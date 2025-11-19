@@ -1,0 +1,637 @@
+openapi: 3.0.1
+info:
+  contact:
+    email: developer.overheid@geonovum.nl
+    name: Team developer.overheid.nl
+  description: OSS Register (oss.developer.overheid.nl)
+  title: OSS Register v1
+  version: 1.0.0
+servers:
+- description: Production
+  url: https://api.overheid.nl/oss-register/v1
+- description: Test
+  url: https://api-register.don.apps.digilab.network/oss-register/v1
+tags:
+- description: Endpoints for listing and managing OSS repositories.
+  name: Repositories
+- description: Endpoints for listing OSS publishers.
+  name: Publishers
+paths:
+  /repositories:
+    get:
+      description: Geeft een lijst terug met OSS repositories die in het register
+        zijn opgenomen.
+      operationId: listRepositories
+      parameters:
+      - description: "Filter op publiccode-status. all = alle repositories, withPublicCode\
+          \ = alleen repositories met een publiccode.yaml, withoutPublicCode = alleen\
+          \ repositories zonder publiccode.yaml."
+        explode: true
+        in: query
+        name: status
+        required: false
+        schema:
+          default: all
+          enum:
+          - all
+          - withPublicCode
+          - withoutPublicCode
+          type: string
+        style: form
+      - description: Paginanummer (1-based).
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          minimum: 1
+          type: integer
+        style: form
+      - description: Aantal resultaten per pagina.
+        explode: true
+        in: query
+        name: perPage
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+        style: form
+      - description: Filter op organisatie (bijvoorbeeld de organisation URI).
+        explode: true
+        in: query
+        name: organisation
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Kommagescheiden lijst met repository-id's (uuid).
+        explode: true
+        in: query
+        name: ids
+        required: false
+        schema:
+          example: "9fd3f7b1-7d79-4f41-bf8f-4a1b0a3b0d11,7cfdde0b-5a0d-41a4-a2f8-c2a4cb1b158a"
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepositoryListResponse"
+          description: OK
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+            X-Total-Count:
+              $ref: "#/components/headers/X-Total-Count"
+        "404":
+          description: Resource does not exist
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+      security:
+      - apiKey: []
+        clientCredentials:
+        - oss:read
+      summary: List repositories
+      tags:
+      - Repositories
+      x-eov-operation-handler: controllers/RepositoriesController
+    post:
+      description: Registreer een nieuwe OSS repository in het register.
+      operationId: createRepository
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostRepository"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repository"
+          description: Repository aangemaakt
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+        "400":
+          description: Ongeldige repository data
+      security:
+      - apiKey: []
+        clientCredentials:
+        - oss:write
+      summary: Create repository
+      tags:
+      - Repositories
+      x-eov-operation-handler: controllers/RepositoriesController
+  /repositories/{id}:
+    get:
+      description: Geeft één OSS repository terug op basis van het id.
+      operationId: getRepositoryById
+      parameters:
+      - description: Het id van de repository.
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repository"
+          description: OK
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+        "404":
+          description: Resource does not exist
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+      security:
+      - apiKey: []
+        clientCredentials:
+        - oss:read
+      summary: Get repository by id
+      tags:
+      - Repositories
+      x-eov-operation-handler: controllers/RepositoriesController
+  /publischers:
+    get:
+      description: Geeft een lijst terug met publishers (organisaties) die OSS registreren.
+      operationId: listPublishers
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublisherListResponse"
+          description: OK
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+            X-Total-Count:
+              $ref: "#/components/headers/X-Total-Count"
+        "404":
+          description: Resource does not exist
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+      security:
+      - apiKey: []
+        clientCredentials:
+        - oss:read
+      summary: List publishers
+      tags:
+      - Publishers
+      x-eov-operation-handler: controllers/PublishersController
+  /organisations:
+    get:
+      description: Alle organisaties ophalen
+      operationId: listOrganisations
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/listOrganisations_200_response"
+          description: OK
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+            X-Total-Count:
+              $ref: "#/components/headers/X-Total-Count"
+      security:
+      - apiKey: []
+      - clientCredentials:
+        - organisations:read
+      summary: Alle organisaties ophalen
+      tags:
+      - Publieke endpoints
+      x-eov-operation-handler: controllers/PubliekeEndpointsController
+    post:
+      description: Maak een nieuwe organisatie aan.
+      operationId: createOrganisation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganisationSummary"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganisationSummary"
+          description: Organisatie aangemaakt
+          headers:
+            API-Version:
+              $ref: "#/components/headers/API-Version"
+        "400":
+          description: Ongeldige organisatie data
+      security:
+      - apiKey: []
+      - clientCredentials:
+        - organisations:write
+      summary: Organisatie aanmaken
+      tags:
+      - Publieke endpoints
+      x-eov-operation-handler: controllers/PubliekeEndpointsController
+components:
+  headers:
+    API-Version:
+      description: De API-versie van de response
+      explode: false
+      schema:
+        example: 1.0.0
+        type: string
+      style: simple
+    X-Total-Count:
+      description: Totaal aantal dat voldoet aan de huidige filter (zonder paginering).
+      explode: false
+      schema:
+        example: 134
+        type: integer
+      style: simple
+  responses:
+    "404":
+      description: Resource does not exist
+      headers:
+        API-Version:
+          $ref: "#/components/headers/API-Version"
+  schemas:
+    Link:
+      example:
+        href: https://openapi-generator.tech
+      properties:
+        href:
+          format: uri
+          type: string
+      required:
+      - href
+      type: object
+    Links:
+      additionalProperties:
+        $ref: "#/components/schemas/Link"
+      description: HAL style links object.
+      type: object
+    OrganisationSummary:
+      example:
+        amountRepositories: 0
+        amountPublicCodes: 6
+        _links:
+          key:
+            href: https://openapi-generator.tech
+        label: label
+        uri: https://openapi-generator.tech
+      properties:
+        uri:
+          format: uri
+          type: string
+        label:
+          type: string
+        amountRepositories:
+          type: integer
+        amountPublicCodes:
+          type: integer
+        _links:
+          additionalProperties:
+            $ref: "#/components/schemas/Link"
+          description: HAL style links object.
+          type: object
+      required:
+      - label
+      - uri
+      type: object
+    PublicCode:
+      additionalProperties: true
+      description: Geparste representatie van publiccode.yaml. Volgt de publiccode.yml
+        specificatie (zie https://yml.publiccode.tools/).
+      example:
+        name: Mijn OSS project
+        url: https://github.com/overheid/mijn-project
+        description:
+          en: Short English description
+          nl: Korte Nederlandse omschrijving
+        legal:
+          license: EUPL-1.2
+      type: object
+    PostRepository:
+      example:
+        publicCodeUrl: https://openapi-generator.tech
+        organisation:
+          amountRepositories: 0
+          amountPublicCodes: 6
+          _links:
+            key:
+              href: https://openapi-generator.tech
+          label: label
+          uri: https://openapi-generator.tech
+        gitDescription: gitDescription
+        repositoryUrl: https://openapi-generator.tech
+      properties:
+        repositoryUrl:
+          description: URL van de broncode repository.
+          format: uri
+          type: string
+        organisation:
+          $ref: "#/components/schemas/OrganisationSummary"
+        publicCodeUrl:
+          description: URL naar de inhoud van publiccode.yaml in de repository.
+          format: uri
+          type: string
+        gitDescription:
+          description: Beschrijving van de repository afkomstig uit de git-hosting
+            (bijvoorbeeld de repository description). Wordt gebruikt als alternatief
+            wanneer geen publiccode.yaml beschikbaar is.
+          type: string
+      required:
+      - repositoryUrl
+      type: object
+    Repository:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        organisation:
+          amountRepositories: 0
+          amountPublicCodes: 6
+          _links:
+            key:
+              href: https://openapi-generator.tech
+          label: label
+          uri: https://openapi-generator.tech
+        publicCode:
+          name: Mijn OSS project
+          url: https://github.com/overheid/mijn-project
+          description:
+            en: Short English description
+            nl: Korte Nederlandse omschrijving
+          legal:
+            license: EUPL-1.2
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        gitDescription: gitDescription
+        repositoryUrl: https://openapi-generator.tech
+        updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        id:
+          format: uuid
+          readOnly: true
+          type: string
+        repositoryUrl:
+          description: URL van de broncode repository.
+          format: uri
+          type: string
+        organisation:
+          $ref: "#/components/schemas/OrganisationSummary"
+        publicCode:
+          additionalProperties: true
+          description: Geparste representatie van publiccode.yaml. Volgt de publiccode.yml
+            specificatie (zie https://yml.publiccode.tools/).
+          example:
+            name: Mijn OSS project
+            url: https://github.com/overheid/mijn-project
+            description:
+              en: Short English description
+              nl: Korte Nederlandse omschrijving
+            legal:
+              license: EUPL-1.2
+          type: object
+        gitDescription:
+          description: Beschrijving van de repository afkomstig uit de git-hosting
+            (bijvoorbeeld de repository description). Wordt gebruikt als alternatief
+            wanneer geen publiccode.yaml beschikbaar is.
+          type: string
+        createdAt:
+          format: date-time
+          readOnly: true
+          type: string
+        updatedAt:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - repositoryUrl
+      type: object
+    RepositoryListResponse:
+      example:
+        total: 134
+        perPage: 20
+        data:
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          organisation:
+            amountRepositories: 0
+            amountPublicCodes: 6
+            _links:
+              key:
+                href: https://openapi-generator.tech
+            label: label
+            uri: https://openapi-generator.tech
+          publicCode:
+            name: Mijn OSS project
+            url: https://github.com/overheid/mijn-project
+            description:
+              en: Short English description
+              nl: Korte Nederlandse omschrijving
+            legal:
+              license: EUPL-1.2
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          gitDescription: gitDescription
+          repositoryUrl: https://openapi-generator.tech
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          organisation:
+            amountRepositories: 0
+            amountPublicCodes: 6
+            _links:
+              key:
+                href: https://openapi-generator.tech
+            label: label
+            uri: https://openapi-generator.tech
+          publicCode:
+            name: Mijn OSS project
+            url: https://github.com/overheid/mijn-project
+            description:
+              en: Short English description
+              nl: Korte Nederlandse omschrijving
+            legal:
+              license: EUPL-1.2
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          gitDescription: gitDescription
+          repositoryUrl: https://openapi-generator.tech
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        totalPages: 7
+        page: 1
+      properties:
+        data:
+          items:
+            $ref: "#/components/schemas/Repository"
+          type: array
+        page:
+          description: Huidige pagina (1-based).
+          example: 1
+          type: integer
+        perPage:
+          description: Aantal resultaten per pagina.
+          example: 20
+          type: integer
+        total:
+          description: Totaal aantal resultaten zonder paginering.
+          example: 134
+          type: integer
+        totalPages:
+          description: Totaal aantal pagina's.
+          example: 7
+          type: integer
+      required:
+      - data
+      type: object
+    CodeHosting:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        url: https://openapi-generator.tech
+        group: true
+        updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        url:
+          format: uri
+          type: string
+        group:
+          description: Of het om een groep/organisatie op het code hosting platform
+            gaat.
+          type: boolean
+        createdAt:
+          format: date-time
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+      - group
+      - url
+      type: object
+    Publisher:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        description: description
+        active: true
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        codeHosting:
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          url: https://openapi-generator.tech
+          group: true
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          url: https://openapi-generator.tech
+          group: true
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        id:
+          format: uuid
+          type: string
+        description:
+          type: string
+        codeHosting:
+          items:
+            $ref: "#/components/schemas/CodeHosting"
+          type: array
+        active:
+          type: boolean
+        createdAt:
+          format: date-time
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+      - active
+      - description
+      - id
+      type: object
+    PublisherListResponse:
+      example:
+        data:
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          description: description
+          active: true
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          codeHosting:
+          - createdAt: 2000-01-23T04:56:07.000+00:00
+            url: https://openapi-generator.tech
+            group: true
+            updatedAt: 2000-01-23T04:56:07.000+00:00
+          - createdAt: 2000-01-23T04:56:07.000+00:00
+            url: https://openapi-generator.tech
+            group: true
+            updatedAt: 2000-01-23T04:56:07.000+00:00
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          description: description
+          active: true
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          codeHosting:
+          - createdAt: 2000-01-23T04:56:07.000+00:00
+            url: https://openapi-generator.tech
+            group: true
+            updatedAt: 2000-01-23T04:56:07.000+00:00
+          - createdAt: 2000-01-23T04:56:07.000+00:00
+            url: https://openapi-generator.tech
+            group: true
+            updatedAt: 2000-01-23T04:56:07.000+00:00
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        data:
+          items:
+            $ref: "#/components/schemas/Publisher"
+          type: array
+      required:
+      - data
+      type: object
+    listOrganisations_200_response:
+      example:
+        organisations:
+        - amountRepositories: 0
+          amountPublicCodes: 6
+          _links:
+            key:
+              href: https://openapi-generator.tech
+          label: label
+          uri: https://openapi-generator.tech
+        - amountRepositories: 0
+          amountPublicCodes: 6
+          _links:
+            key:
+              href: https://openapi-generator.tech
+          label: label
+          uri: https://openapi-generator.tech
+      properties:
+        organisations:
+          items:
+            $ref: "#/components/schemas/OrganisationSummary"
+          type: array
+      type: object
+  securitySchemes:
+    apiKey:
+      in: header
+      name: X-Api-Key
+      type: apiKey
+    clientCredentials:
+      flows:
+        clientCredentials:
+          scopes:
+            oss:read: Leestoegang op OSS-register
+            oss:write: Schrijftoegang op OSS-register
+            organisations:read: Leestoegang op organisaties
+          tokenUrl: https://auth.developer.overheid.nl/realms/don/protocol/openid-connect/token
+      type: oauth2
