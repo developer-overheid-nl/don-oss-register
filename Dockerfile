@@ -1,0 +1,17 @@
+FROM golang:latest
+
+RUN apt-get update && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* 
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+ENV GIN_MODE=release
+RUN go build -o main ./cmd/main.go
+
+EXPOSE 1337
+
+CMD ["./main"]
