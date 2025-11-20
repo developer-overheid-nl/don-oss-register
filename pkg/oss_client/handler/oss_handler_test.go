@@ -90,7 +90,7 @@ func TestListRepositories_HandlerSetsHeaders(t *testing.T) {
 	result, err := ctrl.ListRepositories(ctx, &models.ListRepositoriesParams{})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, "1", w.Header().Get("X-Total-Count"))
+	assert.Equal(t, "1", w.Header().Get("Total-Count"))
 }
 
 func TestRetrieveRepositorie_NotFound(t *testing.T) {

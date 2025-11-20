@@ -110,7 +110,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/repositories")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "test-version", resp.Header.Get("API-Version"))
-		require.Equal(t, "1", resp.Header.Get("X-Total-Count"))
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
 		body := decodeBody[[]models.RepositorySummary](t, resp)
 		require.Len(t, body, 1)
@@ -131,7 +131,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	t.Run("search repositories", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/_search?q=Integration")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		require.Equal(t, "1", resp.Header.Get("X-Total-Count"))
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
 		body := decodeBody[[]models.RepositorySummary](t, resp)
 		require.Len(t, body, 1)
