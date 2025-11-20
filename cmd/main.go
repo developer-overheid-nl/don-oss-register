@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	api "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/database"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
+	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/seed"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 )
 
@@ -130,6 +132,9 @@ func main() {
 		log.Fatalf("Geen databaseverbinding: %v", err)
 	}
 	repo := repositories.NewRepositoriesRepository(db)
+	if err := seed.Publish(context.Background(), repo, "./publishers.json"); err != nil {
+		log.Fatalf("publishers seeding failed: %v", err)
+	}
 	repositoriesService := services.NewRepositoriesService(repo)
 	controller := handler.NewOSSController(repositoriesService)
 
