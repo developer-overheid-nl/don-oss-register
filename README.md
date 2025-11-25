@@ -5,8 +5,6 @@ API van het API register (oss.developer.overheid.nl)
 ## Overview
 
 - API version: 1.0.0
-- Build date: 2025-04-02
-- Generator version: 7.7.0
 
 ## Lokaal draaien
 
