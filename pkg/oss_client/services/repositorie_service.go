@@ -64,7 +64,7 @@ func (s *RepositoriesService) SearchRepositories(ctx context.Context, p *models.
 	return results, pagination, nil
 }
 
-func (s *RepositoriesService) CreateRepositorie(ctx context.Context, requestBody models.PostRepositorie) (*models.Repositorie, error) {
+func (s *RepositoriesService) CreateRepositorie(ctx context.Context, requestBody models.PostRepositorie) (*models.RepositorieDetail, error) {
 	//todo crawler aanroepen en data opslaan
 	return nil, nil
 }

@@ -12,15 +12,15 @@ package models
 import "strings"
 
 type RepositorySummary struct {
-	Id             string               `gorm:"column:id;primaryKey"`
-	Name           string               `gorm:"column:name"`
-	Description    string               `gorm:"column:description"`
+	Id             string               `json:"id" gorm:"column:id;primaryKey"`
+	Name           string               `json:"name" gorm:"column:name"`
+	Description    string               `json:"description" gorm:"column:description"`
 	Organisation   *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
 	OrganisationID *string              `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositorieUri string               `gorm:"column:repositorie_uri"`
-	PublicCodeUrl  string               `gorm:"column:public_code_url"`
-	CreatedAt      int64                `gorm:"column:created_at"`
-	UpdatedAt      int64                `gorm:"column:updated_at"`
+	RepositorieUri string               `json:"repositorieUri" gorm:"column:repositorie_uri"`
+	PublicCodeUrl  string               `json:"publicCodeUrl" gorm:"column:public_code_url"`
+	CreatedAt      int64                `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      int64                `json:"updatedAt" gorm:"column:updated_at"`
 	Links          *Links               `json:"_links,omitempty"`
 }
 
@@ -29,15 +29,15 @@ type RepositorieDetail struct {
 }
 
 type Repositorie struct {
-	Id             string        `gorm:"column:id;primaryKey"`
-	Name           string        `gorm:"column:name"`
-	Description    string        `gorm:"column:description"`
+	Id             string        `json:"id" gorm:"column:id;primaryKey"`
+	Name           string        `json:"name" gorm:"column:name"`
+	Description    string        `json:"description" gorm:"column:description"`
 	Organisation   *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
 	OrganisationID *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositorieUri string        `gorm:"column:repositorie_uri"`
-	PublicCodeUrl  string        `gorm:"column:public_code_url"`
-	CreatedAt      int64         `gorm:"column:created_at"`
-	UpdatedAt      int64         `gorm:"column:updated_at"`
+	RepositorieUri string        `json:"repositorieUri" gorm:"column:repositorie_uri"`
+	PublicCodeUrl  string        `json:"publicCodeUrl" gorm:"column:public_code_url"`
+	CreatedAt      int64         `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      int64         `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 type ListRepositoriesSearchParams struct {

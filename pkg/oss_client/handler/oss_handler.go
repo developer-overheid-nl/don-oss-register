@@ -68,7 +68,7 @@ func (c *OSSController) RetrieveRepositorie(ctx *gin.Context, params *models.Rep
 }
 
 // CreateRepositorie handles POST /repositories
-func (c *OSSController) CreateRepositorie(ctx *gin.Context, body *models.PostRepositorie) (*models.Repositorie, error) {
+func (c *OSSController) CreateRepositorie(ctx *gin.Context, body *models.PostRepositorie) (*models.RepositorieDetail, error) {
 	created, err := c.Service.CreateRepositorie(ctx.Request.Context(), *body)
 	if err != nil {
 		return nil, err
