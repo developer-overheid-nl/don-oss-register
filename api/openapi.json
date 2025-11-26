@@ -85,6 +85,9 @@
               },
               "Total-Count": {
                 "$ref": "#/components/headers/Total-Count"
+              },
+              "Link": {
+                "$ref": "#/components/headers/Link"
               }
             },
             "content": {
@@ -252,6 +255,9 @@
               },
               "Total-Count": {
                 "$ref": "#/components/headers/Total-Count"
+              },
+              "Link": {
+                "$ref": "#/components/headers/Link"
               }
             },
             "content": {
@@ -335,6 +341,11 @@
           "type": "integer",
           "example": 134
         }
+      },
+      "Link": {
+        "description": "Paginatielinks volgens RFC 8288 (bijv. next, prev, first, last).",
+        "schema": {
+          "type": "string"        }
       }
     },
     "responses": {
@@ -446,26 +457,6 @@
             "items": {
               "$ref": "#/components/schemas/Repository"
             }
-          },
-          "page": {
-            "type": "integer",
-            "description": "Huidige pagina (1-based).",
-            "example": 1
-          },
-          "perPage": {
-            "type": "integer",
-            "description": "Aantal resultaten per pagina.",
-            "example": 20
-          },
-          "total": {
-            "type": "integer",
-            "description": "Totaal aantal resultaten zonder paginering.",
-            "example": 134
-          },
-          "totalPages": {
-            "type": "integer",
-            "description": "Totaal aantal pagina's.",
-            "example": 7
           }
         },
         "required": ["data"]
