@@ -133,10 +133,18 @@ func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.Lis
 
 func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.PostRepository) (*models.RepositoryDetail, error) {
 	if (requestBody.PubliccodeYml == nil) && (requestBody.Description == nil && requestBody.Name == nil) {
-		//crawler aanroepen
+		return nil, problem.NewBadRequest("repository", "name en description zijn verplicht zonder publiccodeYml",
+			problem.InvalidParam{Name: "name", Reason: "is verplicht zonder publiccodeYml"},
+			problem.InvalidParam{Name: "description", Reason: "is verplicht zonder publiccodeYml"},
+		)
 	}
-	s.repo.SaveRepository(ctx, util.ToRepository(&requestBody))
-	return nil, nil
+
+	repo := util.ToRepository(&requestBody)
+	if err := s.repo.SaveRepository(ctx, repo); err != nil {
+		return nil, err
+	}
+
+	return util.ToRepositoryDetail(repo), nil
 }
 
 func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, models.Pagination, error) {
@@ -147,10 +155,7 @@ func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.Lis
 
 	orgSummaries := make([]models.OrganisationSummary, len(organisations))
 	for i, org := range organisations {
-		orgSummaries[i] = models.OrganisationSummary{
-			Uri:   org.Uri,
-			Label: org.Label,
-		}
+		orgSummaries[i] = models.OrganisationSummary(org)
 	}
 
 	return orgSummaries, pagination, nil

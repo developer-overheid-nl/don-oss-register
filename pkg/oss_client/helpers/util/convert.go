@@ -35,12 +35,19 @@ func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 func ToRepository(repo *models.PostRepository) *models.Repository {
 	return &models.Repository{
 		Id:            uuid.NewString(),
-		Name:          *repo.Name,
-		Description:   *repo.Description,
-		RepositoryUrl: *repo.RepositoryUrl,
-		PublicCodeUrl: *repo.PubliccodeYml,
+		Name:          stringValue(repo.Name),
+		Description:   stringValue(repo.Description),
+		RepositoryUrl: stringValue(repo.RepositoryUrl),
+		PublicCodeUrl: stringValue(repo.PubliccodeYml),
 		UpdatedAt:     repo.UpdatedAt,
 		CreatedAt:     repo.CreatedAt,
 		Active:        repo.Active,
 	}
+}
+
+func stringValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
