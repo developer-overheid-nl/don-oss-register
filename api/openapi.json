@@ -23,9 +23,133 @@
     {
       "name": "Repositories",
       "description": "Endpoints for listing and managing OSS repositories."
+    },
+    {
+      "name": "GitOrganisations",
+      "description": "Endpoints for listing and managing git-organisations (code hosting accounts)."
     }
   ],
   "paths": {
+    "/gitOrganisations": {
+      "get": {
+        "tags": ["GitOrganisations"],
+        "summary": "List git organisations",
+        "description": "Geeft een lijst met geregistreerde git-organisaties terug.",
+        "operationId": "listGitOrganisations",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Paginanummer (1-based).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "description": "Aantal resultaten per pagina.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "description": "Kommagescheiden lijst met git-organisatie-id's (uuid).",
+            "schema": {
+              "type": "string",
+              "example": "9fd3f7b1-7d79-4f41-bf8f-4a1b0a3b0d11,7cfdde0b-5a0d-41a4-a2f8-c2a4cb1b158a"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "API-Version": {
+                "$ref": "#/components/headers/API-Version"
+              },
+              "Total-Count": {
+                "$ref": "#/components/headers/Total-Count"
+              },
+              "Link": {
+                "$ref": "#/components/headers/Link"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GitOrganisation"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [],
+            "clientCredentials": ["oss:write"]
+          }
+        ]
+      },
+      "post": {
+        "tags": ["GitOrganisations"],
+        "summary": "Create git organisation",
+        "description": "Registreer een nieuwe git-organisatie met code hosting URL en TOOI organisatie.",
+        "operationId": "createGitOrganisation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostGitOrganisation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Git-organisatie aangemaakt",
+            "headers": {
+              "API-Version": {
+                "$ref": "#/components/headers/API-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitOrganisation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ongeldige git-organisatie data"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [],
+            "clientCredentials": ["oss:write"]
+          }
+        ]
+      }
+    },
     "/repositories": {
       "get": {
         "tags": ["Repositories"],
@@ -460,6 +584,78 @@
           }
         },
         "required": ["data"]
+      },
+      "PostGitOrganisation": {
+        "type": "object",
+        "properties": {
+          "gitOrganisationUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL van de git organisatie (bijv. https://github.com/organisatie)."
+          },
+          "organisationUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "TOOI URL van de organisatie."
+          }
+        },
+        "required": ["gitOrganisationUrl", "organisationUrl"]
+      },
+      "GitOrganisation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "organisationId": {
+            "type": "string",
+            "format": "uri"
+          },
+          "organisation": {
+            "$ref": "#/components/schemas/OrganisationSummary"
+          },
+          "codeHosting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeHosting"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
+      },
+      "CodeHosting": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "group": {
+            "type": "boolean",
+            "default": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
       }
     },
     "securitySchemes": {
