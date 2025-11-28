@@ -34,7 +34,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version"}
-	config.ExposeHeaders = []string{"API-Version"}
+	config.ExposeHeaders = []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"}
 	g.Use(cors.New(config))
 
 	g.Use(APIVersionMiddleware(apiVersion))
@@ -55,7 +55,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			apiVersionHeader,
 			notFoundResponse,
 		},
-		tonic.Handler(controller.SearchRepositories, 200),
+		tonic.Handler(controller.SearchRepositorys, 200),
 	)
 	read.GET("/repositories",
 		[]fizz.OperationOption{
@@ -69,7 +69,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			apiVersionHeader,
 			notFoundResponse,
 		},
-		tonic.Handler(controller.ListRepositories, 200),
+		tonic.Handler(controller.ListRepositorys, 200),
 	)
 
 	read.GET("/repositories/:id",
@@ -84,7 +84,22 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			apiVersionHeader,
 			notFoundResponse,
 		},
-		tonic.Handler(controller.RetrieveRepositorie, 200),
+		tonic.Handler(controller.RetrieveRepository, 200),
+	)
+
+	read.GET("/gitOrganisations",
+		[]fizz.OperationOption{
+			fizz.ID("getGitOrganisation"),
+			fizz.Summary("Haal een de git organisaties op"),
+			fizz.Description("Haal de nieuwe git organisaties met een OpenAPI URL."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"apiKey":            {},
+				"clientCredentials": {"oss:write"},
+			}),
+			apiVersionHeader,
+			notFoundResponse,
+		},
+		tonic.Handler(controller.ListGitOrganisations, 201),
 	)
 
 	readOrg := root.Group("", "Private endpoints", "Alleen lezen endpoints")
@@ -100,7 +115,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			apiVersionHeader,
 			notFoundResponse,
 		},
-		tonic.Handler(controller.GetAllOrganisations, 200),
+		tonic.Handler(controller.ListOrganisations, 200),
 	)
 	writeOrg := root.Group("", "Private endpoints", "Alleen lezen endpoints")
 	writeOrg.POST("/organisations",
@@ -131,7 +146,22 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			apiVersionHeader,
 			notFoundResponse,
 		},
-		tonic.Handler(controller.CreateRepositorie, 201),
+		tonic.Handler(controller.CreateRepository, 201),
+	)
+
+	write.POST("/gitOrganisations",
+		[]fizz.OperationOption{
+			fizz.ID("createGitOrganisation"),
+			fizz.Summary("Registreer een nieuwe git organisatie"),
+			fizz.Description("Registreer een nieuwe git organisatie met een OpenAPI URL."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"apiKey":            {},
+				"clientCredentials": {"oss:write"},
+			}),
+			apiVersionHeader,
+			notFoundResponse,
+		},
+		tonic.Handler(controller.CreateGitOrganisation, 201),
 	)
 	// 6) OpenAPI documentatie
 	g.StaticFile("/v1/openapi.json", "./api/openapi.json")

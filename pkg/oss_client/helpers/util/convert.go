@@ -1,41 +1,46 @@
 package util
 
 import (
-	"fmt"
-
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	"github.com/google/uuid"
 )
 
-func ToRepositorySummary(repo *models.Repositorie) models.RepositorySummary {
+func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 	var orgSummary *models.OrganisationSummary
 	if repo.Organisation != nil {
 		orgSummary = &models.OrganisationSummary{
 			Uri:   repo.Organisation.Uri,
 			Label: repo.Organisation.Label,
-			Links: &models.Links{
-				Self: &models.Link{Href: fmt.Sprintf("/v1/repositories?organisation=%s", repo.Organisation.Uri)},
-			},
 		}
 	}
 	return models.RepositorySummary{
-		Id:             repo.Id,
-		Name:           repo.Name,
-		Description:    repo.Description,
-		RepositorieUri: repo.RepositorieUri,
-		PublicCodeUrl:  repo.PublicCodeUrl,
-		CreatedAt:      repo.CreatedAt,
-		UpdatedAt:      repo.UpdatedAt,
-		Organisation:   orgSummary,
-		Links: &models.Links{
-			Self: &models.Link{Href: fmt.Sprintf("/v1/repositories/%s", repo.Id)},
-		},
+		Id:            repo.Id,
+		Name:          repo.Name,
+		Description:   repo.Description,
+		RepositoryUrl: repo.RepositoryUrl,
+		PublicCodeUrl: repo.PublicCodeUrl,
+		CreatedAt:     repo.CreatedAt,
+		UpdatedAt:     repo.UpdatedAt,
+		Organisation:  orgSummary,
 	}
 }
 
-func ToRepositorieDetail(repo *models.Repositorie) *models.RepositorieDetail {
-	detail := &models.RepositorieDetail{
+func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
+	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
 	}
-	detail.Links = nil
 	return detail
+}
+
+func ToRepository(repo *models.PostRepository) *models.Repository {
+	return &models.Repository{
+		Id:            uuid.NewString(),
+		Name:          *repo.Name,
+		Description:   *repo.Description,
+		RepositoryUrl: *repo.RepositoryUrl,
+		PublicCodeUrl: *repo.PubliccodeYml,
+		UpdatedAt:     repo.UpdatedAt,
+		CreatedAt:     repo.CreatedAt,
+		Active:        repo.Active,
+	}
 }

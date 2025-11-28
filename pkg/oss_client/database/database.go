@@ -16,8 +16,10 @@ func Connect(connStr string) (*gorm.DB, error) {
 	}
 
 	if err := db.AutoMigrate(
-		&models.Repositorie{},
+		&models.Repository{},
 		&models.Organisation{},
+		&models.GitOrganisatie{},
+		&models.CodeHosting{},
 	); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}

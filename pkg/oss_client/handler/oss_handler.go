@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"fmt"
-
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -12,16 +10,16 @@ import (
 
 // OSSController binds HTTP requests to the OSSController
 type OSSController struct {
-	Service *services.RepositoriesService
+	Service *services.RepositoryService
 }
 
 // newOSSController creates a new controller
-func NewOSSController(s *services.RepositoriesService) *OSSController {
+func NewOSSController(s *services.RepositoryService) *OSSController {
 	return &OSSController{Service: s}
 }
 
-// ListRepositories handles GET /repositories
-func (c *OSSController) ListRepositories(ctx *gin.Context, p *models.ListRepositoriesParams) ([]models.RepositorySummary, error) {
+// ListRepositorys handles GET /Repositorys
+func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, error) {
 	if p.Page < 1 {
 		p.Page = 1
 	}
@@ -29,7 +27,7 @@ func (c *OSSController) ListRepositories(ctx *gin.Context, p *models.ListReposit
 		p.PerPage = 10
 	}
 	p.BaseURL = ctx.FullPath()
-	repos, pagination, err := c.Service.ListRepositories(ctx.Request.Context(), p)
+	repos, pagination, err := c.Service.ListRepositorys(ctx.Request.Context(), p)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +36,8 @@ func (c *OSSController) ListRepositories(ctx *gin.Context, p *models.ListReposit
 	return repos, nil
 }
 
-// SearchRepositories handles GET /repositories/_search
-func (c *OSSController) SearchRepositories(ctx *gin.Context, p *models.ListRepositoriesSearchParams) ([]models.RepositorySummary, error) {
+// SearchRepositorys handles GET /Repositorys/_search
+func (c *OSSController) SearchRepositorys(ctx *gin.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, error) {
 	if p.Page < 1 {
 		p.Page = 1
 	}
@@ -47,7 +45,7 @@ func (c *OSSController) SearchRepositories(ctx *gin.Context, p *models.ListRepos
 		p.PerPage = 10
 	}
 	p.BaseURL = ctx.FullPath()
-	results, pagination, err := c.Service.SearchRepositories(ctx.Request.Context(), p)
+	results, pagination, err := c.Service.SearchRepositorys(ctx.Request.Context(), p)
 	if err != nil {
 		return nil, err
 	}
@@ -55,21 +53,21 @@ func (c *OSSController) SearchRepositories(ctx *gin.Context, p *models.ListRepos
 	return results, nil
 }
 
-// RetrieveRepositorie handles GET /repositories/:id
-func (c *OSSController) RetrieveRepositorie(ctx *gin.Context, params *models.RepositorieParams) (*models.RepositorieDetail, error) {
-	repositorie, err := c.Service.RetrieveRepositorie(ctx.Request.Context(), params.Id)
+// RetrieveRepository handles GET /Repositorys/:id
+func (c *OSSController) RetrieveRepository(ctx *gin.Context, params *models.RepositoryParams) (*models.RepositoryDetail, error) {
+	Repository, err := c.Service.RetrieveRepository(ctx.Request.Context(), params.Id)
 	if err != nil {
 		return nil, err
 	}
-	if repositorie == nil {
-		return nil, problem.NewNotFound(params.Id, "Repositorie not found")
+	if Repository == nil {
+		return nil, problem.NewNotFound(params.Id, "Repository not found")
 	}
-	return repositorie, nil
+	return Repository, nil
 }
 
-// CreateRepositorie handles POST /repositories
-func (c *OSSController) CreateRepositorie(ctx *gin.Context, body *models.PostRepositorie) (*models.RepositorieDetail, error) {
-	created, err := c.Service.CreateRepositorie(ctx.Request.Context(), *body)
+// CreateRepository handles POST /Repositorys
+func (c *OSSController) CreateRepository(ctx *gin.Context, body *models.PostRepository) (*models.RepositoryDetail, error) {
+	created, err := c.Service.CreateRepository(ctx.Request.Context(), *body)
 	if err != nil {
 		return nil, err
 	}
@@ -77,30 +75,54 @@ func (c *OSSController) CreateRepositorie(ctx *gin.Context, body *models.PostRep
 }
 
 // ListOrganisations handles GET /organisations
-func (c *OSSController) GetAllOrganisations(ctx *gin.Context) ([]models.OrganisationSummary, error) {
-	orgs, total, err := c.Service.GetAllOrganisations(ctx.Request.Context())
+func (c *OSSController) ListOrganisations(ctx *gin.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, error) {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 10
+	}
+	p.BaseURL = ctx.FullPath()
+
+	orgs, pagination, err := c.Service.ListOrganisations(ctx.Request.Context(), p)
 	if err != nil {
 		return nil, err
 	}
-	ctx.Header("Total-Count", fmt.Sprintf("%d", total))
-	orgSummaries := make([]models.OrganisationSummary, len(orgs))
-	for i, org := range orgs {
-		orgSummaries[i] = models.OrganisationSummary{
-			Uri:   org.Uri,
-			Label: org.Label,
-			Links: &models.Links{
-				Repositories: &models.Link{
-					Href: fmt.Sprintf("/v1/repositories?organisation=%s", org.Uri),
-				},
-			},
-		}
-	}
-	return orgSummaries, nil
+	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
+
+	return orgs, nil
 }
 
 // CreateOrganisation handles POST /organisations
 func (c *OSSController) CreateOrganisation(ctx *gin.Context, body *models.Organisation) (*models.Organisation, error) {
 	created, err := c.Service.CreateOrganisation(ctx.Request.Context(), body)
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
+}
+
+// ListGitOrganisations handles GET /GitRepositorys
+func (c *OSSController) ListGitOrganisations(ctx *gin.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatie, error) {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 10
+	}
+	p.BaseURL = ctx.FullPath()
+	gitOrganisations, pagination, err := c.Service.ListGitOrganisations(ctx.Request.Context(), p)
+	if err != nil {
+		return nil, err
+	}
+	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
+
+	return gitOrganisations, nil
+}
+
+// CreateGitOrganisation handles POST /GitOrganisation
+func (c *OSSController) CreateGitOrganisation(ctx *gin.Context, body *models.PostGitOrganisatie) (*models.GitOrganisatie, error) {
+	created, err := c.Service.CreateGitOrganisatie(ctx.Request.Context(), *body)
 	if err != nil {
 		return nil, err
 	}

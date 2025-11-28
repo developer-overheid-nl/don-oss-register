@@ -24,7 +24,7 @@ import (
 type integrationEnv struct {
 	server  *httptest.Server
 	repo    repositories.RepositoriesRepository
-	service *services.RepositoriesService
+	service *services.RepositoryService
 	client  *http.Client
 }
 
@@ -37,10 +37,10 @@ func newIntegrationEnv(t *testing.T) *integrationEnv {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repositorie{}))
+	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}))
 
 	repo := repositories.NewRepositoriesRepository(db)
-	svc := services.NewRepositoriesService(repo)
+	svc := services.NewRepositoryService(repo)
 	controller := handler.NewOSSController(svc)
 	router := oss_client.NewRouter("test-version", controller)
 
@@ -96,15 +96,15 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	repoModel := &models.Repositorie{
+	repoModel := &models.Repository{
 		Id:             "repo-1",
 		Name:           "Integration Repo",
 		Description:    "Integratietest repository",
 		OrganisationID: &org.Uri,
-		RepositorieUri: "https://example.org/repos/repo-1",
+		RepositoryUrl:  "https://example.org/repos/repo-1",
 		PublicCodeUrl:  "https://publiccode.net/repo-1",
 	}
-	require.NoError(t, env.repo.SaveRepositorie(ctx, repoModel))
+	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
 
 	t.Run("list repositories", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/repositories")
@@ -123,7 +123,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "test-version", resp.Header.Get("API-Version"))
 
-		body := decodeBody[models.RepositorieDetail](t, resp)
+		body := decodeBody[models.RepositoryDetail](t, resp)
 		require.Equal(t, "repo-1", body.Id)
 		require.NotNil(t, body.Organisation)
 	})
@@ -142,11 +142,11 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/organisations")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "1", resp.Header.Get("Total-Count"))
+		require.NotEmpty(t, resp.Header.Get("Link"))
 
 		body := decodeBody[[]models.OrganisationSummary](t, resp)
 		require.Len(t, body, 1)
 		require.Equal(t, org.Uri, body[0].Uri)
-		require.NotNil(t, body[0].Links)
 	})
 
 	t.Run("create organisation validation", func(t *testing.T) {

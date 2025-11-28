@@ -9,7 +9,10 @@
 
 package models
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type RepositorySummary struct {
 	Id             string               `json:"id" gorm:"column:id;primaryKey"`
@@ -17,30 +20,30 @@ type RepositorySummary struct {
 	Description    string               `json:"description" gorm:"column:description"`
 	Organisation   *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
 	OrganisationID *string              `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositorieUri string               `json:"repositorieUri" gorm:"column:repositorie_uri"`
+	RepositoryUrl  string               `json:"repositoryUrl" gorm:"column:repository_url"`
 	PublicCodeUrl  string               `json:"publicCodeUrl" gorm:"column:public_code_url"`
-	CreatedAt      int64                `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt      int64                `json:"updatedAt" gorm:"column:updated_at"`
-	Links          *Links               `json:"_links,omitempty"`
+	CreatedAt      time.Time            `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      time.Time            `json:"updatedAt" gorm:"column:updated_at"`
 }
 
-type RepositorieDetail struct {
+type RepositoryDetail struct {
 	RepositorySummary
 }
 
-type Repositorie struct {
+type Repository struct {
 	Id             string        `json:"id" gorm:"column:id;primaryKey"`
 	Name           string        `json:"name" gorm:"column:name"`
 	Description    string        `json:"description" gorm:"column:description"`
 	Organisation   *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
 	OrganisationID *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositorieUri string        `json:"repositorieUri" gorm:"column:repositorie_uri"`
+	RepositoryUrl  string        `json:"repositoryUrl" gorm:"column:repository_url"`
 	PublicCodeUrl  string        `json:"publicCodeUrl" gorm:"column:public_code_url"`
-	CreatedAt      int64         `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt      int64         `json:"updatedAt" gorm:"column:updated_at"`
+	CreatedAt      time.Time     `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      time.Time     `json:"updatedAt" gorm:"column:updated_at"`
+	Active         bool          `json:"active" gorm:"column:active"`
 }
 
-type ListRepositoriesSearchParams struct {
+type ListRepositorysSearchParams struct {
 	Page         int     `query:"page"`
 	PerPage      int     `query:"perPage"`
 	Organisation *string `query:"organisation"`
@@ -48,23 +51,16 @@ type ListRepositoriesSearchParams struct {
 	BaseURL      string
 }
 
-type PostRepositorie struct {
-	GitOrganisationUrl string `json:"gitOrganisationUrl" binding:"required,url"`
-	OrganisationUrl    string `json:"organisationUrl" binding:"required,url"`
+type PostRepository struct {
+	RepositoryUrl *string   `json:"repositoryUrl"`
+	Name          *string   `json:"name"`
+	Description   *string   `json:"description"`
+	PubliccodeYml *string   `json:"publiccodeYml"`
+	Active        bool      `json:"active"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
-
-type OrganisationSummary struct {
-	Uri   string `gorm:"column:uri;primaryKey" json:"uri"`
-	Label string `gorm:"column:label" json:"label"`
-	Links *Links `json:"_links,omitempty"`
-}
-
-type Organisation struct {
-	Uri   string `gorm:"column:uri;primaryKey" json:"uri"`
-	Label string `gorm:"column:label" json:"label"`
-}
-
-type ListRepositoriesParams struct {
+type ListRepositorysParams struct {
 	Page         int     `query:"page"`
 	PerPage      int     `query:"perPage"`
 	Organisation *string `query:"organisation"`
@@ -72,7 +68,7 @@ type ListRepositoriesParams struct {
 	BaseURL      string
 }
 
-func (p *ListRepositoriesParams) FilterIDs() *string {
+func (p *ListRepositorysParams) FilterIDs() *string {
 	if p == nil {
 		return nil
 	}
@@ -90,28 +86,8 @@ func trimPointer(val *string) *string {
 	return &trimmed
 }
 
-type RepositorieParams struct {
+type RepositoryParams struct {
 	Id string `path:"id"`
-}
-
-// Link representeert een hypermedia‐link
-type Link struct {
-	Href string `json:"href"`
-}
-type Links struct {
-	First        *Link `json:"first,omitempty"`
-	Prev         *Link `json:"prev,omitempty"`
-	Self         *Link `json:"self,omitempty"`
-	Next         *Link `json:"next,omitempty"`
-	Last         *Link `json:"last,omitempty"`
-	Repositories *Link `json:"repositories,omitempty"` // link naar de lijst van repositories
-}
-
-type Lifecycle struct {
-	Status     string `json:"status"`
-	Version    string `json:"version"`
-	Sunset     string `json:"sunset,omitempty"`
-	Deprecated string `json:"deprecated,omitempty"`
 }
 
 type Pagination struct {

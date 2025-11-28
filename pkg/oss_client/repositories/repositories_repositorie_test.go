@@ -16,7 +16,7 @@ func setupDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repositorie{}))
+	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}))
 	return db
 }
 
@@ -28,17 +28,17 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	require.NoError(t, repo.SaveOrganisatie(org))
 
-	repositorie := &models.Repositorie{
+	repository := &models.Repository{
 		Id:             "repo-1",
 		Name:           "Repo One",
 		Description:    "Repository description",
 		OrganisationID: &org.Uri,
-		RepositorieUri: "https://example.org/repos/repo-1",
+		RepositoryUrl:  "https://example.org/repos/repo-1",
 		PublicCodeUrl:  "https://publiccode.net/repo-1",
 	}
-	require.NoError(t, repo.SaveRepositorie(ctx, repositorie))
+	require.NoError(t, repo.SaveRepository(ctx, repository))
 
-	got, err := repo.GetRepositorieByID(ctx, "repo-1")
+	got, err := repo.GetRepositoryByID(ctx, "repo-1")
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	assert.Equal(t, "Repo One", got.Name)
@@ -56,22 +56,22 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 	require.NoError(t, repo.SaveOrganisatie(org1))
 	require.NoError(t, repo.SaveOrganisatie(org2))
 
-	repositoriesToSave := []*models.Repositorie{
+	repositoriesToSave := []*models.Repository{
 		{Id: "repo-1", Name: "Repo One", OrganisationID: &org1.Uri},
 		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org1.Uri},
 		{Id: "repo-3", Name: "Repo Three", OrganisationID: &org2.Uri},
 	}
 	for _, r := range repositoriesToSave {
-		require.NoError(t, repo.SaveRepositorie(ctx, r))
+		require.NoError(t, repo.SaveRepository(ctx, r))
 	}
 
-	results, pagination, err := repo.GetRepositories(ctx, 1, 10, &org1.Uri, nil)
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri, nil)
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
 
 	ids := "repo-3"
-	results, pagination, err = repo.GetRepositories(ctx, 1, 10, nil, &ids)
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, nil, &ids)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "repo-3", results[0].Id)
@@ -87,7 +87,7 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 	require.NoError(t, repo.SaveOrganisatie(org))
 
 	save := func(id, name string) {
-		require.NoError(t, repo.SaveRepositorie(ctx, &models.Repositorie{
+		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
 			Id:             id,
 			Name:           name,
 			OrganisationID: &org.Uri,
@@ -96,7 +96,7 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 	save("repo-1", "Account API")
 	save("repo-2", "User Portal")
 
-	results, pagination, err := repo.SearchRepositories(ctx, 1, 10, nil, "account")
+	results, pagination, err := repo.SearchRepositorys(ctx, 1, 10, nil, "account")
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "repo-1", results[0].Id)

@@ -10,23 +10,24 @@ import (
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
+	"github.com/google/uuid"
 )
 
-// RepositoriesService implementeert RepositoriesServicer met de benodigde repository
-type RepositoriesService struct {
+// RepositoryService implementeert RepositoriesServicer met de benodigde repository
+type RepositoryService struct {
 	repo repositories.RepositoriesRepository
 }
 
-// NewRepositoriesService Constructor-functie
-func NewRepositoriesService(repo repositories.RepositoriesRepository) *RepositoriesService {
-	return &RepositoriesService{
+// NewRepositoryService Constructor-functie
+func NewRepositoryService(repo repositories.RepositoriesRepository) *RepositoryService {
+	return &RepositoryService{
 		repo: repo,
 	}
 }
 
-func (s *RepositoriesService) ListRepositories(ctx context.Context, p *models.ListRepositoriesParams) ([]models.RepositorySummary, models.Pagination, error) {
+func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, models.Pagination, error) {
 	idFilter := p.FilterIDs()
-	repositories, pagination, err := s.repo.GetRepositories(ctx, p.Page, p.PerPage, p.Organisation, idFilter)
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, idFilter)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -39,21 +40,87 @@ func (s *RepositoriesService) ListRepositories(ctx context.Context, p *models.Li
 	return dtos, pagination, nil
 }
 
-func (s *RepositoriesService) RetrieveRepositorie(ctx context.Context, id string) (*models.RepositorieDetail, error) {
-	api, err := s.repo.GetRepositorieByID(ctx, id)
+func (s *RepositoryService) ListGitOrganisations(ctx context.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatie, models.Pagination, error) {
+	gitOrganisations, pagination, err := s.repo.GetGitOrganisations(ctx, p.Page, p.PerPage, p.Ids)
+	if err != nil {
+		return nil, models.Pagination{}, err
+	}
+	return gitOrganisations, pagination, nil
+}
+
+func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBody models.PostGitOrganisatie) (*models.GitOrganisatie, error) {
+	gitURL := strings.TrimSpace(requestBody.GitOrganisationUrl)
+	orgURL := strings.TrimSpace(requestBody.OrganisationUrl)
+
+	if _, err := url.ParseRequestURI(gitURL); err != nil {
+		return nil, problem.NewBadRequest(gitURL, fmt.Sprintf("foutieve git url: %v", err),
+			problem.InvalidParam{Name: "gitOrganisationUrl", Reason: "Moet een geldige URL zijn"})
+	}
+	if _, err := url.ParseRequestURI(orgURL); err != nil {
+		return nil, problem.NewBadRequest(orgURL, fmt.Sprintf("foutieve organisation url: %v", err),
+			problem.InvalidParam{Name: "organisationUrl", Reason: "Moet een geldige URL zijn"})
+	}
+
+	organisation, err := s.repo.FindOrganisationByURI(ctx, orgURL)
+	if err != nil {
+		return nil, err
+	}
+	if organisation == nil {
+		return nil, problem.NewNotFound(orgURL, "Organisation not found")
+	}
+
+	gitOrg, err := s.repo.FindGitOrganisationByOrganisationURI(ctx, organisation.Uri)
+	if err != nil {
+		return nil, err
+	}
+	if gitOrg == nil {
+		gitOrg = &models.GitOrganisatie{
+			Id:             uuid.NewString(),
+			OrganisationID: &organisation.Uri,
+			Organisation:   organisation,
+		}
+		if err := s.repo.SaveGitOrganisatie(ctx, gitOrg); err != nil {
+			return nil, err
+		}
+	}
+
+	codeHosting, err := s.repo.AddCodeHosting(ctx, gitOrg.Id, gitURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the returned gitOrg contains the new code hosting entry
+	if codeHosting != nil {
+		found := false
+		for _, ch := range gitOrg.CodeHosting {
+			if ch.URL == codeHosting.URL {
+				found = true
+				break
+			}
+		}
+		if !found {
+			gitOrg.CodeHosting = append(gitOrg.CodeHosting, *codeHosting)
+		}
+	}
+
+	return gitOrg, nil
+}
+
+func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (*models.RepositoryDetail, error) {
+	api, err := s.repo.GetRepositoryByID(ctx, id)
 	if err != nil || api == nil {
 		return nil, err
 	}
-	detail := util.ToRepositorieDetail(api)
+	detail := util.ToRepositoryDetail(api)
 	return detail, nil
 }
 
-func (s *RepositoriesService) SearchRepositories(ctx context.Context, p *models.ListRepositoriesSearchParams) ([]models.RepositorySummary, models.Pagination, error) {
+func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, models.Pagination, error) {
 	trimmed := strings.TrimSpace(p.Query)
 	if trimmed == "" {
 		return []models.RepositorySummary{}, models.Pagination{}, nil
 	}
-	repositories, pagination, err := s.repo.SearchRepositories(ctx, p.Page, p.PerPage, p.Organisation, trimmed)
+	repositories, pagination, err := s.repo.SearchRepositorys(ctx, p.Page, p.PerPage, p.Organisation, trimmed)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -64,17 +131,33 @@ func (s *RepositoriesService) SearchRepositories(ctx context.Context, p *models.
 	return results, pagination, nil
 }
 
-func (s *RepositoriesService) CreateRepositorie(ctx context.Context, requestBody models.PostRepositorie) (*models.RepositorieDetail, error) {
-	//todo crawler aanroepen en data opslaan
+func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.PostRepository) (*models.RepositoryDetail, error) {
+	if (requestBody.PubliccodeYml == nil) && (requestBody.Description == nil && requestBody.Name == nil) {
+		//crawler aanroepen
+	}
+	s.repo.SaveRepository(ctx, util.ToRepository(&requestBody))
 	return nil, nil
 }
 
-func (s *RepositoriesService) GetAllOrganisations(ctx context.Context) ([]models.Organisation, int, error) {
-	return s.repo.GetOrganisations(ctx)
+func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, models.Pagination, error) {
+	organisations, pagination, err := s.repo.GetOrganisations(ctx, p.Page, p.PerPage, p.FilterIDs())
+	if err != nil {
+		return nil, models.Pagination{}, err
+	}
+
+	orgSummaries := make([]models.OrganisationSummary, len(organisations))
+	for i, org := range organisations {
+		orgSummaries[i] = models.OrganisationSummary{
+			Uri:   org.Uri,
+			Label: org.Label,
+		}
+	}
+
+	return orgSummaries, pagination, nil
 }
 
 // CreateOrganisation validates and stores a new organisation
-func (s *RepositoriesService) CreateOrganisation(ctx context.Context, org *models.Organisation) (*models.Organisation, error) {
+func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.Organisation) (*models.Organisation, error) {
 	if _, err := url.ParseRequestURI(org.Uri); err != nil {
 		return nil, problem.NewBadRequest(org.Uri, fmt.Sprintf("foutieve uri: %v", err),
 			problem.InvalidParam{Name: "uri", Reason: "Moet een geldige URL zijn"})
