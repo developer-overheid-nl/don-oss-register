@@ -12,6 +12,12 @@ type GitOrganisatie struct {
 	CodeHosting    []CodeHosting `json:"codeHosting" gorm:"foreignKey:PublisherID;references:Id;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
+type GitOrganisatieSummary struct {
+	Id           string        `gorm:"column:id;primaryKey" json:"id"`
+	Organisation *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	CodeHosting  []CodeHosting `json:"codeHosting" gorm:"foreignKey:PublisherID;references:Id;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+}
+
 type CodeHosting struct {
 	ID          string `json:"-" gorm:"primaryKey"`
 	URL         string `json:"url" gorm:"not null;uniqueIndex"`

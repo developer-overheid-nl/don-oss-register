@@ -103,7 +103,7 @@ func (c *OSSController) CreateOrganisation(ctx *gin.Context, body *models.Organi
 }
 
 // ListGitOrganisations handles GET /GitRepositorys
-func (c *OSSController) ListGitOrganisations(ctx *gin.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatie, error) {
+func (c *OSSController) ListGitOrganisations(ctx *gin.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatieSummary, error) {
 	if p.Page < 1 {
 		p.Page = 1
 	}

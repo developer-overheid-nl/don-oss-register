@@ -40,12 +40,17 @@ func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListR
 	return dtos, pagination, nil
 }
 
-func (s *RepositoryService) ListGitOrganisations(ctx context.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *RepositoryService) ListGitOrganisations(ctx context.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatieSummary, models.Pagination, error) {
 	gitOrganisations, pagination, err := s.repo.GetGitOrganisations(ctx, p.Page, p.PerPage, p.Ids)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
-	return gitOrganisations, pagination, nil
+
+	dtos := make([]models.GitOrganisatieSummary, len(gitOrganisations))
+	for i, gitOrganisation := range gitOrganisations {
+		dtos[i] = util.ToGitOrganisatieSummary(&gitOrganisation)
+	}
+	return dtos, pagination, nil
 }
 
 func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBody models.PostGitOrganisatie) (*models.GitOrganisatie, error) {
