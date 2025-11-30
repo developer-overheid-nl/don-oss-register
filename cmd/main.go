@@ -125,7 +125,7 @@ func main() {
 	u.RawQuery = q.Encode()
 
 	dbcon := u.String()
-	db, err := database.Connect(dbcon)
+	db, err := database.Connect(dbcon, schema, true)
 	if err != nil {
 		log.Fatalf("Geen databaseverbinding: %v", err)
 	}
