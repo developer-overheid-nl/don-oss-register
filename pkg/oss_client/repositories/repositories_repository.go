@@ -36,8 +36,20 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 }
 
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
-	//todo upsurt?
-	return r.db.Create(repository).Error
+	var existing models.Repository
+	err := r.db.WithContext(ctx).Where("repository_url = ?", repository.RepositoryUrl).First(&existing).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if err == nil {
+		repository.Id = existing.Id
+		if repository.CreatedAt.IsZero() {
+			repository.CreatedAt = existing.CreatedAt
+		}
+		return r.db.WithContext(ctx).Save(repository).Error
+	}
+
+	return r.db.WithContext(ctx).Create(repository).Error
 }
 
 func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
