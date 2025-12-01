@@ -97,12 +97,13 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	repoModel := &models.Repository{
-		Id:             "repo-1",
-		Name:           "Integration Repo",
-		Description:    "Integratietest repository",
-		OrganisationID: &org.Uri,
-		RepositoryUrl:  "https://example.org/repos/repo-1",
-		PublicCodeUrl:  "https://publiccode.net/repo-1",
+		Id:               "repo-1",
+		Name:             "Integration Repo",
+		ShortDescription: "Integratietest repository",
+		LongDescription:  "Integratietest repository",
+		OrganisationID:   &org.Uri,
+		RepositoryUrl:    "https://example.org/repos/repo-1",
+		PublicCodeUrl:    "https://publiccode.net/repo-1",
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
 

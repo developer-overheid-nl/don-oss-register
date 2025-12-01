@@ -32,7 +32,9 @@
   "paths": {
     "/gitOrganisations": {
       "get": {
-        "tags": ["GitOrganisations"],
+        "tags": [
+          "GitOrganisations"
+        ],
         "summary": "List git organisations",
         "description": "Geeft een lijst met geregistreerde git-organisaties terug.",
         "operationId": "listGitOrganisations",
@@ -103,12 +105,16 @@
         "security": [
           {
             "apiKey": [],
-            "clientCredentials": ["oss:write"]
+            "clientCredentials": [
+              "oss:write"
+            ]
           }
         ]
       },
       "post": {
-        "tags": ["GitOrganisations"],
+        "tags": [
+          "GitOrganisations"
+        ],
         "summary": "Create git organisation",
         "description": "Registreer een nieuwe git-organisatie met code hosting URL en TOOI organisatie.",
         "operationId": "createGitOrganisation",
@@ -145,14 +151,18 @@
         "security": [
           {
             "apiKey": [],
-            "clientCredentials": ["oss:write"]
+            "clientCredentials": [
+              "oss:write"
+            ]
           }
         ]
       }
     },
     "/repositories": {
       "get": {
-        "tags": ["Repositories"],
+        "tags": [
+          "Repositories"
+        ],
         "summary": "List repositories",
         "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen.",
         "operationId": "listRepositories",
@@ -229,12 +239,16 @@
         "security": [
           {
             "apiKey": [],
-            "clientCredentials": ["oss:read"]
+            "clientCredentials": [
+              "oss:read"
+            ]
           }
         ]
       },
       "post": {
-        "tags": ["Repositories"],
+        "tags": [
+          "Repositories"
+        ],
         "summary": "Create repository",
         "description": "Registreer een nieuwe OSS repository in het register.",
         "operationId": "createRepository",
@@ -271,14 +285,18 @@
         "security": [
           {
             "apiKey": [],
-            "clientCredentials": ["oss:write"]
+            "clientCredentials": [
+              "oss:write"
+            ]
           }
         ]
       }
     },
     "/repositories/{id}": {
       "get": {
-        "tags": ["Repositories"],
+        "tags": [
+          "Repositories"
+        ],
         "summary": "Get repository by id",
         "description": "Geeft één OSS repository terug op basis van het id.",
         "operationId": "getRepositoryById",
@@ -317,7 +335,9 @@
         "security": [
           {
             "apiKey": [],
-            "clientCredentials": ["oss:read"]
+            "clientCredentials": [
+              "oss:read"
+            ]
           }
         ]
       }
@@ -329,10 +349,14 @@
             "apiKey": []
           },
           {
-            "clientCredentials": ["organisations:read"]
+            "clientCredentials": [
+              "organisations:read"
+            ]
           }
         ],
-        "tags": ["Publieke endpoints"],
+        "tags": [
+          "Publieke endpoints"
+        ],
         "summary": "Alle organisaties ophalen",
         "description": "Alle organisaties ophalen",
         "operationId": "listOrganisations",
@@ -408,10 +432,14 @@
             "apiKey": []
           },
           {
-            "clientCredentials": ["organisations:write"]
+            "clientCredentials": [
+              "organisations:write"
+            ]
           }
         ],
-        "tags": ["Publieke endpoints"],
+        "tags": [
+          "Publieke endpoints"
+        ],
         "summary": "Organisatie aanmaken",
         "description": "Maak een nieuwe organisatie aan.",
         "operationId": "createOrganisation",
@@ -469,7 +497,8 @@
       "Link": {
         "description": "Paginatielinks volgens RFC 8288 (bijv. next, prev, first, last).",
         "schema": {
-          "type": "string"        }
+          "type": "string"
+        }
       }
     },
     "responses": {
@@ -491,7 +520,9 @@
             "format": "uri"
           }
         },
-        "required": ["href"]
+        "required": [
+          "href"
+        ]
       },
       "Links": {
         "type": "object",
@@ -514,23 +545,47 @@
             "$ref": "#/components/schemas/Links"
           }
         },
-        "required": ["uri", "label"]
+        "required": [
+          "uri",
+          "label"
+        ]
       },
       "PostRepository": {
         "type": "object",
         "properties": {
-          "gitOrganisationUrl": {
+          "repositoryUrl": {
             "type": "string",
             "format": "uri",
-            "description": "URL van de git organisatie."
+            "description": "URL van de broncode repository."
           },
-          "organisationUrl": {
+          "name": {
+            "type": "string",
+            "description": "Naam van de repository; wordt overschreven door publiccode.yaml indien aanwezig."
+          },
+          "description": {
+            "type": "string",
+            "description": "Korte of lange beschrijving; wordt overschreven door publiccode.yaml indien aanwezig."
+          },
+          "publiccodeYmlUrl": {
             "type": "string",
             "format": "uri",
-            "description": "URL van de TOOI organisatie."
+            "description": "URL van de publiccode.yaml."
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
-        "required": ["repositoryUrl"]
+        "required": [
+          "repositoryUrl"
+        ]
       },
       "Repository": {
         "type": "object",
@@ -550,15 +605,22 @@
           },
           "publicCodeUrl": {
             "type": "string",
-            "description": "Url van publiccode.yaml in de repository."
-          },
-          "description": {
-            "type": "string",
-            "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "URL van publiccode.yaml in de repository."
           },
           "name": {
             "type": "string",
-            "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "Naam van de repository (bij voorkeur uit publiccode.yaml)."
+          },
+          "shortDescription": {
+            "type": "string",
+            "description": "Korte beschrijving uit publiccode.yaml of fallback waarde."
+          },
+          "longDescription": {
+            "type": "string",
+            "description": "Lange beschrijving uit publiccode.yaml."
+          },
+          "active": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -571,7 +633,9 @@
             "readOnly": true
           }
         },
-        "required": ["repositoryUrl"]
+        "required": [
+          "repositoryUrl"
+        ]
       },
       "RepositoryListResponse": {
         "type": "object",
@@ -583,7 +647,9 @@
             }
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       },
       "PostGitOrganisation": {
         "type": "object",
@@ -599,7 +665,10 @@
             "description": "TOOI URL van de organisatie."
           }
         },
-        "required": ["gitOrganisationUrl", "organisationUrl"]
+        "required": [
+          "gitOrganisationUrl",
+          "organisationUrl"
+        ]
       },
       "GitOrganisation": {
         "type": "object",

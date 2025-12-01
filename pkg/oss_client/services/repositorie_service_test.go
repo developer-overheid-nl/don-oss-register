@@ -108,10 +108,11 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 		listFunc: func(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
-					Id:           "repo-1",
-					Name:         "Repo One",
-					Description:  "desc",
-					Organisation: org,
+					Id:               "repo-1",
+					Name:             "Repo One",
+					ShortDescription: "desc",
+					LongDescription:  "desc",
+					Organisation:     org,
 				},
 			}, models.Pagination{TotalRecords: 1, CurrentPage: 1, RecordsPerPage: 10}, nil
 		},

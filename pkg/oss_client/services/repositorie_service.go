@@ -137,7 +137,7 @@ func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.Lis
 }
 
 func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.PostRepository) (*models.RepositoryDetail, error) {
-	if (requestBody.PubliccodeYml == nil) && (requestBody.Description == nil && requestBody.Name == nil) {
+	if (requestBody.PubliccodeYmlUrl == nil) && (requestBody.Description == nil && requestBody.Name == nil) {
 		return nil, problem.NewBadRequest("repository", "name en description zijn verplicht zonder publiccodeYml",
 			problem.InvalidParam{Name: "name", Reason: "is verplicht zonder publiccodeYml"},
 			problem.InvalidParam{Name: "description", Reason: "is verplicht zonder publiccodeYml"},

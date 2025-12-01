@@ -36,8 +36,13 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 }
 
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
+	trimmedRepoURL := strings.TrimSpace(repository.RepositoryUrl)
+	if trimmedRepoURL == "" {
+		return r.db.WithContext(ctx).Create(repository).Error
+	}
+
 	var existing models.Repository
-	err := r.db.WithContext(ctx).Where("repository_url = ?", repository.RepositoryUrl).First(&existing).Error
+	err := r.db.WithContext(ctx).Where("repository_url = ?", trimmedRepoURL).First(&existing).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}

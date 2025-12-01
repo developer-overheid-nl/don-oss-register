@@ -29,12 +29,13 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 	require.NoError(t, repo.SaveOrganisatie(org))
 
 	repository := &models.Repository{
-		Id:             "repo-1",
-		Name:           "Repo One",
-		Description:    "Repository description",
-		OrganisationID: &org.Uri,
-		RepositoryUrl:  "https://example.org/repos/repo-1",
-		PublicCodeUrl:  "https://publiccode.net/repo-1",
+		Id:               "repo-1",
+		Name:             "Repo One",
+		ShortDescription: "Repository description",
+		LongDescription:  "Repository description",
+		OrganisationID:   &org.Uri,
+		RepositoryUrl:    "https://example.org/repos/repo-1",
+		PublicCodeUrl:    "https://publiccode.net/repo-1",
 	}
 	require.NoError(t, repo.SaveRepository(ctx, repository))
 

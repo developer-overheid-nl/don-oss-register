@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -132,6 +134,18 @@ func main() {
 	repo := repositories.NewRepositoriesRepository(db)
 	repositoriesService := services.NewRepositoryService(repo)
 	controller := handler.NewOSSController(repositoriesService)
+	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.gpp-woo.nl", Label: "GPP-Woo"}); err != nil {
+		fmt.Printf("[GPP-Woo-import] create org warning: %v\n", err)
+	}
+	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.geonovum.nl", Label: "Stichting Geonovum"}); err != nil {
+		fmt.Printf("[Geonovum-import] create org warning: %v\n", err)
+	}
+	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.ictu.nl", Label: "ICTU"}); err != nil {
+		fmt.Printf("[ICTU-import] create org warning: %v\n", err)
+	}
+	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://vng.nl", Label: "Vereniging van Nederlandse Gemeenten"}); err != nil {
+		fmt.Printf("[VNG-import] create org warning: %v\n", err)
+	}
 
 	// Start server
 	router := api.NewRouter(version, controller)
