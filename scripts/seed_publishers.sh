@@ -4,7 +4,7 @@ set -euo pipefail
 # Seed organisations en git-organisaties vanuit publishers.json.
 # BASE_URL, PUBLISHERS_FILE, API_KEY en BEARER_TOKEN kunnen via env worden gezet.
 
-BASE_URL=${BASE_URL:-http://localhost:1337/v1}
+BASE_URL=${BASE_URL:-https://localhost:1337/v1}
 PUBLISHERS_FILE=${PUBLISHERS_FILE:-publishers.json}
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -58,7 +58,7 @@ while IFS= read -r row; do
 
   org_payload=$(jq -nc --arg uri "${org_uri}" --arg lbl "${label}" '{uri:$uri,label:$lbl}')
   post_json "${BASE_URL}/organisations" "${org_payload}" "organisation ${label}"
-
+  echo "${BASE_URL}/gitOrganisations"
   jq -r '.codeHosting[]?.url // empty' <<<"${row}" | while IFS= read -r code_host; do
     [[ -z "${code_host}" ]] && continue
     git_payload=$(jq -nc --arg gitOrganisationUrl "${code_host}" --arg organisationUrl "${org_uri}" \

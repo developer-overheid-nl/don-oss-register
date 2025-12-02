@@ -2,17 +2,21 @@
 
 # Posts gitOrganisations for publishers that miss a tooiUrl in publishers.json.
 # Usage: API_KEY=secret ./scripts/import_missing_tooi.sh [publishers.json]
+# Supports API_KEY and/or BEARER_TOKEN (like scripts/seed_publishers.sh).
 
 set -euo pipefail
 
 JSON_PATH="${1:-publishers.json}"
-API_BASE="${API_BASE:-http://localhost:1337}"
-API_KEY="${API_KEY:-}"
+BASE_URL="${BASE_URL:-https://localhost:1337/v1}"
 
-if [[ -z "${API_KEY}" ]]; then
-  echo "API_KEY must be set" >&2
+if [[ ! -f "${JSON_PATH}" ]]; then
+  echo "Publishers file not found: ${JSON_PATH}" >&2
   exit 1
 fi
+
+auth_headers=()
+[[ -n "${API_KEY:-}" ]] && auth_headers+=(-H "X-Api-Key: ${API_KEY}")
+[[ -n "${BEARER_TOKEN:-}" ]] && auth_headers+=(-H "Authorization: Bearer ${BEARER_TOKEN}")
 
 org_url_for_id() {
   case "$1" in
@@ -33,12 +37,15 @@ post_git_org() {
   local payload
   payload="$(jq -n --arg git "${git_url}" --arg org "${org_url}" '{gitOrganisationUrl:$git, organisationUrl:$org}')"
   local status
-  status="$(curl --silent --show-error --output "${tmp}" --write-out "%{http_code}" \
+  local curl_args=(-sS --output "${tmp}" --write-out "%{http_code}" \
     --request POST \
-    --url "${API_BASE}/v1/gitOrganisations" \
+    --url "${BASE_URL}/gitOrganisations" \
     --header "content-type: application/json" \
-    --header "x-api-key: ${API_KEY}" \
-    --data "${payload}")" || status="000"
+    --data "${payload}")
+  if ((${#auth_headers[@]})); then
+    curl_args+=("${auth_headers[@]}")
+  fi
+  status="$(curl "${curl_args[@]}")" || status="000"
   if [[ "${status}" =~ ^2 ]]; then
     echo "-> ${status}: $(cat "${tmp}")"
   else
