@@ -17,9 +17,18 @@ func Connect(connStr string, schema string, resetSchema bool) (*gorm.DB, error) 
 	}
 
 	if resetSchema {
-		resetSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS %q CASCADE; CREATE SCHEMA %q;", schema, schema)
-		if err := db.Exec(resetSQL).Error; err != nil {
-			return nil, fmt.Errorf("failed to reset schema %s: %w", schema, err)
+		m := db.Migrator()
+		for _, table := range []interface{}{
+			&models.CodeHosting{},
+			&models.Repository{},
+			&models.GitOrganisatie{},
+			&models.Organisation{},
+		} {
+			if m.HasTable(table) {
+				if err := m.DropTable(table); err != nil {
+					return nil, fmt.Errorf("failed to reset table %T in schema %s: %w", table, schema, err)
+				}
+			}
 		}
 	}
 
