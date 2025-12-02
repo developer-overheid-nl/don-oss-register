@@ -15,20 +15,19 @@ import (
 )
 
 type RepositorySummary struct {
-	Id               string               `json:"id" gorm:"column:id;primaryKey"`
-	Name             string               `json:"name" gorm:"column:name"`
-	ShortDescription string               `json:"shortDescription" gorm:"column:short_description"`
-	Organisation     *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID   *string              `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositoryUrl    string               `json:"repositoryUrl" gorm:"column:repository_url"`
-	PublicCodeUrl    string               `json:"publicCodeUrl" gorm:"column:public_code_url"`
-	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt        time.Time            `json:"updatedAt" gorm:"column:updated_at"`
+	Id             string               `json:"id" gorm:"column:id;primaryKey"`
+	Name           string               `json:"name" gorm:"column:name"`
+	Description    string               `json:"description" gorm:"column:description"`
+	Organisation   *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID *string              `json:"organisationId,omitempty" gorm:"column:organisation_id"`
+	RepositoryUrl  string               `json:"repositoryUrl" gorm:"column:repository_url"`
+	PublicCodeUrl  string               `json:"publicCodeUrl" gorm:"column:public_code_url"`
+	CreatedAt      time.Time            `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      time.Time            `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 type RepositoryDetail struct {
 	RepositorySummary
-	LongDescription string `json:"longDescription" gorm:"column:long_description"`
 }
 
 type Repository struct {

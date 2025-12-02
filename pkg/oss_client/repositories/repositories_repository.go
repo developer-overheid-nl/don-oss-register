@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 
@@ -47,6 +48,7 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 		return err
 	}
 	if err == nil {
+		log.Printf("SaveRepository: found existing repository for url %q with id %s", trimmedRepoURL, existing.Id)
 		repository.Id = existing.Id
 		if repository.CreatedAt.IsZero() {
 			repository.CreatedAt = existing.CreatedAt

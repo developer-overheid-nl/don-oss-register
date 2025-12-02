@@ -19,22 +19,22 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		}
 	}
 	return models.RepositorySummary{
-		Id:               repo.Id,
-		Name:             repo.Name,
-		ShortDescription: repo.ShortDescription,
-		RepositoryUrl:    repo.RepositoryUrl,
-		PublicCodeUrl:    repo.PublicCodeUrl,
-		CreatedAt:        repo.CreatedAt,
-		UpdatedAt:        repo.UpdatedAt,
-		Organisation:     orgSummary,
+		Id:            repo.Id,
+		Name:          repo.Name,
+		Description:   repo.ShortDescription,
+		RepositoryUrl: repo.RepositoryUrl,
+		PublicCodeUrl: repo.PublicCodeUrl,
+		CreatedAt:     repo.CreatedAt,
+		UpdatedAt:     repo.UpdatedAt,
+		Organisation:  orgSummary,
 	}
 }
 
 func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
-		LongDescription:   repo.LongDescription,
 	}
+	detail.Description = repo.LongDescription
 	return detail
 }
 
