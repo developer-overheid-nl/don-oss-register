@@ -127,8 +127,25 @@ func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody mo
 			problem.InvalidParam{Name: "description", Reason: "is verplicht zonder publiccodeYml"},
 		)
 	}
+	orgURL := ""
+	if requestBody.OrganisationUrl != nil {
+		orgURL = strings.TrimSpace(*requestBody.OrganisationUrl)
+	}
+	if orgURL == "" {
+		return nil, problem.NewBadRequest("repository", "organisationUrl is verplicht",
+			problem.InvalidParam{Name: "organisationUrl", Reason: "organisationUrl is verplicht"})
+	}
 
 	repo := util.ToRepository(&requestBody)
+	org, err := s.repo.FindOrganisationByURI(ctx, orgURL)
+	if err != nil {
+		return nil, err
+	}
+	if org == nil {
+		return nil, problem.NewNotFound(orgURL, "Organisation not found")
+	}
+	repo.OrganisationID = &org.Uri
+	repo.Organisation = org
 	if err := s.repo.SaveRepository(ctx, repo); err != nil {
 		return nil, err
 	}
