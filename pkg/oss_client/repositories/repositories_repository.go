@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +22,8 @@ type RepositoriesRepository interface {
 	GetOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error)
 	FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error)
 	GetGitOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error)
-	FindGitOrganisationByOrganisationURI(ctx context.Context, organisationURI string) (*models.GitOrganisatie, error)
+	FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error
-	AddCodeHosting(ctx context.Context, gitOrganisationID string, url string, isGroup *bool) (*models.CodeHosting, error)
 }
 
 type repositoriesRepository struct {
@@ -122,7 +120,7 @@ func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, 
 	}
 
 	var gitOrganisations []models.GitOrganisatie
-	if err := db.Limit(perPage).Preload("Organisation").Preload("CodeHosting").Offset(offset).Find(&gitOrganisations).Error; err != nil {
+	if err := db.Limit(perPage).Preload("Organisation").Offset(offset).Find(&gitOrganisations).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
@@ -291,12 +289,15 @@ func (r *repositoriesRepository) FindOrganisationByURI(ctx context.Context, uri 
 	return &org, nil
 }
 
-func (r *repositoriesRepository) FindGitOrganisationByOrganisationURI(ctx context.Context, organisationURI string) (*models.GitOrganisatie, error) {
+func (r *repositoriesRepository) SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error {
+	return r.db.WithContext(ctx).Save(gitOrg).Error
+}
+
+func (r *repositoriesRepository) FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error) {
 	var gitOrg models.GitOrganisatie
 	err := r.db.WithContext(ctx).
 		Preload("Organisation").
-		Preload("CodeHosting").
-		Where("organisation_id = ?", organisationURI).
+		Where("git_organisation_url = ?", url).
 		First(&gitOrg).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -305,32 +306,4 @@ func (r *repositoriesRepository) FindGitOrganisationByOrganisationURI(ctx contex
 		return nil, err
 	}
 	return &gitOrg, nil
-}
-
-func (r *repositoriesRepository) SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error {
-	return r.db.WithContext(ctx).Save(gitOrg).Error
-}
-
-func (r *repositoriesRepository) AddCodeHosting(ctx context.Context, gitOrganisationID string, url string, isGroup *bool) (*models.CodeHosting, error) {
-	var existing models.CodeHosting
-	if err := r.db.WithContext(ctx).Where("url = ?", url).First(&existing).Error; err == nil {
-		return &existing, nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-
-	groupValue := true
-	if isGroup != nil {
-		groupValue = *isGroup
-	}
-	ch := models.CodeHosting{
-		ID:          uuid.NewString(),
-		URL:         url,
-		Group:       &groupValue,
-		PublisherID: gitOrganisationID,
-	}
-	if err := r.db.WithContext(ctx).Create(&ch).Error; err != nil {
-		return nil, err
-	}
-	return &ch, nil
 }

@@ -19,7 +19,6 @@ func Connect(connStr string, schema string, resetSchema bool) (*gorm.DB, error) 
 	if resetSchema {
 		m := db.Migrator()
 		for _, table := range []interface{}{
-			&models.CodeHosting{},
 			&models.Repository{},
 			&models.GitOrganisatie{},
 			&models.Organisation{},
@@ -36,7 +35,6 @@ func Connect(connStr string, schema string, resetSchema bool) (*gorm.DB, error) 
 		&models.Repository{},
 		&models.Organisation{},
 		&models.GitOrganisatie{},
-		&models.CodeHosting{},
 	); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}

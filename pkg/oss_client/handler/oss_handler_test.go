@@ -21,9 +21,8 @@ type serviceStubRepo struct {
 	getOrgFunc          func(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
-	findGitOrgByOrgFunc func(ctx context.Context, organisationURI string) (*models.GitOrganisatie, error)
+	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
-	addCodeHostingFunc  func(ctx context.Context, gitOrgID, url string, isGroup *bool) (*models.CodeHosting, error)
 }
 
 func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
@@ -80,9 +79,9 @@ func (s *serviceStubRepo) FindOrganisationByURI(ctx context.Context, uri string)
 	return nil, nil
 }
 
-func (s *serviceStubRepo) FindGitOrganisationByOrganisationURI(ctx context.Context, organisationURI string) (*models.GitOrganisatie, error) {
-	if s.findGitOrgByOrgFunc != nil {
-		return s.findGitOrgByOrgFunc(ctx, organisationURI)
+func (s *serviceStubRepo) FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error) {
+	if s.findGitOrgByURLFunc != nil {
+		return s.findGitOrgByURLFunc(ctx, url)
 	}
 	return nil, nil
 }
@@ -92,13 +91,6 @@ func (s *serviceStubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models
 		return s.saveGitOrgFunc(ctx, gitOrg)
 	}
 	return nil
-}
-
-func (s *serviceStubRepo) AddCodeHosting(ctx context.Context, gitOrgID, url string, isGroup *bool) (*models.CodeHosting, error) {
-	if s.addCodeHostingFunc != nil {
-		return s.addCodeHostingFunc(ctx, gitOrgID, url, isGroup)
-	}
-	return nil, nil
 }
 
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {

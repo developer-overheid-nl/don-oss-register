@@ -74,38 +74,22 @@ func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBod
 		return nil, problem.NewNotFound(orgURL, "Organisation not found")
 	}
 
-	gitOrg, err := s.repo.FindGitOrganisationByOrganisationURI(ctx, organisation.Uri)
+	existingByURL, err := s.repo.FindGitOrganisationByURL(ctx, gitURL)
 	if err != nil {
 		return nil, err
 	}
-	if gitOrg == nil {
-		gitOrg = &models.GitOrganisatie{
-			Id:             uuid.NewString(),
-			OrganisationID: &organisation.Uri,
-			Organisation:   organisation,
-		}
-		if err := s.repo.SaveGitOrganisatie(ctx, gitOrg); err != nil {
-			return nil, err
-		}
+	if existingByURL != nil {
+		return existingByURL, nil
 	}
 
-	codeHosting, err := s.repo.AddCodeHosting(ctx, gitOrg.Id, gitURL, nil)
-	if err != nil {
+	gitOrg := &models.GitOrganisatie{
+		Id:                 uuid.NewString(),
+		OrganisationID:     &organisation.Uri,
+		Organisation:       organisation,
+		GitOrganisationUrl: gitURL,
+	}
+	if err := s.repo.SaveGitOrganisatie(ctx, gitOrg); err != nil {
 		return nil, err
-	}
-
-	// Ensure the returned gitOrg contains the new code hosting entry
-	if codeHosting != nil {
-		found := false
-		for _, ch := range gitOrg.CodeHosting {
-			if ch.URL == codeHosting.URL {
-				found = true
-				break
-			}
-		}
-		if !found {
-			gitOrg.CodeHosting = append(gitOrg.CodeHosting, *codeHosting)
-		}
 	}
 
 	return gitOrg, nil

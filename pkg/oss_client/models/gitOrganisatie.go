@@ -6,23 +6,16 @@ type PostGitOrganisatie struct {
 }
 
 type GitOrganisatie struct {
-	Id             string        `gorm:"column:id;primaryKey" json:"id"`
-	Organisation   *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	CodeHosting    []CodeHosting `json:"codeHosting" gorm:"foreignKey:PublisherID;references:Id;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Id                 string        `gorm:"column:id;primaryKey" json:"id"`
+	Organisation       *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID     *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
+	GitOrganisationUrl string        `json:"gitOrganisationUrl" gorm:"column:git_organisation_url;uniqueIndex"`
 }
 
 type GitOrganisatieSummary struct {
-	Id           string        `gorm:"column:id;primaryKey" json:"id"`
-	Organisation *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	CodeHosting  []CodeHosting `json:"codeHosting" gorm:"foreignKey:PublisherID;references:Id;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-}
-
-type CodeHosting struct {
-	ID          string `json:"-" gorm:"primaryKey"`
-	URL         string `json:"url" gorm:"not null;uniqueIndex"`
-	Group       *bool  `json:"group" gorm:"default:true;not null"`
-	PublisherID string `json:"-" gorm:"column:publisher_id"`
+	Id                 string        `gorm:"column:id;primaryKey" json:"id"`
+	Organisation       *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	GitOrganisationUrl string        `json:"gitOrganisationUrl"`
 }
 
 type ListGitOrganisationsParams struct {
