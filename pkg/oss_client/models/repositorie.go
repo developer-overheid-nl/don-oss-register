@@ -53,10 +53,11 @@ type ListRepositorysSearchParams struct {
 }
 
 type PostRepository struct {
-	RepositoryUrl    *string   `json:"repositoryUrl"`
+	RepositoryUrl    *string   `json:"repositoryUrl" binding:"required,url"`
 	Name             *string   `json:"name"`
 	Description      *string   `json:"description"`
 	PubliccodeYmlUrl *string   `json:"publiccodeYmlUrl"`
+	OrganisationUrl  *string   `json:"organisationUrl" binding:"required,url"`
 	Active           bool      `json:"active"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`

@@ -83,10 +83,10 @@ func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBod
 	}
 
 	gitOrg := &models.GitOrganisatie{
-		Id:                 uuid.NewString(),
-		OrganisationID:     &organisation.Uri,
-		Organisation:       organisation,
-		GitOrganisationUrl: gitURL,
+		Id:             uuid.NewString(),
+		OrganisationID: &organisation.Uri,
+		Organisation:   organisation,
+		Url:            gitURL,
 	}
 	if err := s.repo.SaveGitOrganisatie(ctx, gitOrg); err != nil {
 		return nil, err

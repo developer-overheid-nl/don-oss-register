@@ -86,9 +86,9 @@ func ToRepository(repo *models.PostRepository) *models.Repository {
 
 func ToGitOrganisatieSummary(gitOrg *models.GitOrganisatie) models.GitOrganisatieSummary {
 	return models.GitOrganisatieSummary{
-		Id:                 gitOrg.Id,
-		Organisation:       gitOrg.Organisation,
-		GitOrganisationUrl: gitOrg.GitOrganisationUrl,
+		Id:           gitOrg.Id,
+		Organisation: gitOrg.Organisation,
+		Url:          gitOrg.Url,
 	}
 }
 

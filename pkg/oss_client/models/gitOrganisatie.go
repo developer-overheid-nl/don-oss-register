@@ -6,16 +6,16 @@ type PostGitOrganisatie struct {
 }
 
 type GitOrganisatie struct {
-	Id                 string        `gorm:"column:id;primaryKey" json:"id"`
-	Organisation       *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID     *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	GitOrganisationUrl string        `json:"gitOrganisationUrl" gorm:"column:git_organisation_url;uniqueIndex"`
+	Id             string        `gorm:"column:id;primaryKey" json:"id"`
+	Organisation   *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
+	Url            string        `json:"url" gorm:"column:url;uniqueIndex"`
 }
 
 type GitOrganisatieSummary struct {
-	Id                 string        `gorm:"column:id;primaryKey" json:"id"`
-	Organisation       *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	GitOrganisationUrl string        `json:"gitOrganisationUrl"`
+	Id           string        `gorm:"column:id;primaryKey" json:"id"`
+	Organisation *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	Url          string        `json:"url"`
 }
 
 type ListGitOrganisationsParams struct {
