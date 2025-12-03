@@ -297,7 +297,7 @@ func (r *repositoriesRepository) FindGitOrganisationByURL(ctx context.Context, u
 	var gitOrg models.GitOrganisatie
 	err := r.db.WithContext(ctx).
 		Preload("Organisation").
-		Where("git_organisation_url = ?", url).
+		Where("url = ?", url).
 		First(&gitOrg).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
