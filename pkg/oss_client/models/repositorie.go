@@ -10,20 +10,19 @@
 package models
 
 import (
-	"strings"
 	"time"
 )
 
 type RepositorySummary struct {
-	Id             string               `json:"id" gorm:"column:id;primaryKey"`
-	Name           string               `json:"name" gorm:"column:name"`
-	Description    string               `json:"description" gorm:"column:description"`
-	Organisation   *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID *string              `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositoryUrl  string               `json:"repositoryUrl" gorm:"column:repository_url"`
-	PublicCodeUrl  string               `json:"publicCodeUrl" gorm:"column:public_code_url"`
-	CreatedAt      time.Time            `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt      time.Time            `json:"updatedAt" gorm:"column:updated_at"`
+	Id               string               `json:"id" gorm:"column:id;primaryKey"`
+	Url              string               `json:"url" gorm:"column:repository_url"`
+	Organisation     *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID   *string              `json:"-" gorm:"column:organisation_id"`
+	PublicCodeUrl    string               `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
+	ShortDescription string               `json:"shortDescription,omitempty" gorm:"column:short_description"`
+	Name             string               `json:"name,omitempty" gorm:"column:name"`
+	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt        time.Time            `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 type RepositoryDetail struct {
@@ -34,62 +33,45 @@ type Repository struct {
 	Id               string        `json:"id" gorm:"column:id;primaryKey"`
 	Name             string        `json:"name" gorm:"column:name"`
 	ShortDescription string        `json:"shortDescription" gorm:"column:short_description"`
-	LongDescription  string        `json:"longDescription" gorm:"column:long_description"`
-	Organisation     *Organisation `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID   *string       `json:"organisationId,omitempty" gorm:"column:organisation_id"`
-	RepositoryUrl    string        `json:"repositoryUrl" gorm:"column:repository_url"`
-	PublicCodeUrl    string        `json:"publicCodeUrl" gorm:"column:public_code_url"`
+	LongDescription  string        `json:"longDescription,omitempty" gorm:"column:long_description"`
+	Organisation     *Organisation `json:"-" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID   *string       `json:"-" gorm:"column:organisation_id"`
+	Url              string        `json:"url" gorm:"column:repository_url"`
+	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
 	CreatedAt        time.Time     `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt        time.Time     `json:"updatedAt" gorm:"column:updated_at"`
-	Active           bool          `json:"active" gorm:"column:active"`
+	Active           bool          `json:"-" gorm:"column:active"`
 }
 
 type ListRepositorysSearchParams struct {
-	Page         int     `query:"page"`
-	PerPage      int     `query:"perPage"`
+	Page         int     `query:"page" validate:"omitempty,min=1"`
+	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
 	Organisation *string `query:"organisation"`
 	Query        string  `query:"q" binding:"required"`
 	BaseURL      string
 }
 
-type PostRepository struct {
-	RepositoryUrl    *string   `json:"repositoryUrl" binding:"required"`
-	Name             *string   `json:"name"`
-	Description      *string   `json:"description"`
-	PubliccodeYmlUrl *string   `json:"publiccodeYmlUrl"`
-	OrganisationUrl  *string   `json:"organisationUrl" binding:"required"`
-	Active           bool      `json:"active"`
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
+type RepositoryInput struct {
+	Url              *string `json:"url" binding:"required,url"`
+	OrganisationUri  *string `json:"organisationUri" binding:"required,url"`
+	PublicCodeUrl    *string `json:"publicCodeUrl" binding:"omitempty,url"`
+	ShortDescription *string `json:"shortDescription,omitempty"`
+	Name             *string `json:"name,omitempty"`
 }
 type ListRepositorysParams struct {
-	Page         int     `query:"page"`
-	PerPage      int     `query:"perPage"`
+	Page         int     `query:"page" validate:"omitempty,min=1"`
+	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
 	Organisation *string `query:"organisation"`
-	Ids          *string `query:"ids"`
 	BaseURL      string
-}
-
-func (p *ListRepositorysParams) FilterIDs() *string {
-	if p == nil {
-		return nil
-	}
-	return trimPointer(p.Ids)
-}
-
-func trimPointer(val *string) *string {
-	if val == nil {
-		return nil
-	}
-	trimmed := strings.TrimSpace(*val)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }
 
 type RepositoryParams struct {
 	Id string `path:"id"`
+}
+
+type UpdateRepositoryRequest struct {
+	RepositoryParams
+	RepositoryInput
 }
 
 type Pagination struct {

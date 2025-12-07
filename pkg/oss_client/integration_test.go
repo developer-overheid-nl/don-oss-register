@@ -37,7 +37,7 @@ func newIntegrationEnv(t *testing.T) *integrationEnv {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}))
+	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}, &models.GitOrganisatie{}))
 
 	repo := repositories.NewRepositoriesRepository(db)
 	svc := services.NewRepositoryService(repo)
@@ -102,7 +102,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		ShortDescription: "Integratietest repository",
 		LongDescription:  "Integratietest repository",
 		OrganisationID:   &org.Uri,
-		RepositoryUrl:    "https://example.org/repos/repo-1",
+		Url:              "https://example.org/repos/repo-1",
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
@@ -116,6 +116,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		body := decodeBody[[]models.RepositorySummary](t, resp)
 		require.Len(t, body, 1)
 		require.Equal(t, "repo-1", body[0].Id)
+		require.Equal(t, repoModel.Url, body[0].Url)
 		require.NotNil(t, body[0].Organisation)
 	})
 
@@ -142,8 +143,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	t.Run("list organisations", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/organisations")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		require.Equal(t, "1", resp.Header.Get("Total-Count"))
-		require.NotEmpty(t, resp.Header.Get("Link"))
+		require.Empty(t, resp.Header.Get("Total-Count"))
 
 		body := decodeBody[[]models.OrganisationSummary](t, resp)
 		require.Len(t, body, 1)

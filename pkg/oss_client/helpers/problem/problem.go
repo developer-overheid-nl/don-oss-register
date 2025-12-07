@@ -1,59 +1,43 @@
 package problem
 
-type InvalidParam struct {
-	Name   string `json:"name"`
-	Reason string `json:"reason"`
+import "net/http"
+
+type ErrorDetail struct {
+	In       string `json:"in"`
+	Location string `json:"location"`
+	Code     string `json:"code"`
+	Detail   string `json:"detail"`
 }
 
-// RepositorieError implementeert error + Problem Details (RFC 7807)
-type RepositorieError struct {
-	Type          string         `json:"type"`
-	Title         string         `json:"title"`
-	Status        int            `json:"status"`
-	Detail        string         `json:"detail"`
-	Instance      string         `json:"instance,omitempty"`
-	InvalidParams []InvalidParam `json:"invalidParams,omitempty"`
+// ProblemJSON implements the OSS-register error envelope.
+type ProblemJSON struct {
+	Status int           `json:"status"`
+	Title  string        `json:"title"`
+	Errors []ErrorDetail `json:"errors,omitempty"`
 }
 
-func (e RepositorieError) Error() string { return e.Detail }
+func (e ProblemJSON) Error() string { return e.Title }
 
-func NewBadRequest(oasUri, detail string, params ...InvalidParam) RepositorieError {
-	return RepositorieError{
-		Instance:      oasUri,
-		Type:          "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/400",
-		Title:         "Bad Request",
-		Status:        400,
-		Detail:        detail,
-		InvalidParams: params,
+func New(status int, title string, details ...ErrorDetail) ProblemJSON {
+	return ProblemJSON{
+		Status: status,
+		Title:  title,
+		Errors: details,
 	}
 }
 
-func NewNotFound(oasUri, detail string, params ...InvalidParam) RepositorieError {
-	return RepositorieError{
-		Instance:      oasUri,
-		Type:          "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/404",
-		Title:         "Not Found",
-		Status:        404,
-		Detail:        detail,
-		InvalidParams: params,
-	}
+func NewBadRequest(title string, details ...ErrorDetail) ProblemJSON {
+	return New(http.StatusBadRequest, title, details...)
 }
 
-func NewInternalServerError(detail string) RepositorieError {
-	return RepositorieError{
-		Type:   "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/500",
-		Title:  "Internal Server Error",
-		Status: 500,
-		Detail: detail,
-	}
+func NewNotFound(title string) ProblemJSON {
+	return New(http.StatusNotFound, title)
 }
 
-func NewForbidden(oasUri, detail string) RepositorieError {
-	return RepositorieError{
-		Instance: oasUri,
-		Type:     "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/403",
-		Title:    "Forbidden",
-		Status:   403,
-		Detail:   detail,
-	}
+func NewInternalServerError(title string) ProblemJSON {
+	return New(http.StatusInternalServerError, title)
+}
+
+func NewForbidden(title string) ProblemJSON {
+	return New(http.StatusForbidden, title)
 }

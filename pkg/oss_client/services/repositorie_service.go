@@ -26,8 +26,7 @@ func NewRepositoryService(repo repositories.RepositoriesRepository) *RepositoryS
 }
 
 func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, models.Pagination, error) {
-	idFilter := p.FilterIDs()
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, idFilter)
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -41,7 +40,7 @@ func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListR
 }
 
 func (s *RepositoryService) ListGitOrganisations(ctx context.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatieSummary, models.Pagination, error) {
-	gitOrganisations, pagination, err := s.repo.GetGitOrganisations(ctx, p.Page, p.PerPage, p.Ids)
+	gitOrganisations, pagination, err := s.repo.GetGitOrganisations(ctx, p.Page, p.PerPage, p.Organisation)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -53,17 +52,19 @@ func (s *RepositoryService) ListGitOrganisations(ctx context.Context, p *models.
 	return dtos, pagination, nil
 }
 
-func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBody models.PostGitOrganisatie) (*models.GitOrganisatie, error) {
-	gitURL := strings.TrimSpace(requestBody.GitOrganisationUrl)
-	orgURL := strings.TrimSpace(requestBody.OrganisationUrl)
+func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBody models.GitOrganisationInput) (*models.GitOrganisatie, error) {
+	gitURL := strings.TrimSpace(requestBody.Url)
+	orgURL := strings.TrimSpace(requestBody.OrganisationUri)
 
 	if _, err := url.ParseRequestURI(gitURL); err != nil {
-		return nil, problem.NewBadRequest(gitURL, fmt.Sprintf("foutieve git url: %v", err),
-			problem.InvalidParam{Name: "gitOrganisationUrl", Reason: "Moet een geldige URL zijn"})
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("url", "url", "must be a valid URL"),
+		)
 	}
 	if _, err := url.ParseRequestURI(orgURL); err != nil {
-		return nil, problem.NewBadRequest(orgURL, fmt.Sprintf("foutieve organisation url: %v", err),
-			problem.InvalidParam{Name: "organisationUrl", Reason: "Moet een geldige URL zijn"})
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("organisationUri", "url", "must be a valid URL"),
+		)
 	}
 
 	organisation, err := s.repo.FindOrganisationByURI(ctx, orgURL)
@@ -71,7 +72,7 @@ func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBod
 		return nil, err
 	}
 	if organisation == nil {
-		return nil, problem.NewNotFound(orgURL, "Organisation not found")
+		return nil, problem.NewNotFound("Resource does not exist")
 	}
 
 	existingByURL, err := s.repo.FindGitOrganisationByURL(ctx, gitURL)
@@ -107,7 +108,9 @@ func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (
 func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, models.Pagination, error) {
 	trimmed := strings.TrimSpace(p.Query)
 	if trimmed == "" {
-		return []models.RepositorySummary{}, models.Pagination{}, nil
+		return nil, models.Pagination{}, problem.NewBadRequest("Invalid input",
+			queryError("q", "required", "q is required"),
+		)
 	}
 	repositories, pagination, err := s.repo.SearchRepositorys(ctx, p.Page, p.PerPage, p.Organisation, trimmed)
 	if err != nil {
@@ -120,30 +123,41 @@ func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.Lis
 	return results, pagination, nil
 }
 
-func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.PostRepository) (*models.RepositoryDetail, error) {
-	if (requestBody.PubliccodeYmlUrl == nil) && (requestBody.Description == nil && requestBody.Name == nil) {
-		return nil, problem.NewBadRequest("repository", "name en description zijn verplicht zonder publiccodeYml",
-			problem.InvalidParam{Name: "name", Reason: "is verplicht zonder publiccodeYml"},
-			problem.InvalidParam{Name: "description", Reason: "is verplicht zonder publiccodeYml"},
+func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
+	repo := util.ApplyRepositoryInput(nil, &requestBody)
+
+	repoURL := strings.TrimSpace(repo.Url)
+	if repoURL == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("url", "required", "url is required"),
 		)
 	}
-	orgURL := ""
-	if requestBody.OrganisationUrl != nil {
-		orgURL = strings.TrimSpace(*requestBody.OrganisationUrl)
-	}
-	if orgURL == "" {
-		return nil, problem.NewBadRequest("repository", "organisationUrl is verplicht",
-			problem.InvalidParam{Name: "organisationUrl", Reason: "organisationUrl is verplicht"})
+	if _, err := url.ParseRequestURI(repoURL); err != nil {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("url", "url", "must be a valid URL"),
+		)
 	}
 
-	repo := util.ToRepository(&requestBody)
+	orgURL := trimPtr(requestBody.OrganisationUri)
+	if orgURL == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("organisationUri", "required", "organisationUri is required"),
+		)
+	}
+	if _, err := url.ParseRequestURI(orgURL); err != nil {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("organisationUri", "url", "must be a valid URL"),
+		)
+	}
+
 	org, err := s.repo.FindOrganisationByURI(ctx, orgURL)
 	if err != nil {
 		return nil, err
 	}
 	if org == nil {
-		return nil, problem.NewNotFound(orgURL, "Organisation not found")
+		return nil, problem.NewNotFound("Resource does not exist")
 	}
+
 	repo.OrganisationID = &org.Uri
 	repo.Organisation = org
 	if err := s.repo.SaveRepository(ctx, repo); err != nil {
@@ -153,10 +167,60 @@ func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody mo
 	return util.ToRepositoryDetail(repo), nil
 }
 
-func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, models.Pagination, error) {
-	organisations, pagination, err := s.repo.GetOrganisations(ctx, p.Page, p.PerPage, p.FilterIDs())
+func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
+	existing, err := s.repo.GetRepositoryByID(ctx, id)
 	if err != nil {
-		return nil, models.Pagination{}, err
+		return nil, err
+	}
+	if existing == nil {
+		return nil, problem.NewNotFound("Resource does not exist")
+	}
+
+	updated := util.ApplyRepositoryInput(existing, &requestBody)
+	updated.Id = id
+
+	repoURL := strings.TrimSpace(updated.Url)
+	if repoURL == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("url", "required", "url is required"),
+		)
+	}
+	if _, err := url.ParseRequestURI(repoURL); err != nil {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("url", "url", "must be a valid URL"),
+		)
+	}
+
+	orgURL := trimPtr(requestBody.OrganisationUri)
+	if orgURL != "" {
+		if _, err := url.ParseRequestURI(orgURL); err != nil {
+			return nil, problem.NewBadRequest("Invalid input",
+				bodyError("organisationUri", "url", "must be a valid URL"),
+			)
+		}
+
+		org, err := s.repo.FindOrganisationByURI(ctx, orgURL)
+		if err != nil {
+			return nil, err
+		}
+		if org == nil {
+			return nil, problem.NewNotFound("Resource does not exist")
+		}
+		updated.OrganisationID = &org.Uri
+		updated.Organisation = org
+	}
+
+	if err := s.repo.SaveRepository(ctx, updated); err != nil {
+		return nil, err
+	}
+
+	return util.ToRepositoryDetail(updated), nil
+}
+
+func (s *RepositoryService) ListOrganisations(ctx context.Context, _ *models.ListOrganisationsParams) ([]models.OrganisationSummary, error) {
+	organisations, err := s.repo.GetOrganisations(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	orgSummaries := make([]models.OrganisationSummary, len(organisations))
@@ -164,21 +228,51 @@ func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.Lis
 		orgSummaries[i] = models.OrganisationSummary(org)
 	}
 
-	return orgSummaries, pagination, nil
+	return orgSummaries, nil
 }
 
 // CreateOrganisation validates and stores a new organisation
 func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.Organisation) (*models.Organisation, error) {
+	org.Uri = strings.TrimSpace(org.Uri)
+	org.Label = strings.TrimSpace(org.Label)
+
 	if _, err := url.ParseRequestURI(org.Uri); err != nil {
-		return nil, problem.NewBadRequest(org.Uri, fmt.Sprintf("foutieve uri: %v", err),
-			problem.InvalidParam{Name: "uri", Reason: "Moet een geldige URL zijn"})
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("uri", "url", "must be a valid URL"),
+		)
 	}
-	if strings.TrimSpace(org.Label) == "" {
-		return nil, problem.NewBadRequest(org.Uri, "label is verplicht",
-			problem.InvalidParam{Name: "label", Reason: "label is verplicht"})
+	if org.Label == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("label", "required", "label is required"),
+		)
 	}
 	if err := s.repo.SaveOrganisatie(org); err != nil {
 		return nil, err
 	}
 	return org, nil
+}
+
+func bodyError(field, code, detail string) problem.ErrorDetail {
+	return problem.ErrorDetail{
+		In:       "body",
+		Location: fmt.Sprintf("#/%s", field),
+		Code:     code,
+		Detail:   detail,
+	}
+}
+
+func queryError(field, code, detail string) problem.ErrorDetail {
+	return problem.ErrorDetail{
+		In:       "query",
+		Location: fmt.Sprintf("#/%s", field),
+		Code:     code,
+		Detail:   detail,
+	}
+}
+
+func trimPtr(val *string) string {
+	if val == nil {
+		return ""
+	}
+	return strings.TrimSpace(*val)
 }

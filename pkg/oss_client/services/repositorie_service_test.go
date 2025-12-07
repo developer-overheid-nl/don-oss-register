@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 	"github.com/stretchr/testify/assert"
@@ -12,20 +13,20 @@ import (
 )
 
 type stubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
-	getOrgFunc          func(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error)
-	gitOrgListFunc      func(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error)
+	getOrgFunc          func(ctx context.Context) ([]models.Organisation, error)
+	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	findOrgByURIF       func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
 
-func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation, ids)
+		return s.listFunc(ctx, page, perPage, organisation)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -59,16 +60,16 @@ func (s *stubRepo) AllRepositorys(ctx context.Context) ([]models.Repository, err
 	return nil, nil
 }
 
-func (s *stubRepo) GetOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error) {
+func (s *stubRepo) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
 	if s.getOrgFunc != nil {
-		return s.getOrgFunc(ctx, page, perPage, ids)
+		return s.getOrgFunc(ctx)
 	}
-	return nil, models.Pagination{}, nil
+	return nil, nil
 }
 
-func (s *stubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *stubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
 	if s.gitOrgListFunc != nil {
-		return s.gitOrgListFunc(ctx, page, perPage, ids)
+		return s.gitOrgListFunc(ctx, page, perPage, organisation)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -77,7 +78,7 @@ func (s *stubRepo) FindOrganisationByURI(ctx context.Context, uri string) (*mode
 	if s.findOrgByURIF != nil {
 		return s.findOrgByURIF(ctx, uri)
 	}
-	return nil, gorm.ErrRecordNotFound
+	return nil, nil
 }
 
 func (s *stubRepo) FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error) {
@@ -97,7 +98,7 @@ func (s *stubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrg
 func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
 					Id:               "repo-1",
@@ -149,10 +150,8 @@ func TestSearchRepositories_ReturnsEmptyOnBlankQuery(t *testing.T) {
 	repo := &stubRepo{}
 	svc := services.NewRepositoryService(repo)
 
-	results, pagination, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{Query: "   "})
-	require.NoError(t, err)
-	assert.Len(t, results, 0)
-	assert.Equal(t, 0, pagination.TotalRecords)
+	_, _, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{Query: "   "})
+	require.Error(t, err)
 }
 
 func TestCreateOrganisation_ValidatesInput(t *testing.T) {
@@ -164,8 +163,8 @@ func TestCreateOrganisation_ValidatesInput(t *testing.T) {
 		Label: "Label",
 	})
 	require.Error(t, err)
-	_, isAPIError := err.(interface{ Error() string })
-	assert.True(t, isAPIError)
+	var apiErr problem.ProblemJSON
+	assert.ErrorAs(t, err, &apiErr)
 
 	_, err = svc.CreateOrganisation(context.Background(), &models.Organisation{
 		Uri:   "https://example.org",

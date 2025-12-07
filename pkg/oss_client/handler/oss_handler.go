@@ -20,12 +20,7 @@ func NewOSSController(s *services.RepositoryService) *OSSController {
 
 // ListRepositorys handles GET /Repositorys
 func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, error) {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 10
-	}
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 	p.BaseURL = ctx.FullPath()
 	repos, pagination, err := c.Service.ListRepositorys(ctx.Request.Context(), p)
 	if err != nil {
@@ -38,12 +33,7 @@ func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListReposito
 
 // SearchRepositorys handles GET /Repositorys/_search
 func (c *OSSController) SearchRepositorys(ctx *gin.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, error) {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 10
-	}
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 	p.BaseURL = ctx.FullPath()
 	results, pagination, err := c.Service.SearchRepositorys(ctx.Request.Context(), p)
 	if err != nil {
@@ -60,13 +50,13 @@ func (c *OSSController) RetrieveRepository(ctx *gin.Context, params *models.Repo
 		return nil, err
 	}
 	if Repository == nil {
-		return nil, problem.NewNotFound(params.Id, "Repository not found")
+		return nil, problem.NewNotFound("Resource does not exist")
 	}
 	return Repository, nil
 }
 
 // CreateRepository handles POST /Repositorys
-func (c *OSSController) CreateRepository(ctx *gin.Context, body *models.PostRepository) (*models.RepositoryDetail, error) {
+func (c *OSSController) CreateRepository(ctx *gin.Context, body *models.RepositoryInput) (*models.RepositoryDetail, error) {
 	created, err := c.Service.CreateRepository(ctx.Request.Context(), *body)
 	if err != nil {
 		return nil, err
@@ -76,19 +66,10 @@ func (c *OSSController) CreateRepository(ctx *gin.Context, body *models.PostRepo
 
 // ListOrganisations handles GET /organisations
 func (c *OSSController) ListOrganisations(ctx *gin.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, error) {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 10
-	}
-	p.BaseURL = ctx.FullPath()
-
-	orgs, pagination, err := c.Service.ListOrganisations(ctx.Request.Context(), p)
+	orgs, err := c.Service.ListOrganisations(ctx.Request.Context(), p)
 	if err != nil {
 		return nil, err
 	}
-	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
 
 	return orgs, nil
 }
@@ -104,12 +85,7 @@ func (c *OSSController) CreateOrganisation(ctx *gin.Context, body *models.Organi
 
 // ListGitOrganisations handles GET /GitRepositorys
 func (c *OSSController) ListGitOrganisations(ctx *gin.Context, p *models.ListGitOrganisationsParams) ([]models.GitOrganisatieSummary, error) {
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 10
-	}
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 	p.BaseURL = ctx.FullPath()
 	gitOrganisations, pagination, err := c.Service.ListGitOrganisations(ctx.Request.Context(), p)
 	if err != nil {
@@ -121,10 +97,32 @@ func (c *OSSController) ListGitOrganisations(ctx *gin.Context, p *models.ListGit
 }
 
 // CreateGitOrganisation handles POST /GitOrganisation
-func (c *OSSController) CreateGitOrganisation(ctx *gin.Context, body *models.PostGitOrganisatie) (*models.GitOrganisatie, error) {
+func (c *OSSController) CreateGitOrganisation(ctx *gin.Context, body *models.GitOrganisationInput) (*models.GitOrganisatie, error) {
 	created, err := c.Service.CreateGitOrganisatie(ctx.Request.Context(), *body)
 	if err != nil {
 		return nil, err
 	}
 	return created, nil
+}
+
+// UpdateRepository handles PUT /repositories/:id
+func (c *OSSController) UpdateRepository(ctx *gin.Context, req *models.UpdateRepositoryRequest) (*models.RepositoryDetail, error) {
+	updated, err := c.Service.UpdateRepository(ctx.Request.Context(), req.Id, req.RepositoryInput)
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+func normalizePagination(page, perPage int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	return page, perPage
 }

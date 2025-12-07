@@ -15,14 +15,6 @@ var (
 		"De API-versie van de response",
 		"",
 	)
-
-	notFoundResponse = fizz.Response(
-		"404",
-		"Not Found",
-		nil,
-		nil,
-		nil,
-	)
 )
 
 func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz {
@@ -33,7 +25,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version"}
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"}
 	config.ExposeHeaders = []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"}
 	g.Use(cors.New(config))
 
@@ -42,126 +34,123 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")
 
-	read := root.Group("", "Publieke endpoints", "Alleen lezen endpoints")
-	read.GET("/repositories/_search",
+	root.GET("/repositories/_search",
 		[]fizz.OperationOption{
 			fizz.ID("searchRepositories"),
-			fizz.Summary("Zoek repositories"),
-			fizz.Description("Zoekt geregistreerde repositories op basis van titel."),
+			fizz.Summary("Search repositories"),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen."),
 			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
-				"clientCredentials": {"oss:read"},
+				"clientCredentials": {},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
 		tonic.Handler(controller.SearchRepositorys, 200),
 	)
-	read.GET("/repositories",
+
+	root.GET("/repositories",
 		[]fizz.OperationOption{
 			fizz.ID("listRepositories"),
-			fizz.Summary("Alle repositories ophalen"),
-			fizz.Description("Geeft een lijst met alle geregistreerde repositories terug."),
+			fizz.Summary("List repositories"),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen."),
 			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
-				"clientCredentials": {"oss:read"},
+				"clientCredentials": {},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
 		tonic.Handler(controller.ListRepositorys, 200),
 	)
 
-	read.GET("/repositories/:id",
+	root.GET("/repositories/:id",
 		[]fizz.OperationOption{
-			fizz.ID("retrieveRepositorie"),
-			fizz.Summary("Specifieke repository ophalen"),
-			fizz.Description("Geeft de details van een specifieke repository terug."),
+			fizz.ID("getRepositoryById"),
+			fizz.Summary("Get repository by id"),
+			fizz.Description("Geeft één OSS repository terug op basis van het id."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"apiKey":            {},
-				"clientCredentials": {"oss:read"},
+				"clientCredentials": {"repositories:read"},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
 		tonic.Handler(controller.RetrieveRepository, 200),
 	)
 
-	read.GET("/gitOrganisations",
+	root.PUT("/repositories/:id",
 		[]fizz.OperationOption{
-			fizz.ID("getGitOrganisation"),
-			fizz.Summary("Haal een de git organisaties op"),
-			fizz.Description("Haal de nieuwe git organisaties met een OpenAPI URL."),
+			fizz.ID("updateRepository"),
+			fizz.Summary("Specifieke repository updaten"),
+			fizz.Description("Specifieke repository updaten"),
 			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
-				"clientCredentials": {"oss:write"},
+				"clientCredentials": {"repositories:write"},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
-		tonic.Handler(controller.ListGitOrganisations, 201),
+		tonic.Handler(controller.UpdateRepository, 200),
 	)
 
-	readOrg := root.Group("", "Private endpoints", "Alleen lezen endpoints")
-	readOrg.GET("/organisations",
+	root.POST("/repositories",
+		[]fizz.OperationOption{
+			fizz.ID("createRepository"),
+			fizz.Summary("Create repository"),
+			fizz.Description("Registreer een nieuwe OSS repository in het register."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {"repositories:write"},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.CreateRepository, 201),
+	)
+
+	root.GET("/git-organisations",
+		[]fizz.OperationOption{
+			fizz.ID("listGitOrganisations"),
+			fizz.Summary("List git organisations"),
+			fizz.Description("Geeft een lijst terug met git organisations die in het register zijn opgenomen."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.ListGitOrganisations, 200),
+	)
+
+	root.POST("/git-organisations",
+		[]fizz.OperationOption{
+			fizz.ID("createGitOrganisation"),
+			fizz.Summary("Create git organisation"),
+			fizz.Description("Registreer een nieuwe git organisatie in het register."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {"gitOrganisations:write"},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.CreateGitOrganisation, 201),
+	)
+
+	root.GET("/organisations",
 		[]fizz.OperationOption{
 			fizz.ID("listOrganisations"),
 			fizz.Summary("Alle organisaties ophalen"),
-			fizz.Description("Geeft een lijst van alle organisaties terug."),
+			fizz.Description("Alle organisaties ophalen"),
 			fizz.Security(&openapi.SecurityRequirement{
 				"apiKey":            {},
 				"clientCredentials": {"organisations:read"},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
 		tonic.Handler(controller.ListOrganisations, 200),
 	)
-	writeOrg := root.Group("", "Private endpoints", "Alleen lezen endpoints")
-	writeOrg.POST("/organisations",
+
+	root.POST("/organisations",
 		[]fizz.OperationOption{
 			fizz.ID("createOrganisation"),
-			fizz.Summary("Voeg een nieuwe organisatie toe"),
-			fizz.Description("Voeg een organisatie toe op basis van URI en label."),
+			fizz.Summary("Organisatie aanmaken"),
+			fizz.Description("Maak een nieuwe organisatie aan."),
 			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
 				"clientCredentials": {"organisations:write"},
 			}),
 			apiVersionHeader,
-			notFoundResponse,
 		},
 		tonic.Handler(controller.CreateOrganisation, 201),
-	)
-
-	write := root.Group("", "Private endpoints", "Bewerken van repositories")
-	write.POST("/repositories",
-		[]fizz.OperationOption{
-			fizz.ID("createRepositorie"),
-			fizz.Summary("Registreer een nieuwe repository"),
-			fizz.Description("Registreer een nieuwe repository met een OpenAPI URL."),
-			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
-				"clientCredentials": {"oss:write"},
-			}),
-			apiVersionHeader,
-			notFoundResponse,
-		},
-		tonic.Handler(controller.CreateRepository, 201),
-	)
-
-	write.POST("/gitOrganisations",
-		[]fizz.OperationOption{
-			fizz.ID("createGitOrganisation"),
-			fizz.Summary("Registreer een nieuwe git organisatie"),
-			fizz.Description("Registreer een nieuwe git organisatie met een OpenAPI URL."),
-			fizz.Security(&openapi.SecurityRequirement{
-				"apiKey":            {},
-				"clientCredentials": {"oss:write"},
-			}),
-			apiVersionHeader,
-			notFoundResponse,
-		},
-		tonic.Handler(controller.CreateGitOrganisation, 201),
 	)
 	// 6) OpenAPI documentatie
 	g.StaticFile("/v1/openapi.json", "./api/openapi.json")
@@ -175,9 +164,7 @@ type apiVersionWriter struct {
 }
 
 func (w *apiVersionWriter) WriteHeader(code int) {
-	if code >= 200 && code < 300 {
-		w.Header().Set("API-Version", w.version)
-	}
+	w.Header().Set("API-Version", w.version)
 	w.ResponseWriter.WriteHeader(code)
 }
 

@@ -19,14 +19,14 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		}
 	}
 	return models.RepositorySummary{
-		Id:            repo.Id,
-		Name:          repo.Name,
-		Description:   repo.ShortDescription,
-		RepositoryUrl: repo.RepositoryUrl,
-		PublicCodeUrl: repo.PublicCodeUrl,
-		CreatedAt:     repo.CreatedAt,
-		UpdatedAt:     repo.UpdatedAt,
-		Organisation:  orgSummary,
+		Id:               repo.Id,
+		Url:              repo.Url,
+		Name:             repo.Name,
+		ShortDescription: repo.ShortDescription,
+		PublicCodeUrl:    repo.PublicCodeUrl,
+		CreatedAt:        repo.CreatedAt,
+		UpdatedAt:        repo.UpdatedAt,
+		Organisation:     orgSummary,
 	}
 }
 
@@ -34,24 +34,47 @@ func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
 	}
-	detail.Description = repo.LongDescription
 	return detail
 }
 
-func ToRepository(repo *models.PostRepository) *models.Repository {
-	r := &models.Repository{
-		Id:               uuid.NewString(),
-		Name:             strings.TrimSpace(stringValue(repo.Name)),
-		ShortDescription: strings.TrimSpace(stringValue(repo.Description)),
-		LongDescription:  strings.TrimSpace(stringValue(repo.Description)),
-		RepositoryUrl:    strings.TrimSpace(stringValue(repo.RepositoryUrl)),
-		PublicCodeUrl:    "",
-		UpdatedAt:        repo.UpdatedAt,
-		CreatedAt:        repo.CreatedAt,
-		Active:           repo.Active,
+func ToGitOrganisatieSummary(gitOrg *models.GitOrganisatie) models.GitOrganisatieSummary {
+	return models.GitOrganisatieSummary{
+		Id:           gitOrg.Id,
+		Organisation: gitOrg.Organisation,
+		Url:          gitOrg.Url,
+	}
+}
+
+func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInput) *models.Repository {
+	if target == nil {
+		target = &models.Repository{
+			Id: uuid.NewString(),
+		}
 	}
 
-	publicCodeRaw := strings.TrimSpace(stringValue(repo.PubliccodeYmlUrl))
+	if input == nil {
+		return target
+	}
+
+	if input.Url != nil {
+		target.Url = strings.TrimSpace(*input.Url)
+	}
+	if input.PublicCodeUrl != nil {
+		target.PublicCodeUrl = strings.TrimSpace(*input.PublicCodeUrl)
+	}
+	if input.Name != nil {
+		target.Name = strings.TrimSpace(*input.Name)
+	}
+	if input.ShortDescription != nil {
+		target.ShortDescription = strings.TrimSpace(*input.ShortDescription)
+		target.LongDescription = target.ShortDescription
+	}
+
+	publicCodeRaw := ""
+	if input.PublicCodeUrl != nil {
+		publicCodeRaw = strings.TrimSpace(*input.PublicCodeUrl)
+	}
+
 	if publicCodeRaw != "" {
 		content := publicCodeRaw
 		if isLikelyURL(publicCodeRaw) {
@@ -63,40 +86,26 @@ func ToRepository(repo *models.PostRepository) *models.Repository {
 					}
 				}
 			}
-			r.PublicCodeUrl = publicCodeRaw
+			target.PublicCodeUrl = publicCodeRaw
 		}
 
 		url, name, shortDesc, longDesc := parsePublicCodeYAML(content)
 		if url != "" {
-			r.PublicCodeUrl = url
+			target.Url = url
 		}
 		if name != "" {
-			r.Name = name
+			target.Name = name
 		}
 		if shortDesc != "" {
-			r.ShortDescription = shortDesc
+			target.ShortDescription = shortDesc
+			target.LongDescription = shortDesc
 		}
 		if longDesc != "" {
-			r.LongDescription = longDesc
+			target.LongDescription = longDesc
 		}
 	}
 
-	return r
-}
-
-func ToGitOrganisatieSummary(gitOrg *models.GitOrganisatie) models.GitOrganisatieSummary {
-	return models.GitOrganisatieSummary{
-		Id:           gitOrg.Id,
-		Organisation: gitOrg.Organisation,
-		Url:          gitOrg.Url,
-	}
-}
-
-func stringValue(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
+	return target
 }
 
 type publicCodeYAML struct {

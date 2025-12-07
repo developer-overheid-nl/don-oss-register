@@ -1,8 +1,8 @@
 package models
 
-type PostGitOrganisatie struct {
-	GitOrganisationUrl string `json:"gitOrganisationUrl" binding:"required,url"`
-	OrganisationUrl    string `json:"organisationUrl" binding:"required,url"`
+type GitOrganisationInput struct {
+	Url             string `json:"url" binding:"required,url"`
+	OrganisationUri string `json:"organisationUri" binding:"required,url"`
 }
 
 type GitOrganisatie struct {
@@ -19,22 +19,10 @@ type GitOrganisatieSummary struct {
 }
 
 type ListGitOrganisationsParams struct {
-	Page    int     `query:"page"`
-	PerPage int     `query:"perPage"`
-	Ids     *string `query:"ids"`
-	BaseURL string
+	Page         int     `query:"page" validate:"omitempty,min=1"`
+	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation *string `query:"organisation"`
+	BaseURL      string
 }
 
-type ListOrganisationsParams struct {
-	Page    int     `query:"page"`
-	PerPage int     `query:"perPage"`
-	Ids     *string `query:"ids"`
-	BaseURL string
-}
-
-func (p *ListOrganisationsParams) FilterIDs() *string {
-	if p == nil {
-		return nil
-	}
-	return trimPointer(p.Ids)
-}
+type ListOrganisationsParams struct{}

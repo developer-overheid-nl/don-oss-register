@@ -1,18 +1,19 @@
 {
-  "openapi": "3.0.1",
+  "openapi": "3.1.0",
   "info": {
+    "title": "OSS-register API v1",
+    "version": "1.0.0",
     "contact": {
       "email": "developer.overheid@geonovum.nl",
-      "name": "Team developer.overheid.nl"
+      "name": "Team developer.overheid.nl",
+      "url": "https://github.com/developer-overheid-nl/don-oss-register/issues"
     },
-    "description": "OSS Register (oss.developer.overheid.nl)",
-    "title": "OSS Register v1",
-    "version": "1.0.0"
+    "description": "API to access the OSS register of developer.overheid.nl.\n\n## Auth\n\nThis API distinguishes between public and private endpoints.\nPublic endpoints can be accessed with either an API key or a client credentials token.\nPrivate endpoints can only be accessed with a client credentials token.\n\n### API key\n\nUsing an API key, you can access all public endpoints of the API register.\nThese requests can also be made from the browser.\nSimply pass the obtained API key with each request using the `X-Api-Key` header.\n\n### Client credentials token\n\nUsing a client credentials token, you can access both public and private endpoints of the OSS register.\nTo obtain the token, you need to perform a `POST` request to `https://auth.developer.overheid.nl/realms/don/protocol/openid-connect/token` with the following Form URL Encoded body:\n- `grant_type`: `client_credentials`\n- `scope`: depending on the access you need and the client you are, you can request one or more of the following scopes:\n  - `repositories:read`\n  - `repositories:write`\n  - `gitOrganisations:read`\n  - `gitOrganisations:write`\n  - `organisations:read`\n  - `organisations:write`\n- `client_id`: the client id you received from us\n- `client_secret`: the client secret you received from us\n\nPass the obtained token with each request using the `Authorization` header. Example:\n\n`Authorization`: `Bearer {ACCESS_TOKEN}` (replace `{ACCESS_TOKEN}` with the obtained `access_token`)\n\n## Pagination\n\nPagination of collections is done using the `Link` header.\nThere are various libraries available (such as [parse-link-header](https://www.npmjs.com/package/parse-link-header) for Javascript) that can parse this header.\nAdditionally, the following headers provide extra support for implementing pagination in the client:\n- `Current-Page`: the current page in the collection\n- `Per-Page`: the number of items per page\n- `Total-Count`: the total number of items\n- `Total-Pages`: the total number of pages\n"
   },
   "servers": [
     {
       "description": "Production",
-      "url": "https://api.overheid.nl/oss-register/v1"
+      "url": "https://api.developer.overheid.nl/oss-register/v1"
     },
     {
       "description": "Test",
@@ -22,228 +23,127 @@
   "tags": [
     {
       "name": "Repositories",
-      "description": "Endpoints for listing and managing OSS repositories."
+      "description": "Endpoints for listing and managing repositories."
     },
     {
-      "name": "GitOrganisations",
-      "description": "Endpoints for listing and managing git-organisations (code hosting accounts)."
+      "name": "Organisations",
+      "description": "Endpoints for listing and managing organisations."
+    },
+    {
+      "name": "Git organisations",
+      "description": "Endpoints for listing and managing git organisations."
+    },
+    {
+      "name": "Public endpoints",
+      "description": "Public endpoints, accessible with an API key or client credentials token."
+    },
+    {
+      "name": "Private endpoints",
+      "description": "Private endpoints of the API register, accessible with a client credentials token."
     }
   ],
   "paths": {
-    "/gitOrganisations": {
+    "/git-organisations": {
       "get": {
         "tags": [
-          "GitOrganisations"
+          "Public endpoints",
+          "Git organisations"
         ],
         "summary": "List git organisations",
-        "description": "Geeft een lijst met geregistreerde git-organisaties terug.",
+        "description": "Geeft een lijst terug met git organisations die in het register zijn opgenomen.",
         "operationId": "listGitOrganisations",
         "parameters": [
           {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Paginanummer (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
+            "$ref": "./components/parameters.yaml#/page"
           },
           {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Aantal resultaten per pagina.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 10
-            }
+            "$ref": "./components/parameters.yaml#/perPage"
           },
           {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "description": "Kommagescheiden lijst met git-organisatie-id's (uuid).",
-            "schema": {
-              "type": "string",
-              "example": "9fd3f7b1-7d79-4f41-bf8f-4a1b0a3b0d11,7cfdde0b-5a0d-41a4-a2f8-c2a4cb1b158a"
-            }
+            "$ref": "./components/parameters.yaml#/organisation"
           }
         ],
         "responses": {
+          "400": {
+            "$ref": "./components/responses.yaml#/400"
+          },
           "200": {
-            "description": "OK",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
-              },
-              "Total-Count": {
-                "$ref": "#/components/headers/Total-Count"
+                "$ref": "./components/headers.yaml#/API-Version"
               },
               "Link": {
-                "$ref": "#/components/headers/Link"
+                "$ref": "./components/headers.yaml#/Link"
+              },
+              "Total-Count": {
+                "$ref": "./components/headers.yaml#/Total-Count"
+              },
+              "Current-Page": {
+                "$ref": "./components/headers.yaml#/Current-Page"
+              },
+              "Per-Page": {
+                "$ref": "./components/headers.yaml#/Per-Page"
+              },
+              "Total-Pages": {
+                "$ref": "./components/headers.yaml#/Total-Pages"
               }
             },
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/GitOrganisation"
+                    "$ref": "./schemas/GitOrganisation.schema.json"
                   }
                 }
               }
             }
-          },
-          "404": {
-            "$ref": "#/components/responses/404"
           }
-        },
-        "security": [
-          {
-            "apiKey": [],
-            "clientCredentials": [
-              "oss:write"
-            ]
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
-          "GitOrganisations"
+          "Private endpoints",
+          "Git organisations"
         ],
         "summary": "Create git organisation",
-        "description": "Registreer een nieuwe git-organisatie met code hosting URL en TOOI organisatie.",
+        "description": "Registreer een nieuwe git organisatie in het register.",
         "operationId": "createGitOrganisation",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostGitOrganisation"
+                "$ref": "./schemas/GitOrganisationInput.schema.json"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Git-organisatie aangemaakt",
+            "description": "Created",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
+                "$ref": "./components/headers.yaml#/API-Version"
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GitOrganisation"
+                  "$ref": "./schemas/GitOrganisation.schema.json"
                 }
               }
             }
           },
           "400": {
-            "description": "Ongeldige git-organisatie data"
+            "$ref": "./components/responses.yaml#/400"
           }
         },
         "security": [
           {
-            "apiKey": [],
             "clientCredentials": [
-              "oss:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/repositories/_search": {
-      "get": {
-        "tags": [
-          "Repositories"
-        ],
-        "summary": "Search repositories",
-        "description": "Zoekt geregistreerde repositories op basis van titel.",
-        "operationId": "searchRepositories",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "description": "Zoekterm voor de repositorynaam.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Paginanummer (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Aantal resultaten per pagina.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 10
-            }
-          },
-          {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter op organisation uri.",
-            "schema": {
-              "type": "string",
-              "format": "uri"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "headers": {
-              "API-Version": {
-                "$ref": "#/components/headers/API-Version"
-              },
-              "Total-Count": {
-                "$ref": "#/components/headers/Total-Count"
-              },
-              "Link": {
-                "$ref": "#/components/headers/Link"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RepositorySummary"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/404"
-          }
-        },
-        "security": [
-          {
-            "apiKey": [],
-            "clientCredentials": [
-              "oss:read"
+              "gitOrganisations:write"
             ]
           }
         ]
@@ -252,6 +152,7 @@
     "/repositories": {
       "get": {
         "tags": [
+          "Public endpoints",
           "Repositories"
         ],
         "summary": "List repositories",
@@ -259,88 +160,57 @@
         "operationId": "listRepositories",
         "parameters": [
           {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Paginanummer (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
+            "$ref": "./components/parameters.yaml#/page"
           },
           {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Aantal resultaten per pagina.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
+            "$ref": "./components/parameters.yaml#/perPage"
           },
           {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter op organisatie (bijvoorbeeld de organisation URI).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "description": "Kommagescheiden lijst met repository-id's (uuid).",
-            "schema": {
-              "type": "string",
-              "example": "9fd3f7b1-7d79-4f41-bf8f-4a1b0a3b0d11,7cfdde0b-5a0d-41a4-a2f8-c2a4cb1b158a"
-            }
+            "$ref": "./components/parameters.yaml#/organisation"
           }
         ],
         "responses": {
+          "400": {
+            "$ref": "./components/responses.yaml#/400"
+          },
           "200": {
-            "description": "OK",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
-              },
-              "Total-Count": {
-                "$ref": "#/components/headers/Total-Count"
+                "$ref": "./components/headers.yaml#/API-Version"
               },
               "Link": {
-                "$ref": "#/components/headers/Link"
+                "$ref": "./components/headers.yaml#/Link"
+              },
+              "Total-Count": {
+                "$ref": "./components/headers.yaml#/Total-Count"
+              },
+              "Current-Page": {
+                "$ref": "./components/headers.yaml#/Current-Page"
+              },
+              "Per-Page": {
+                "$ref": "./components/headers.yaml#/Per-Page"
+              },
+              "Total-Pages": {
+                "$ref": "./components/headers.yaml#/Total-Pages"
               }
             },
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/RepositorySummary"
+                    "$ref": "./schemas/RepositorySummary.schema.json"
                   }
                 }
               }
             }
-          },
-          "404": {
-            "$ref": "#/components/responses/404"
           }
-        },
-        "security": [
-          {
-            "apiKey": [],
-            "clientCredentials": [
-              "oss:read"
-            ]
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
+          "Private endpoints",
           "Repositories"
         ],
         "summary": "Create repository",
@@ -351,89 +221,195 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostRepository"
+                "$ref": "./schemas/RepositoryInput.schema.json"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Repository aangemaakt",
+            "description": "Created",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
+                "$ref": "./components/headers.yaml#/API-Version"
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RepositorySummary"
+                  "$ref": "./schemas/Repository.schema.json"
                 }
               }
             }
           },
           "400": {
-            "description": "Ongeldige repository data"
+            "$ref": "./components/responses.yaml#/400"
           }
         },
         "security": [
           {
-            "apiKey": [],
             "clientCredentials": [
-              "oss:write"
+              "repositories:write"
             ]
           }
         ]
       }
     },
-    "/repositories/{id}": {
+    "/repositories/_search": {
       "get": {
         "tags": [
+          "Public endpoints",
+          "Repositories"
+        ],
+        "summary": "Search repositories",
+        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen.",
+        "operationId": "searchRepositories",
+        "parameters": [
+          {
+            "$ref": "./components/parameters.yaml#/page"
+          },
+          {
+            "$ref": "./components/parameters.yaml#/perPage"
+          },
+          {
+            "$ref": "./components/parameters.yaml#/organisation"
+          },
+          {
+            "$ref": "./components/parameters.yaml#/q"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "./components/responses.yaml#/400"
+          },
+          "200": {
+            "headers": {
+              "API-Version": {
+                "$ref": "./components/headers.yaml#/API-Version"
+              },
+              "Link": {
+                "$ref": "./components/headers.yaml#/Link"
+              },
+              "Total-Count": {
+                "$ref": "./components/headers.yaml#/Total-Count"
+              },
+              "Current-Page": {
+                "$ref": "./components/headers.yaml#/Current-Page"
+              },
+              "Per-Page": {
+                "$ref": "./components/headers.yaml#/Per-Page"
+              },
+              "Total-Pages": {
+                "$ref": "./components/headers.yaml#/Total-Pages"
+              }
+            },
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "./schemas/RepositorySummary.schema.json"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/repositories/{id}": {
+      "parameters": [
+        {
+          "$ref": "./components/parameters.yaml#/id"
+        }
+      ],
+      "get": {
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "clientCredentials": [
+              "repositories:read"
+            ]
+          }
+        ],
+        "tags": [
+          "Public endpoints",
           "Repositories"
         ],
         "summary": "Get repository by id",
-        "description": "Geeft één OSS repository terug op basis van het id.",
+        "description": "Geeft \u00e9\u00e9n OSS repository terug op basis van het id.",
         "operationId": "getRepositoryById",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Het id van de repository.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
+                "$ref": "./components/headers.yaml#/API-Version"
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RepositorySummary"
+                  "$ref": "./schemas/Repository.schema.json"
                 }
               }
             }
           },
           "404": {
-            "$ref": "#/components/responses/404"
+            "$ref": "./components/responses.yaml#/404"
           }
-        },
+        }
+      },
+      "put": {
         "security": [
           {
-            "apiKey": [],
             "clientCredentials": [
-              "oss:read"
+              "repositories:write"
             ]
           }
-        ]
+        ],
+        "tags": [
+          "Private endpoints",
+          "Repositories"
+        ],
+        "summary": "Specifieke repository updaten",
+        "description": "Specifieke repository updaten",
+        "operationId": "updateRepository",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schemas/RepositoryInput.schema.json"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "headers": {
+              "API-Version": {
+                "$ref": "./components/headers.yaml#/API-Version"
+              }
+            },
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/Repository.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./components/responses.yaml#/400"
+          },
+          "404": {
+            "$ref": "./components/responses.yaml#/404"
+          }
+        }
       }
     },
     "/organisations": {
@@ -449,70 +425,26 @@
           }
         ],
         "tags": [
-          "Publieke endpoints"
+          "Public endpoints",
+          "Organisations"
         ],
         "summary": "Alle organisaties ophalen",
         "description": "Alle organisaties ophalen",
         "operationId": "listOrganisations",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Paginanummer (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Aantal resultaten per pagina.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "description": "Kommagescheiden lijst met id's.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "OK",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
-              },
-              "Total-Count": {
-                "$ref": "#/components/headers/Total-Count"
-              },
-              "Link": {
-                "$ref": "#/components/headers/Link"
+                "$ref": "./components/headers.yaml#/API-Version"
               }
             },
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "organisations": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/OrganisationSummary"
-                      }
-                    }
+                  "type": "array",
+                  "items": {
+                    "$ref": "./schemas/OrganisationSummary.schema.json"
                   }
                 }
               }
@@ -523,265 +455,63 @@
       "post": {
         "security": [
           {
-            "apiKey": []
-          },
-          {
             "clientCredentials": [
               "organisations:write"
             ]
           }
         ],
         "tags": [
-          "Publieke endpoints"
+          "Private endpoints",
+          "Organisations"
         ],
         "summary": "Organisatie aanmaken",
         "description": "Maak een nieuwe organisatie aan.",
         "operationId": "createOrganisation",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrganisationSummary"
+                "$ref": "./schemas/OrganisationSummary.schema.json"
               }
             }
           }
         },
         "responses": {
+          "400": {
+            "$ref": "./components/responses.yaml#/400"
+          },
           "201": {
-            "description": "Organisatie aangemaakt",
             "headers": {
               "API-Version": {
-                "$ref": "#/components/headers/API-Version"
+                "$ref": "./components/headers.yaml#/API-Version"
               }
             },
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrganisationSummary"
+                  "$ref": "./schemas/Organisation.schema.json"
                 }
               }
             }
-          },
-          "400": {
-            "description": "Ongeldige organisatie data"
           }
         }
       }
     }
   },
   "components": {
-    "headers": {
-      "API-Version": {
-        "description": "De API-versie van de response",
-        "explode": false,
-        "schema": {
-          "example": "1.0.0",
-          "type": "string"
-        },
-        "style": "simple"
-      },
-      "Total-Count": {
-        "description": "Totaal aantal dat voldoet aan de huidige filter (zonder paginering).",
-        "schema": {
-          "type": "integer",
-          "example": 134
-        }
-      },
-      "Link": {
-        "description": "Paginatielinks volgens RFC 8288 (bijv. next, prev, first, last).",
-        "schema": {
-          "type": "string"
-        }
-      }
-    },
-    "responses": {
-      "404": {
-        "description": "Resource does not exist",
-        "headers": {
-          "API-Version": {
-            "$ref": "#/components/headers/API-Version"
-          }
-        }
-      }
-    },
-    "schemas": {
-      "Link": {
-        "type": "object",
-        "properties": {
-          "href": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "required": [
-          "href"
-        ]
-      },
-      "Links": {
-        "type": "object",
-        "description": "HAL style links object.",
-        "additionalProperties": {
-          "$ref": "#/components/schemas/Link"
-        }
-      },
-      "OrganisationSummary": {
-        "type": "object",
-        "properties": {
-          "uri": {
-            "type": "string",
-            "format": "uri"
-          },
-          "label": {
-            "type": "string"
-          },
-          "_links": {
-            "$ref": "#/components/schemas/Links"
-          }
-        },
-        "required": [
-          "uri",
-          "label"
-        ]
-      },
-      "PostRepository": {
-        "type": "object",
-        "properties": {
-          "repositoryUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL van de broncode repository."
-          },
-          "name": {
-            "type": "string",
-            "description": "Naam van de repository; wordt overschreven door publiccode.yaml indien aanwezig."
-          },
-          "description": {
-            "type": "string",
-            "description": "Korte of lange beschrijving; wordt overschreven door publiccode.yaml indien aanwezig."
-          },
-          "publiccodeYmlUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL van de publiccode.yaml."
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "repositoryUrl"
-        ]
-      },
-      "RepositorySummary": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "repositoryUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL van de broncode repository."
-          },
-          "organisation": {
-            "$ref": "#/components/schemas/OrganisationSummary"
-          },
-          "publicCodeUrl": {
-            "type": "string",
-            "description": "URL van publiccode.yaml in de repository."
-          },
-          "name": {
-            "type": "string",
-            "description": "Naam van de repository (bij voorkeur uit publiccode.yaml)."
-          },
-          "shortDescription": {
-            "type": "string",
-            "description": "Korte beschrijving uit publiccode.yaml of fallback waarde."
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          }
-        }
-      },
-      "PostGitOrganisation": {
-        "type": "object",
-        "properties": {
-          "gitOrganisationUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL van de git organisatie (bijv. https://github.com/organisatie)."
-          },
-          "organisationUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "TOOI URL van de organisatie."
-          }
-        },
-        "required": [
-          "gitOrganisationUrl",
-          "organisationUrl"
-        ]
-      },
-      "GitOrganisation": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "organisationId": {
-            "type": "string",
-            "format": "uri"
-          },
-          "organisation": {
-            "$ref": "#/components/schemas/OrganisationSummary"
-          },
-          "gitOrganisationUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL van de git organisatie (bijv. https://github.com/organisatie)."
-          }
-        }
-      }
-    },
     "securitySchemes": {
       "apiKey": {
-        "type": "apiKey",
-        "name": "X-Api-Key",
-        "in": "header"
+        "$ref": "./components/securitySchemes.yaml#/apiKey"
       },
       "clientCredentials": {
-        "type": "oauth2",
-        "flows": {
-          "clientCredentials": {
-            "tokenUrl": "https://auth.developer.overheid.nl/realms/don/protocol/openid-connect/token",
-            "scopes": {
-              "oss:read": "Leestoegang op OSS-register",
-              "oss:write": "Schrijftoegang op OSS-register",
-              "organisations:read": "Leestoegang op organisaties"
-            }
-          }
-        }
+        "$ref": "./components/securitySchemes.yaml#/clientCredentials"
       }
     }
-  }
+  },
+  "security": [
+    {
+      "clientCredentials": []
+    }
+  ]
 }

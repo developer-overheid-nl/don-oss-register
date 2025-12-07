@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
@@ -28,31 +27,25 @@ import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 )
 
-func invalidParamsFromBinding(err error, sample any) []problem.InvalidParam {
-	// Probeer direct op validator.ValidationErrors te matchen.
+func invalidParamsFromBinding(c *gin.Context, err error) []problem.ErrorDetail {
 	var verrs validator.ValidationErrors
 	if !errors.As(err, &verrs) {
-		// Geen validator-errors? Geef generiek terug.
-		return []problem.InvalidParam{{Name: "body", Reason: err.Error()}}
+		return []problem.ErrorDetail{{
+			In:       inferLocation(c, ""),
+			Location: "#/",
+			Code:     "invalid",
+			Detail:   err.Error(),
+		}}
 	}
 
-	t := reflect.TypeOf(sample)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	out := make([]problem.InvalidParam, 0, len(verrs))
+	out := make([]problem.ErrorDetail, 0, len(verrs))
 	for _, fe := range verrs {
-		name := fe.Field()
-		// StructField -> json tag
-		if f, ok := t.FieldByName(fe.StructField()); ok {
-			if tag := f.Tag.Get("json"); tag != "" && tag != "-" {
-				name = strings.Split(tag, ",")[0]
-			}
-		}
-		out = append(out, problem.InvalidParam{
-			Name:   name,
-			Reason: humanReason(fe),
+		field := normalizeFieldName(fe.Field())
+		out = append(out, problem.ErrorDetail{
+			In:       inferLocation(c, field),
+			Location: fmt.Sprintf("#/%s", field),
+			Code:     fe.Tag(),
+			Detail:   humanReason(fe),
 		})
 	}
 	return out
@@ -61,12 +54,29 @@ func invalidParamsFromBinding(err error, sample any) []problem.InvalidParam {
 func humanReason(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":
-		return "is verplicht"
+		return "is required"
 	case "url":
-		return "Moet een geldige URL zijn (bijv. https://…)"
+		return "must be a valid URL"
 	default:
 		return fe.Error()
 	}
+}
+
+func normalizeFieldName(name string) string {
+	if name == "" {
+		return "body"
+	}
+	return strings.ToLower(name[:1]) + name[1:]
+}
+
+func inferLocation(c *gin.Context, field string) string {
+	if strings.EqualFold(field, "id") {
+		return "path"
+	}
+	if c.Request != nil && c.Request.Method == http.MethodGet {
+		return "query"
+	}
+	return "body"
 }
 
 func init() {
@@ -74,14 +84,14 @@ func init() {
 		// 1) Bind/validate errors → 400 met correcte invalidParams
 		var be tonic.BindError
 		if errors.As(err, &be) || isValidationErr(err) {
-			invalids := invalidParamsFromBinding(err, models.PostRepository{})
-			apiErr := problem.NewBadRequest("body", "Invalid input", invalids...)
+			invalids := invalidParamsFromBinding(c, err)
+			apiErr := problem.NewBadRequest("Request validation failed", invalids...)
 			c.Header("Content-Type", "application/problem+json")
 			return apiErr.Status, apiErr
 		}
 
 		// 2) Jouw eigen APIError → pass-through
-		if apiErr, ok := err.(problem.RepositorieError); ok {
+		if apiErr, ok := err.(problem.ProblemJSON); ok {
 			c.Header("Content-Type", "application/problem+json")
 			return apiErr.Status, apiErr
 		}

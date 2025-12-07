@@ -16,7 +16,7 @@ func setupDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}))
+	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}, &models.GitOrganisatie{}))
 	return db
 }
 
@@ -34,7 +34,7 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 		ShortDescription: "Repository description",
 		LongDescription:  "Repository description",
 		OrganisationID:   &org.Uri,
-		RepositoryUrl:    "https://example.org/repos/repo-1",
+		Url:              "https://example.org/repos/repo-1",
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
 	}
 	require.NoError(t, repo.SaveRepository(ctx, repository))
@@ -66,17 +66,10 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 		require.NoError(t, repo.SaveRepository(ctx, r))
 	}
 
-	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri, nil)
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri)
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
-
-	ids := "repo-3"
-	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, nil, &ids)
-	require.NoError(t, err)
-	require.Len(t, results, 1)
-	assert.Equal(t, "repo-3", results[0].Id)
-	assert.Equal(t, 1, pagination.TotalRecords)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {

@@ -13,15 +13,15 @@ import (
 )
 
 type RepositoriesRepository interface {
-	GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error)
+	GetRepositorys(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	SaveOrganisatie(organisation *models.Organisation) error
 	AllRepositorys(ctx context.Context) ([]models.Repository, error)
-	GetOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error)
+	GetOrganisations(ctx context.Context) ([]models.Organisation, error)
 	FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error)
-	GetGitOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error)
+	GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
@@ -35,21 +35,39 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 }
 
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
-	trimmedRepoURL := strings.TrimSpace(repository.RepositoryUrl)
-	if trimmedRepoURL == "" {
-		return r.db.WithContext(ctx).Create(repository).Error
-	}
+	trimmedRepoURL := strings.TrimSpace(repository.Url)
+	repository.Url = trimmedRepoURL
 
 	var existing models.Repository
-	err := r.db.WithContext(ctx).Where("repository_url = ?", trimmedRepoURL).First(&existing).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
+	found := false
+	if repository.Id != "" {
+		if err := r.db.WithContext(ctx).Where("id = ?", repository.Id).First(&existing).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+		} else {
+			found = true
+		}
 	}
-	if err == nil {
-		log.Printf("SaveRepository: found existing repository for url %q with id %s", trimmedRepoURL, existing.Id)
+
+	if !found && trimmedRepoURL != "" {
+		err := r.db.WithContext(ctx).Where("repository_url = ?", trimmedRepoURL).First(&existing).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if err == nil {
+			log.Printf("SaveRepository: found existing repository for url %q with id %s", trimmedRepoURL, existing.Id)
+			found = true
+		}
+	}
+
+	if found {
 		repository.Id = existing.Id
 		if repository.CreatedAt.IsZero() {
 			repository.CreatedAt = existing.CreatedAt
+		}
+		if repository.OrganisationID == nil {
+			repository.OrganisationID = existing.OrganisationID
 		}
 		return r.db.WithContext(ctx).Save(repository).Error
 	}
@@ -57,19 +75,18 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 	return r.db.WithContext(ctx).Create(repository).Error
 }
 
-func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = 20
+	}
 	offset := (page - 1) * perPage
 
-	db := r.db
+	db := r.db.WithContext(ctx)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-	}
-	if ids != nil {
-		idsSlice := strings.Split(*ids, ",")
-		for i := range idsSlice {
-			idsSlice[i] = strings.TrimSpace(idsSlice[i])
-		}
-		db = db.Where("id IN ?", idsSlice)
 	}
 
 	var totalRecords int64
@@ -102,16 +119,18 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	return repositories, pagination, nil
 }
 
-func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = 20
+	}
 	offset := (page - 1) * perPage
 
-	db := r.db
-	if ids != nil {
-		idsSlice := strings.Split(*ids, ",")
-		for i := range idsSlice {
-			idsSlice[i] = strings.TrimSpace(idsSlice[i])
-		}
-		db = db.Where("id IN ?", idsSlice)
+	db := r.db.WithContext(ctx)
+	if organisation != nil && strings.TrimSpace(*organisation) != "" {
+		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
 
 	var totalRecords int64
@@ -146,7 +165,7 @@ func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, 
 
 func (r *repositoriesRepository) GetRepositoryByID(ctx context.Context, id string) (*models.Repository, error) {
 	var api models.Repository
-	if err := r.db.Preload("Organisation").First(&api, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Organisation").First(&api, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -161,7 +180,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 		page = 1
 	}
 	if perPage <= 0 {
-		perPage = 10
+		perPage = 20
 	}
 	if trimmed == "" {
 		return []models.Repository{}, models.Pagination{
@@ -237,45 +256,12 @@ func (r *repositoriesRepository) AllRepositorys(ctx context.Context) ([]models.R
 	return repositories, nil
 }
 
-func (r *repositoriesRepository) GetOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error) {
-	offset := (page - 1) * perPage
-
-	db := r.db.WithContext(ctx)
-	if ids != nil {
-		idsSlice := strings.Split(*ids, ",")
-		for i := range idsSlice {
-			idsSlice[i] = strings.TrimSpace(idsSlice[i])
-		}
-		db = db.Where("uri IN ?", idsSlice)
-	}
-
-	var totalRecords int64
-	if err := db.Model(&models.Organisation{}).Count(&totalRecords).Error; err != nil {
-		return nil, models.Pagination{}, err
-	}
-
+func (r *repositoriesRepository) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
 	var organisations []models.Organisation
-	if err := db.Limit(perPage).Offset(offset).Order("label asc").Find(&organisations).Error; err != nil {
-		return nil, models.Pagination{}, err
+	if err := r.db.WithContext(ctx).Order("label asc").Find(&organisations).Error; err != nil {
+		return nil, err
 	}
-
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(perPage)))
-	pagination := models.Pagination{
-		CurrentPage:    page,
-		RecordsPerPage: perPage,
-		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
-	}
-	if page < totalPages {
-		next := page + 1
-		pagination.Next = &next
-	}
-	if page > 1 {
-		prev := page - 1
-		pagination.Previous = &prev
-	}
-
-	return organisations, pagination, nil
+	return organisations, nil
 }
 
 func (r *repositoriesRepository) FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error) {

@@ -15,19 +15,19 @@ import (
 )
 
 type serviceStubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
-	getOrgFunc          func(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error)
-	gitOrgListFunc      func(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error)
+	getOrgFunc          func(ctx context.Context) ([]models.Organisation, error)
+	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
 
-func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
+func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation, ids)
+		return s.listFunc(ctx, page, perPage, organisation)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -61,16 +61,16 @@ func (s *serviceStubRepo) AllRepositorys(ctx context.Context) ([]models.Reposito
 	return nil, nil
 }
 
-func (s *serviceStubRepo) GetOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error) {
+func (s *serviceStubRepo) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
 	if s.getOrgFunc != nil {
-		return s.getOrgFunc(ctx, page, perPage, ids)
+		return s.getOrgFunc(ctx)
 	}
-	return nil, models.Pagination{}, nil
+	return nil, nil
 }
 
-func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, ids *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
 	if s.gitOrgListFunc != nil {
-		return s.gitOrgListFunc(ctx, page, perPage, ids)
+		return s.gitOrgListFunc(ctx, page, perPage, organisation)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -96,7 +96,7 @@ func (s *serviceStubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string, ids *string) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
 			org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 			return []models.Repository{
 				{Id: "repo-1", Name: "Repo One", Organisation: org},
@@ -107,7 +107,7 @@ func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	req := httptest.NewRequest(http.MethodGet, "/v1/Repositories", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/repositories", nil)
 	ctx.Request = req
 	ctx.Params = gin.Params{}
 
@@ -124,7 +124,7 @@ func TestRetrieveRepository_NotFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	req := httptest.NewRequest(http.MethodGet, "/v1/Repositories/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/repositories/missing", nil)
 	ctx.Request = req
 
 	resp, err := ctrl.RetrieveRepository(ctx, &models.RepositoryParams{Id: "missing"})
@@ -143,7 +143,7 @@ func TestSearchRepositorys_UsesService(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	req := httptest.NewRequest(http.MethodGet, "/v1/Repositories/_search?q=repo", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/repositories/_search?q=repo", nil)
 	ctx.Request = req
 
 	results, err := ctrl.SearchRepositorys(ctx, &models.ListRepositorysSearchParams{Query: "repo"})
@@ -155,13 +155,8 @@ func TestSearchRepositorys_UsesService(t *testing.T) {
 func TestListOrganisations_SetsHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		getOrgFunc: func(ctx context.Context, page, perPage int, ids *string) ([]models.Organisation, models.Pagination, error) {
-			return []models.Organisation{{Uri: "org-1", Label: "Org 1"}}, models.Pagination{
-				TotalRecords:   1,
-				TotalPages:     1,
-				CurrentPage:    page,
-				RecordsPerPage: perPage,
-			}, nil
+		getOrgFunc: func(ctx context.Context) ([]models.Organisation, error) {
+			return []models.Organisation{{Uri: "org-1", Label: "Org 1"}}, nil
 		},
 	}
 	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
@@ -174,8 +169,7 @@ func TestListOrganisations_SetsHeader(t *testing.T) {
 	orgs, err := ctrl.ListOrganisations(ctx, &models.ListOrganisationsParams{})
 	require.NoError(t, err)
 	require.Len(t, orgs, 1)
-	assert.Equal(t, "1", w.Header().Get("Total-Count"))
-	assert.NotEmpty(t, w.Header().Get("Link"))
+	assert.Empty(t, w.Header().Get("Total-Count"))
 }
 
 func TestCreateOrganisation_DelegatesToService(t *testing.T) {
