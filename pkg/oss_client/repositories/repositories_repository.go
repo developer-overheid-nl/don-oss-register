@@ -8,7 +8,6 @@ import (
 	"math"
 	"strings"
 
-	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"gorm.io/gorm"
 )
@@ -62,8 +61,20 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 		}
 	}
 
+	// if found && repository.Id != existing.Id {
+	// 	return problem.NewBadRequest("Repository already exists; use PUT instead of POST")
+	// }
+
 	if found {
-		return problem.NewBadRequest("Repository already exists")
+		repository.Id = existing.Id
+		if repository.CreatedAt.IsZero() {
+			repository.CreatedAt = existing.CreatedAt
+		}
+		if repository.OrganisationID == nil {
+			repository.OrganisationID = existing.OrganisationID
+		}
+
+		return r.db.WithContext(ctx).Save(repository).Error
 	}
 
 	return r.db.WithContext(ctx).Create(repository).Error
