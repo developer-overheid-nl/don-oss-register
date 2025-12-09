@@ -58,11 +58,10 @@ while IFS= read -r row; do
 
   org_payload=$(jq -nc --arg uri "${org_uri}" --arg lbl "${label}" '{uri:$uri,label:$lbl}')
   post_json "${BASE_URL}/organisations" "${org_payload}" "organisation ${label}"
-  echo "${BASE_URL}/gitOrganisations"
   jq -r '.codeHosting[]?.url // empty' <<<"${row}" | while IFS= read -r code_host; do
     [[ -z "${code_host}" ]] && continue
-    git_payload=$(jq -nc --arg gitOrganisationUrl "${code_host}" --arg organisationUrl "${org_uri}" \
-      '{gitOrganisationUrl:$gitOrganisationUrl, organisationUrl:$organisationUrl}')
-    post_json "${BASE_URL}/gitOrganisations" "${git_payload}" "  git org ${code_host}"
+    git_payload=$(jq -nc --arg url "${code_host}" --arg organisationUri "${org_uri}" \
+      '{url:$url, organisationUri:$organisationUri}')
+    post_json "${BASE_URL}/git-organisations" "${git_payload}" "  git org ${code_host}"
   done
 done < <(jq -c '.data[]' "${PUBLISHERS_FILE}")

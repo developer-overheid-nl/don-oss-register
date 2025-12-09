@@ -33,6 +33,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
+		LongDescription:   repo.LongDescription,
 	}
 	return detail
 }

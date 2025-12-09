@@ -27,6 +27,7 @@ type RepositorySummary struct {
 
 type RepositoryDetail struct {
 	RepositorySummary
+	LongDescription string `json:"longDescription,omitempty"`
 }
 
 type Repository struct {

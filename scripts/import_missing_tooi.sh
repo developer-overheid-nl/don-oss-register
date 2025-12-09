@@ -35,11 +35,11 @@ post_git_org() {
   local tmp
   tmp="$(mktemp)"
   local payload
-  payload="$(jq -n --arg git "${git_url}" --arg org "${org_url}" '{gitOrganisationUrl:$git, organisationUrl:$org}')"
+  payload="$(jq -n --arg url "${git_url}" --arg organisationUri "${org_url}" '{url:$url, organisationUri:$organisationUri}')"
   local status
   local curl_args=(-sS --output "${tmp}" --write-out "%{http_code}" \
     --request POST \
-    --url "${BASE_URL}/gitOrganisations" \
+    --url "${BASE_URL}/git-organisations" \
     --header "content-type: application/json" \
     --data "${payload}")
   if ((${#auth_headers[@]})); then
