@@ -3,6 +3,8 @@ set -euo pipefail
 
 # Seed organisations en git-organisaties vanuit publishers.json.
 # BASE_URL, PUBLISHERS_FILE, API_KEY en BEARER_TOKEN kunnen via env worden gezet.
+# Combineert de eerdere import_missing_tooi functionaliteit: entries zonder tooiUrl
+# worden via een bekende mapping alsnog aan een organisatie gekoppeld.
 
 BASE_URL=${BASE_URL:-https://localhost:1337/v1}
 PUBLISHERS_FILE=${PUBLISHERS_FILE:-publishers.json}
@@ -20,6 +22,16 @@ fi
 auth_headers=()
 [[ -n "${API_KEY:-}" ]] && auth_headers+=(-H "X-Api-Key: ${API_KEY}")
 [[ -n "${BEARER_TOKEN:-}" ]] && auth_headers+=(-H "Authorization: Bearer ${BEARER_TOKEN}")
+
+org_url_for_id() {
+  case "$1" in
+    6eb9a8a6-7c84-442f-8346-a4b9ca90c7a1) echo "https://www.gpp-woo.nl" ;;
+    29869c95-a74e-4603-8313-f61fd7b46c25) echo "https://www.geonovum.nl" ;;
+    6cb95fc7-a334-4173-b461-068dc03d93eb) echo "https://www.ictu.nl" ;;
+    0ea49086-490d-4c7d-9de3-33a990652860) echo "https://vng.nl" ;;
+    *) return 1 ;;
+  esac
+}
 
 post_json() {
   local url=$1
@@ -50,9 +62,21 @@ post_json() {
 while IFS= read -r row; do
   label=$(jq -r '.description // empty' <<<"${row}")
   org_uri=$(jq -r '.tooiUrl // empty' <<<"${row}")
+  id=$(jq -r '.id // empty' <<<"${row}")
 
-  if [[ -z "${label}" || -z "${org_uri}" || "${org_uri}" == "null" ]]; then
-    echo "Skipping entry met lege description of tooiUrl" >&2
+  if [[ -z "${org_uri}" || "${org_uri}" == "null" ]]; then
+    mapped_uri=$(org_url_for_id "${id}" || true)
+    if [[ -n "${mapped_uri}" ]]; then
+      org_uri="${mapped_uri}"
+      echo "Gebruik mapping voor id ${id}: ${org_uri}"
+    else
+      echo "Skipping entry met lege description of tooiUrl (id=${id}, label=${label})" >&2
+      continue
+    fi
+  fi
+
+  if [[ -z "${label}" ]]; then
+    echo "Skipping entry met lege description (id=${id})" >&2
     continue
   fi
 

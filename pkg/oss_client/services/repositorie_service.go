@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -244,6 +245,15 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 	if org.Label == "" {
 		return nil, problem.NewBadRequest("Invalid input",
 			bodyError("label", "required", "label is required"),
+		)
+	}
+	existing, err := s.repo.FindOrganisationByURI(ctx, org.Uri)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, problem.New(http.StatusConflict, "Organisation already exists",
+			bodyError("uri", "conflict", "organisation already exists"),
 		)
 	}
 	if err := s.repo.SaveOrganisatie(org); err != nil {
