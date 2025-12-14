@@ -60,6 +60,12 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	if input.Url != nil {
 		target.Url = strings.TrimSpace(*input.Url)
 	}
+	if !input.CreatedAt.IsZero() {
+		target.CreatedAt = input.CreatedAt
+	}
+	if !input.UpdatedAt.IsZero() {
+		target.UpdatedAt = input.UpdatedAt
+	}
 	if input.PublicCodeUrl != nil {
 		target.PublicCodeUrl = strings.TrimSpace(*input.PublicCodeUrl)
 	}

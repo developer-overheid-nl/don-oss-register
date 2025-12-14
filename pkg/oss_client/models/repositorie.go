@@ -53,11 +53,13 @@ type ListRepositorysSearchParams struct {
 }
 
 type RepositoryInput struct {
-	Url              *string `json:"url" binding:"required,url"`
-	OrganisationUri  *string `json:"organisationUri" binding:"required,url"`
-	PublicCodeUrl    *string `json:"publicCodeUrl" binding:"omitempty,url"`
-	ShortDescription *string `json:"shortDescription,omitempty"`
-	Name             *string `json:"name,omitempty"`
+	Url              *string   `json:"url" binding:"required,url"`
+	OrganisationUri  *string   `json:"organisationUri" binding:"required,url"`
+	PublicCodeUrl    *string   `json:"publicCodeUrl" binding:"omitempty,url"`
+	ShortDescription *string   `json:"shortDescription,omitempty"`
+	CreatedAt        time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt        time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	Name             *string   `json:"name,omitempty"`
 }
 type ListRepositorysParams struct {
 	Page         int     `query:"page" validate:"omitempty,min=1"`
