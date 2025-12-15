@@ -156,6 +156,9 @@ func main() {
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://vng.nl", Label: "Vereniging van Nederlandse Gemeenten"}); err != nil {
 		fmt.Printf("[VNG-import] create org warning: %v\n", err)
 	}
+	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://developer.overheid.nl/", Label: "Developer overheid"}); err != nil {
+		fmt.Printf("[Developer-overheid-import] create org warning: %v\n", err)
+	}
 
 	// Start server
 	router := api.NewRouter(version, controller)
