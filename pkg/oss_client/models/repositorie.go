@@ -22,7 +22,7 @@ type RepositorySummary struct {
 	ShortDescription string               `json:"shortDescription,omitempty" gorm:"column:short_description"`
 	Name             string               `json:"name,omitempty" gorm:"column:name"`
 	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt        time.Time            `json:"updatedAt" gorm:"column:updated_at"`
+	LastCrawledAt    time.Time            `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
 	LastActivity     time.Time            `json:"lastActivity,omitempty" gorm:"column:last_activity"`
 }
 
@@ -41,7 +41,7 @@ type Repository struct {
 	Url              string        `json:"url" gorm:"column:repository_url"`
 	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
 	CreatedAt        time.Time     `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt        time.Time     `json:"updatedAt" gorm:"column:updated_at"`
+	LastCrawledAt    time.Time     `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
 	LastActivity     time.Time     `json:"lastActivity,omitempty" gorm:"column:last_activity"`
 	Active           bool          `json:"-" gorm:"column:active"`
 }
@@ -60,9 +60,9 @@ type RepositoryInput struct {
 	PublicCodeUrl    *string   `json:"publicCodeUrl" binding:"omitempty,url"`
 	ShortDescription *string   `json:"shortDescription,omitempty"`
 	CreatedAt        time.Time `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt        time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	LastCrawledAt    time.Time `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
 	Name             *string   `json:"name,omitempty"`
-	LastActivity     time.Time `json:"lastActivity,omitempty"`
+	LastActivity     time.Time `json:"lastActivity,omitempty" gorm:"column:last_activity"`
 }
 type ListRepositorysParams struct {
 	Page         int     `query:"page" validate:"omitempty,min=1"`

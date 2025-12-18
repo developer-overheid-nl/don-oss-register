@@ -688,7 +688,7 @@
                         "format": "date-time",
                         "readOnly": true
                       },
-                      "updatedAt": {
+                      "lastCrawledAt": {
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
@@ -858,7 +858,7 @@
                     "format": "date-time",
                     "readOnly": true
                   },
-                  "updatedAt": {
+                  "lastCrawledAt": {
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
@@ -962,7 +962,7 @@
                           "format": "date-time",
                           "readOnly": true
                         },
-                        "updatedAt": {
+                        "lastCrawledAt": {
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
@@ -1247,7 +1247,7 @@
                         "format": "date-time",
                         "readOnly": true
                       },
-                      "updatedAt": {
+                      "lastCrawledAt": {
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
@@ -1467,7 +1467,7 @@
                           "format": "date-time",
                           "readOnly": true
                         },
-                        "updatedAt": {
+                        "lastCrawledAt": {
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
@@ -1644,7 +1644,7 @@
                     "format": "date-time",
                     "readOnly": true
                   },
-                  "updatedAt": {
+                  "lastCrawledAt": {
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
@@ -1748,7 +1748,7 @@
                           "format": "date-time",
                           "readOnly": true
                         },
-                        "updatedAt": {
+                        "lastCrawledAt": {
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
@@ -2606,7 +2606,7 @@
             "format": "date-time",
             "readOnly": true
           },
-          "updatedAt": {
+          "lastCrawledAt": {
             "type": "string",
             "format": "date-time",
             "readOnly": true
@@ -2681,7 +2681,7 @@
             "format": "date-time",
             "readOnly": true
           },
-          "updatedAt": {
+          "lastCrawledAt": {
             "type": "string",
             "format": "date-time",
             "readOnly": true
@@ -2767,7 +2767,7 @@
                 "format": "date-time",
                 "readOnly": true
               },
-              "updatedAt": {
+              "lastCrawledAt": {
                 "type": "string",
                 "format": "date-time",
                 "readOnly": true

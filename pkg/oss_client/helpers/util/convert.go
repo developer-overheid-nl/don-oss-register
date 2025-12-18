@@ -25,7 +25,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		ShortDescription: repo.ShortDescription,
 		PublicCodeUrl:    repo.PublicCodeUrl,
 		CreatedAt:        repo.CreatedAt,
-		UpdatedAt:        repo.UpdatedAt,
+		LastCrawledAt:    repo.LastCrawledAt,
 		LastActivity:     repo.LastActivity,
 		Organisation:     orgSummary,
 	}
@@ -64,8 +64,8 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	if !input.CreatedAt.IsZero() {
 		target.CreatedAt = input.CreatedAt
 	}
-	if !input.UpdatedAt.IsZero() {
-		target.UpdatedAt = input.UpdatedAt
+	if !input.LastCrawledAt.IsZero() {
+		target.LastCrawledAt = input.LastCrawledAt
 	}
 	if !input.LastActivity.IsZero() {
 		target.LastActivity = input.LastActivity

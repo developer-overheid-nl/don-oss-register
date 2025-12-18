@@ -31,6 +31,10 @@ func Connect(connStr string) (*gorm.DB, error) {
 	// 	}
 	// }
 
+	if err := migrateRepositoryLastCrawledAt(db); err != nil {
+		return nil, err
+	}
+
 	if err := db.AutoMigrate(
 		&models.Repository{},
 		&models.Organisation{},
@@ -40,4 +44,19 @@ func Connect(connStr string) (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+// migrateRepositoryLastCrawledAt renames the legacy updated_at column to last_crawled_at.
+func migrateRepositoryLastCrawledAt(db *gorm.DB) error {
+	m := db.Migrator()
+	hasUpdated := m.HasColumn(&models.Repository{}, "updated_at")
+	hasLastCrawled := m.HasColumn(&models.Repository{}, "last_crawled_at")
+
+	if hasUpdated && !hasLastCrawled {
+		if err := m.RenameColumn(&models.Repository{}, "updated_at", "last_crawled_at"); err != nil {
+			return fmt.Errorf("failed to rename column updated_at to last_crawled_at: %w", err)
+		}
+	}
+
+	return nil
 }
