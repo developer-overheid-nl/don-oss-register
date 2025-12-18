@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -97,6 +98,7 @@ func (s *stubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrg
 
 func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
+	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
@@ -106,6 +108,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 					ShortDescription: "desc",
 					LongDescription:  "desc",
 					Organisation:     org,
+					LastActivity:     lastActivity,
 				},
 			}, models.Pagination{TotalRecords: 1, CurrentPage: 1, RecordsPerPage: 10}, nil
 		},
@@ -116,13 +119,15 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "repo-1", results[0].Id)
+	assert.Equal(t, lastActivity, results[0].LastActivity)
 	assert.Equal(t, 1, pagination.TotalRecords)
 }
 
 func TestRetrieveRepository_ReturnsDetail(t *testing.T) {
+	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
 		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
-			return &models.Repository{Id: id, Name: "Repo"}, nil
+			return &models.Repository{Id: id, Name: "Repo", LastActivity: lastActivity}, nil
 		},
 	}
 	svc := services.NewRepositoryService(repo)
@@ -131,6 +136,7 @@ func TestRetrieveRepository_ReturnsDetail(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, detail)
 	assert.Equal(t, "repo-1", detail.Id)
+	assert.Equal(t, lastActivity, detail.LastActivity)
 }
 
 func TestRetrieveRepository_NotFoundPassesThrough(t *testing.T) {

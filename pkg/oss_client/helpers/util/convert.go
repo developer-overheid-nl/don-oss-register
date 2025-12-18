@@ -26,6 +26,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		PublicCodeUrl:    repo.PublicCodeUrl,
 		CreatedAt:        repo.CreatedAt,
 		UpdatedAt:        repo.UpdatedAt,
+		LastActivity:     repo.LastActivity,
 		Organisation:     orgSummary,
 	}
 }
@@ -65,6 +66,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	}
 	if !input.UpdatedAt.IsZero() {
 		target.UpdatedAt = input.UpdatedAt
+	}
+	if !input.LastActivity.IsZero() {
+		target.LastActivity = input.LastActivity
 	}
 	if input.PublicCodeUrl != nil {
 		target.PublicCodeUrl = strings.TrimSpace(*input.PublicCodeUrl)

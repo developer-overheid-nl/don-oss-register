@@ -2610,6 +2610,11 @@
             "type": "string",
             "format": "date-time",
             "readOnly": true
+          },
+          "lastActivity": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
           }
         }
       },
@@ -2680,6 +2685,10 @@
             "type": "string",
             "format": "date-time",
             "readOnly": true
+          },
+          "lastActivity": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2759,6 +2768,11 @@
                 "readOnly": true
               },
               "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "lastActivity": {
                 "type": "string",
                 "format": "date-time",
                 "readOnly": true
