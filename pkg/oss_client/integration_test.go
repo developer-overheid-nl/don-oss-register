@@ -104,7 +104,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		OrganisationID:   &org.Uri,
 		Url:              "https://example.org/repos/repo-1",
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
-		LastActivity:     time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC),
+		LastActivityAt:   time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC),
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
 
@@ -119,7 +119,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Equal(t, "repo-1", body[0].Id)
 		require.Equal(t, repoModel.Url, body[0].Url)
 		require.NotNil(t, body[0].Organisation)
-		require.Equal(t, repoModel.LastActivity, body[0].LastActivity)
+		require.Equal(t, repoModel.LastActivityAt, body[0].LastActivityAt)
 	})
 
 	t.Run("retrieve repository", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		body := decodeBody[models.RepositoryDetail](t, resp)
 		require.Equal(t, "repo-1", body.Id)
 		require.NotNil(t, body.Organisation)
-		require.Equal(t, repoModel.LastActivity, body.LastActivity)
+		require.Equal(t, repoModel.LastActivityAt, body.LastActivityAt)
 	})
 
 	t.Run("search repositories", func(t *testing.T) {

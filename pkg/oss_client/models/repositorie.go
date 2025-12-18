@@ -23,7 +23,7 @@ type RepositorySummary struct {
 	Name             string               `json:"name,omitempty" gorm:"column:name"`
 	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
 	LastCrawledAt    time.Time            `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
-	LastActivity     time.Time            `json:"lastActivity,omitempty" gorm:"column:last_activity"`
+	LastActivityAt   time.Time            `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 
 type RepositoryDetail struct {
@@ -42,7 +42,7 @@ type Repository struct {
 	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
 	CreatedAt        time.Time     `json:"createdAt" gorm:"column:created_at"`
 	LastCrawledAt    time.Time     `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
-	LastActivity     time.Time     `json:"lastActivity,omitempty" gorm:"column:last_activity"`
+	LastActivityAt   time.Time     `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 	Active           bool          `json:"-" gorm:"column:active"`
 }
 
@@ -62,7 +62,7 @@ type RepositoryInput struct {
 	CreatedAt        time.Time `json:"createdAt" gorm:"column:created_at"`
 	LastCrawledAt    time.Time `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
 	Name             *string   `json:"name,omitempty"`
-	LastActivity     time.Time `json:"lastActivity,omitempty" gorm:"column:last_activity"`
+	LastActivityAt   time.Time `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 type ListRepositorysParams struct {
 	Page         int     `query:"page" validate:"omitempty,min=1"`

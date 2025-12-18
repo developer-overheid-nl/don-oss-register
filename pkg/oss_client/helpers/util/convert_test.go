@@ -15,17 +15,17 @@ func TestApplyRepositoryInputSetsTimestamps(t *testing.T) {
 	lastActivity := time.Date(2024, 3, 5, 8, 0, 0, 0, time.UTC)
 
 	input := models.RepositoryInput{
-		Url:           strPtr("https://example.org/repo"),
-		CreatedAt:     created,
-		LastCrawledAt: lastCrawled,
-		LastActivity:  lastActivity,
+		Url:            strPtr("https://example.org/repo"),
+		CreatedAt:      created,
+		LastCrawledAt:  lastCrawled,
+		LastActivityAt: lastActivity,
 	}
 
 	repo := util.ApplyRepositoryInput(nil, &input)
 
 	assert.Equal(t, created, repo.CreatedAt)
 	assert.Equal(t, lastCrawled, repo.LastCrawledAt)
-	assert.Equal(t, lastActivity, repo.LastActivity)
+	assert.Equal(t, lastActivity, repo.LastActivityAt)
 }
 
 func TestApplyRepositoryInputKeepsExistingTimestampsWhenZero(t *testing.T) {
@@ -33,16 +33,16 @@ func TestApplyRepositoryInputKeepsExistingTimestampsWhenZero(t *testing.T) {
 	lastCrawled := time.Date(2023, 7, 1, 12, 0, 0, 0, time.UTC)
 	lastActivity := time.Date(2023, 7, 15, 9, 0, 0, 0, time.UTC)
 	existing := &models.Repository{
-		CreatedAt:     created,
-		LastCrawledAt: lastCrawled,
-		LastActivity:  lastActivity,
+		CreatedAt:      created,
+		LastCrawledAt:  lastCrawled,
+		LastActivityAt: lastActivity,
 	}
 
 	repo := util.ApplyRepositoryInput(existing, &models.RepositoryInput{})
 
 	assert.Equal(t, created, repo.CreatedAt)
 	assert.Equal(t, lastCrawled, repo.LastCrawledAt)
-	assert.Equal(t, lastActivity, repo.LastActivity)
+	assert.Equal(t, lastActivity, repo.LastActivityAt)
 }
 
 func strPtr(val string) *string {

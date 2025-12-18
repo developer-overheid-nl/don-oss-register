@@ -108,7 +108,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 					ShortDescription: "desc",
 					LongDescription:  "desc",
 					Organisation:     org,
-					LastActivity:     lastActivity,
+					LastActivityAt:   lastActivity,
 				},
 			}, models.Pagination{TotalRecords: 1, CurrentPage: 1, RecordsPerPage: 10}, nil
 		},
@@ -119,7 +119,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "repo-1", results[0].Id)
-	assert.Equal(t, lastActivity, results[0].LastActivity)
+	assert.Equal(t, lastActivity, results[0].LastActivityAt)
 	assert.Equal(t, 1, pagination.TotalRecords)
 }
 
@@ -127,7 +127,7 @@ func TestRetrieveRepository_ReturnsDetail(t *testing.T) {
 	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
 		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
-			return &models.Repository{Id: id, Name: "Repo", LastActivity: lastActivity}, nil
+			return &models.Repository{Id: id, Name: "Repo", LastActivityAt: lastActivity}, nil
 		},
 	}
 	svc := services.NewRepositoryService(repo)
@@ -136,7 +136,7 @@ func TestRetrieveRepository_ReturnsDetail(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, detail)
 	assert.Equal(t, "repo-1", detail.Id)
-	assert.Equal(t, lastActivity, detail.LastActivity)
+	assert.Equal(t, lastActivity, detail.LastActivityAt)
 }
 
 func TestRetrieveRepository_NotFoundPassesThrough(t *testing.T) {

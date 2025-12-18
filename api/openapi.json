@@ -2611,7 +2611,7 @@
             "format": "date-time",
             "readOnly": true
           },
-          "lastActivity": {
+          "lastActivityAt": {
             "type": "string",
             "format": "date-time",
             "readOnly": true
@@ -2686,7 +2686,7 @@
             "format": "date-time",
             "readOnly": true
           },
-          "lastActivity": {
+          "lastActivityAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -2772,7 +2772,7 @@
                 "format": "date-time",
                 "readOnly": true
               },
-              "lastActivity": {
+              "lastActivityAt": {
                 "type": "string",
                 "format": "date-time",
                 "readOnly": true

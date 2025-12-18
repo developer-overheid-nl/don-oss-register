@@ -31,7 +31,7 @@ func Connect(connStr string) (*gorm.DB, error) {
 	// 	}
 	// }
 
-	if err := migrateRepositoryLastCrawledAt(db); err != nil {
+	if err := migrateRepositoryTimestampColumns(db); err != nil {
 		return nil, err
 	}
 
@@ -46,15 +46,23 @@ func Connect(connStr string) (*gorm.DB, error) {
 	return db, nil
 }
 
-// migrateRepositoryLastCrawledAt renames the legacy updated_at column to last_crawled_at.
-func migrateRepositoryLastCrawledAt(db *gorm.DB) error {
+// migrateRepositoryTimestampColumns renames legacy timestamp columns.
+func migrateRepositoryTimestampColumns(db *gorm.DB) error {
 	m := db.Migrator()
 	hasUpdated := m.HasColumn(&models.Repository{}, "updated_at")
 	hasLastCrawled := m.HasColumn(&models.Repository{}, "last_crawled_at")
+	hasLastActivity := m.HasColumn(&models.Repository{}, "last_activity")
+	hasLastActivityAt := m.HasColumn(&models.Repository{}, "last_activity_at")
 
 	if hasUpdated && !hasLastCrawled {
 		if err := m.RenameColumn(&models.Repository{}, "updated_at", "last_crawled_at"); err != nil {
 			return fmt.Errorf("failed to rename column updated_at to last_crawled_at: %w", err)
+		}
+	}
+
+	if hasLastActivity && !hasLastActivityAt {
+		if err := m.RenameColumn(&models.Repository{}, "last_activity", "last_activity_at"); err != nil {
+			return fmt.Errorf("failed to rename column last_activity to last_activity_at: %w", err)
 		}
 	}
 
