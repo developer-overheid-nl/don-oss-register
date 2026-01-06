@@ -9,46 +9,52 @@ import (
 )
 
 const (
-	DefaultRepositoryActiveRefreshInterval = 24 * time.Hour
-	DefaultRepositoryActiveStaleAfter      = 48 * time.Hour
+	DefaultRepositoryActiveStaleAfter = 48 * time.Hour
 )
 
 type RepositoryActiveJob struct {
-	repo            repositories.RepositoriesRepository
-	refreshInterval time.Duration
-	staleAfter      time.Duration
+	repo       repositories.RepositoriesRepository
+	staleAfter time.Duration
+	runAtHour  int
 }
 
 func NewRepositoryActiveJob(repo repositories.RepositoriesRepository) *RepositoryActiveJob {
 	return &RepositoryActiveJob{
-		repo:            repo,
-		refreshInterval: DefaultRepositoryActiveRefreshInterval,
-		staleAfter:      DefaultRepositoryActiveStaleAfter,
+		repo:       repo,
+		staleAfter: DefaultRepositoryActiveStaleAfter,
+		runAtHour:  13,
 	}
 }
 
 func (j *RepositoryActiveJob) Start(ctx context.Context) {
-	run := func() {
-		cutoff := time.Now().UTC().Add(-j.staleAfter)
-		if err := j.refreshRepositoryActiveFlags(ctx, cutoff); err != nil {
-			log.Printf("repository active job failed: %v", err)
-		}
-	}
-
-	run()
-
-	ticker := time.NewTicker(j.refreshInterval)
 	go func() {
-		defer ticker.Stop()
 		for {
+			wait := time.Until(nextRunAt(time.Now(), j.runAtHour))
+			timer := time.NewTimer(wait)
 			select {
-			case <-ticker.C:
-				run()
+			case <-timer.C:
+				j.runOnce(ctx)
 			case <-ctx.Done():
+				timer.Stop()
 				return
 			}
 		}
 	}()
+}
+
+func (j *RepositoryActiveJob) runOnce(ctx context.Context) {
+	cutoff := time.Now().UTC().Add(-j.staleAfter)
+	if err := j.refreshRepositoryActiveFlags(ctx, cutoff); err != nil {
+		log.Printf("repository active job failed: %v", err)
+	}
+}
+
+func nextRunAt(now time.Time, hour int) time.Time {
+	next := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, now.Location())
+	if now.After(next) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next
 }
 
 func (j *RepositoryActiveJob) refreshRepositoryActiveFlags(ctx context.Context, cutoff time.Time) error {
