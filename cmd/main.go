@@ -23,6 +23,7 @@ import (
 
 	api "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/database"
+	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/jobs"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 )
@@ -144,6 +145,7 @@ func main() {
 	repo := repositories.NewRepositoriesRepository(db)
 	repositoriesService := services.NewRepositoryService(repo)
 	controller := handler.NewOSSController(repositoriesService)
+	jobs.NewRepositoryActiveJob(repo).Start(context.Background())
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.gpp-woo.nl", Label: "GPP-Woo"}); err != nil {
 		fmt.Printf("[GPP-Woo-import] create org warning: %v\n", err)
 	}

@@ -11,6 +11,7 @@ pids
 *.pid
 *.seed
 *.pid.lock
+*.out
 
 # Coverage and build artifacts
 coverage
