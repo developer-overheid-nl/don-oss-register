@@ -100,7 +100,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	}
 
 	var repositories []models.Repository
-	if err := db.Limit(perPage).Preload("Organisation").Offset(offset).Order("name").Find(&repositories).Error; err != nil {
+	if err := applyRepositoryOrdering(db).Limit(perPage).Preload("Organisation").Offset(offset).Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
@@ -218,9 +218,8 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 	}
 
 	var repositories []models.Repository
-	if err := queryDB.
+	if err := applyRepositoryOrdering(queryDB).
 		Preload("Organisation").
-		Order("name").
 		Offset((page - 1) * perPage).
 		Limit(perPage).
 		Find(&repositories).Error; err != nil {
@@ -297,4 +296,10 @@ func (r *repositoriesRepository) FindGitOrganisationByURL(ctx context.Context, u
 		return nil, err
 	}
 	return &gitOrg, nil
+}
+
+func applyRepositoryOrdering(db *gorm.DB) *gorm.DB {
+	return db.Order("(public_code_url IS NOT NULL AND public_code_url <> '') DESC").
+		Order("last_activity_at DESC").
+		Order("name")
 }
