@@ -105,6 +105,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		Url:              "https://example.org/repos/repo-1",
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
 		LastActivityAt:   time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC),
+		Active:           true,
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
 

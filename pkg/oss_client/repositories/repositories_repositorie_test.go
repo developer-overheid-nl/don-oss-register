@@ -36,6 +36,7 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 		OrganisationID:   &org.Uri,
 		Url:              "https://example.org/repos/repo-1",
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
+		Active:           true,
 	}
 	require.NoError(t, repo.SaveRepository(ctx, repository))
 
@@ -58,9 +59,10 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 	require.NoError(t, repo.SaveOrganisatie(org2))
 
 	repositoriesToSave := []*models.Repository{
-		{Id: "repo-1", Name: "Repo One", OrganisationID: &org1.Uri},
-		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org1.Uri},
-		{Id: "repo-3", Name: "Repo Three", OrganisationID: &org2.Uri},
+		{Id: "repo-1", Name: "Repo One", OrganisationID: &org1.Uri, Active: true},
+		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org1.Uri, Active: true},
+		{Id: "repo-3", Name: "Repo Three", OrganisationID: &org2.Uri, Active: true},
+		{Id: "repo-4", Name: "Repo Four", OrganisationID: &org1.Uri, Active: false},
 	}
 	for _, r := range repositoriesToSave {
 		require.NoError(t, repo.SaveRepository(ctx, r))
@@ -70,6 +72,9 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
+	for _, repo := range results {
+		assert.NotEqual(t, "repo-4", repo.Id)
+	}
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
@@ -85,10 +90,17 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 			Id:             id,
 			Name:           name,
 			OrganisationID: &org.Uri,
+			Active:         true,
 		}))
 	}
 	save("repo-1", "Account API")
 	save("repo-2", "User Portal")
+	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
+		Id:             "repo-3",
+		Name:           "Account API Legacy",
+		OrganisationID: &org.Uri,
+		Active:         false,
+	}))
 
 	results, pagination, err := repo.SearchRepositorys(ctx, 1, 10, nil, "account")
 	require.NoError(t, err)
