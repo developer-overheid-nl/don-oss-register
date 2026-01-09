@@ -67,14 +67,17 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 	for _, r := range repositoriesToSave {
 		require.NoError(t, repo.SaveRepository(ctx, r))
 	}
+	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "repo-2").Error)
 
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri)
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
-	for _, repo := range results {
-		assert.NotEqual(t, "repo-4", repo.Id)
+	ids := make([]string, len(results))
+	for i, repo := range results {
+		ids[i] = repo.Id
 	}
+	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
@@ -85,28 +88,29 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	require.NoError(t, repo.SaveOrganisatie(org))
 
-	save := func(id, name string) {
+	save := func(id, name string, active bool) {
 		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
 			Id:             id,
 			Name:           name,
 			OrganisationID: &org.Uri,
-			Active:         true,
+			Active:         active,
 		}))
 	}
-	save("repo-1", "Account API")
-	save("repo-2", "User Portal")
-	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
-		Id:             "repo-3",
-		Name:           "Account API Legacy",
-		OrganisationID: &org.Uri,
-		Active:         false,
-	}))
+	save("repo-1", "Account API", true)
+	save("repo-2", "User Portal", true)
+	save("repo-3", "Account API Legacy", false)
+	save("repo-4", "Account API v2", true)
+	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "repo-4").Error)
 
 	results, pagination, err := repo.SearchRepositorys(ctx, 1, 10, nil, "account")
 	require.NoError(t, err)
-	require.Len(t, results, 1)
-	assert.Equal(t, "repo-1", results[0].Id)
-	assert.Equal(t, 1, pagination.TotalRecords)
+	require.Len(t, results, 2)
+	ids := make([]string, len(results))
+	for i, repo := range results {
+		ids[i] = repo.Id
+	}
+	assert.ElementsMatch(t, []string{"repo-1", "repo-4"}, ids)
+	assert.Equal(t, 2, pagination.TotalRecords)
 }
 
 func TestRepositoriesRepository_FindOrganisationByURI(t *testing.T) {

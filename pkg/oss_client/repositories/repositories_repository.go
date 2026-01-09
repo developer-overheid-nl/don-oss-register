@@ -90,7 +90,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	offset := (page - 1) * perPage
 
 	db := r.db.WithContext(ctx)
-	db = db.Where("active = ?", true)
+	db = db.Where("(active IS NULL OR active = ?)", true)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
@@ -196,7 +196,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 	}
 
 	base := r.db.WithContext(ctx)
-	base = base.Where("active = ?", true)
+	base = base.Where("(active IS NULL OR active = ?)", true)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		base = base.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
@@ -212,7 +212,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 	}
 
 	queryDB := r.db.WithContext(ctx)
-	queryDB = queryDB.Where("active = ?", true)
+	queryDB = queryDB.Where("(active IS NULL OR active = ?)", true)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		queryDB = queryDB.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
