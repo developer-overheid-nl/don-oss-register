@@ -90,7 +90,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	offset := (page - 1) * perPage
 
 	db := r.db.WithContext(ctx)
-	db = db.Where("(active IS NULL OR active = ?)", true)
+	// db = db.Where("(active IS NULL OR active = ?)", true)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
