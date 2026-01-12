@@ -17,7 +17,11 @@ func LoadOASVersion(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not open OAS file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var oas OpenAPIInfo
 	if err := json.NewDecoder(f).Decode(&oas); err != nil {

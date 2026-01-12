@@ -80,7 +80,11 @@ func (e *integrationEnv) doJSONRequest(t *testing.T, method, path string, payloa
 
 func decodeBody[T any](t *testing.T, resp *http.Response) T {
 	t.Helper()
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("close response body: %v", err)
+		}
+	}()
 	var out T
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
 	return out

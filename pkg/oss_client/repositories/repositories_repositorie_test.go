@@ -48,7 +48,7 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 	assert.Equal(t, "Org 1", got.Organisation.Label)
 }
 
-func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
+func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
 	ctx := context.Background()
@@ -71,13 +71,13 @@ func TestRepositoriesRepository_GetRepositoriesFilters(t *testing.T) {
 
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri)
 	require.NoError(t, err)
-	require.Len(t, results, 2)
-	assert.Equal(t, 2, pagination.TotalRecords)
+	require.Len(t, results, 3)
+	assert.Equal(t, 3, pagination.TotalRecords)
 	ids := make([]string, len(results))
 	for i, repo := range results {
 		ids[i] = repo.Id
 	}
-	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
+	assert.ElementsMatch(t, []string{"repo-1", "repo-2", "repo-4"}, ids)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {

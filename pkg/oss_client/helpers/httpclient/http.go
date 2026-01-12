@@ -53,7 +53,11 @@ func FetchOrganisationLabel(ctx context.Context, uriOrType string, optionalId ..
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = err
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("organisation not found: %s", uri)
 	}

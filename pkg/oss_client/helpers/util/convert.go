@@ -90,7 +90,11 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		content := publicCodeRaw
 		if isLikelyURL(publicCodeRaw) {
 			if resp, err := http.Get(publicCodeRaw); err == nil && resp != nil {
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						_ = err
+					}
+				}()
 				if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 					if body, err := io.ReadAll(resp.Body); err == nil {
 						content = string(body)
