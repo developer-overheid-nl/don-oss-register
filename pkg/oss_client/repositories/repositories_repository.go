@@ -73,6 +73,7 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 		if repository.OrganisationID == nil {
 			repository.OrganisationID = existing.OrganisationID
 		}
+		repository.Active = true
 
 		return r.db.WithContext(ctx).Save(repository).Error
 	}
