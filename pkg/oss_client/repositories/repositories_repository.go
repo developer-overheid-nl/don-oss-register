@@ -37,6 +37,7 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
 	trimmedRepoURL := strings.TrimSpace(repository.Url)
 	repository.Url = trimmedRepoURL
+	repository.Active = true
 
 	var existing models.Repository
 	found := false
@@ -73,7 +74,6 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 		if repository.OrganisationID == nil {
 			repository.OrganisationID = existing.OrganisationID
 		}
-		repository.Active = true
 
 		return r.db.WithContext(ctx).Save(repository).Error
 	}
@@ -91,7 +91,8 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	offset := (page - 1) * perPage
 
 	db := r.db.WithContext(ctx)
-	// db = db.Where("(active IS NULL OR active = ?)", true)
+	db = db.Where("(active IS NULL OR active = ?)", true)
+
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
