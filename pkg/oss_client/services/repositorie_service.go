@@ -130,6 +130,7 @@ func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.Lis
 
 func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
 	repo := util.ApplyRepositoryInput(nil, &requestBody)
+	repo.Active = true
 
 	repoURL := strings.TrimSpace(repo.Url)
 	if repoURL == "" {
@@ -186,6 +187,7 @@ func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, req
 
 	updated := util.ApplyRepositoryInput(existing, &requestBody)
 	updated.Id = id
+	updated.Active = true
 
 	repoURL := strings.TrimSpace(updated.Url)
 	if repoURL == "" {
