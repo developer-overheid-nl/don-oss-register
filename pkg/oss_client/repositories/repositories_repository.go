@@ -204,7 +204,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 	var pattern string
 	if trimmed != "" {
 		pattern = fmt.Sprintf("%%%s%%", strings.ToLower(trimmed))
-		base = base.Where("LOWER(name) LIKE ?", pattern)
+		base = base.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
 	}
 
 	var totalRecords int64
@@ -218,7 +218,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 		queryDB = queryDB.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
 	if pattern != "" {
-		queryDB = queryDB.Where("LOWER(name) LIKE ?", pattern)
+		queryDB = queryDB.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
 	}
 
 	var repositories []models.Repository

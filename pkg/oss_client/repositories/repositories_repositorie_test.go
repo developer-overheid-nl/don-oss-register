@@ -88,29 +88,32 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	require.NoError(t, repo.SaveOrganisatie(org))
 
-	save := func(id, name string, active bool) {
+	save := func(id, name, shortDesc, longDesc string, active bool) {
 		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
-			Id:             id,
-			Name:           name,
-			OrganisationID: &org.Uri,
-			Active:         active,
+			Id:               id,
+			Name:             name,
+			ShortDescription: shortDesc,
+			LongDescription:  longDesc,
+			OrganisationID:   &org.Uri,
+			Active:           active,
 		}))
 	}
-	save("repo-1", "Account API", true)
-	save("repo-2", "User Portal", true)
-	save("repo-3", "Account API Legacy", false)
-	save("repo-4", "Account API v2", true)
+	save("repo-1", "Account API", "", "", true)
+	save("repo-2", "User Portal", "", "", true)
+	save("repo-3", "Account API Legacy", "", "", false)
+	save("repo-4", "Account API v2", "", "", true)
+	save("repo-5", "Payments", "Account payment service", "Account billing integration", true)
 	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "repo-4").Error)
 
 	results, pagination, err := repo.SearchRepositorys(ctx, 1, 10, nil, "account")
 	require.NoError(t, err)
-	require.Len(t, results, 2)
+	require.Len(t, results, 3)
 	ids := make([]string, len(results))
 	for i, repo := range results {
 		ids[i] = repo.Id
 	}
-	assert.ElementsMatch(t, []string{"repo-1", "repo-4"}, ids)
-	assert.Equal(t, 2, pagination.TotalRecords)
+	assert.ElementsMatch(t, []string{"repo-1", "repo-4", "repo-5"}, ids)
+	assert.Equal(t, 3, pagination.TotalRecords)
 }
 
 func TestRepositoriesRepository_FindOrganisationByURI(t *testing.T) {
