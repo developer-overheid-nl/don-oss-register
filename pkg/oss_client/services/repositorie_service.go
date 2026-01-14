@@ -28,7 +28,7 @@ func NewRepositoryService(repo repositories.RepositoriesRepository) *RepositoryS
 }
 
 func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, models.Pagination, error) {
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation)
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, p.IncludeNonPublicCode)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -130,6 +130,7 @@ func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.Lis
 
 func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
 	repo := util.ApplyRepositoryInput(nil, &requestBody)
+	repo.Active = true
 
 	repoURL := strings.TrimSpace(repo.Url)
 	if repoURL == "" {
@@ -186,6 +187,7 @@ func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, req
 
 	updated := util.ApplyRepositoryInput(existing, &requestBody)
 	updated.Id = id
+	updated.Active = true
 
 	repoURL := strings.TrimSpace(updated.Url)
 	if repoURL == "" {

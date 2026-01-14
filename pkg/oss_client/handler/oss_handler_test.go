@@ -15,7 +15,7 @@ import (
 )
 
 type serviceStubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	getOrgFunc          func(ctx context.Context) ([]models.Organisation, error)
@@ -25,9 +25,9 @@ type serviceStubRepo struct {
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
 
-func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
+func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation)
+		return s.listFunc(ctx, page, perPage, organisation, includeNonPublicCode)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -96,7 +96,7 @@ func (s *serviceStubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error) {
 			org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 			return []models.Repository{
 				{Id: "repo-1", Name: "Repo One", Organisation: org},

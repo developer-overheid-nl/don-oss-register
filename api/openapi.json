@@ -90,6 +90,16 @@
               "type": "string",
               "format": "uri"
             }
+          },
+          {
+            "name": "includeNonPublicCode",
+            "in": "query",
+            "required": false,
+            "description": "Include repositories without a publiccode.yaml URL.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -523,7 +533,7 @@
           "Repositories"
         ],
         "summary": "List repositories",
-        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen.",
+        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Standaard alleen repositories met een publiccode.yaml URL; zet includeNonPublicCode=true om alles te zien.",
         "operationId": "listRepositories",
         "parameters": [
           {
