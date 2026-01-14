@@ -50,7 +50,8 @@ func ToGitOrganisatieSummary(gitOrg *models.GitOrganisatie) models.GitOrganisati
 func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInput) *models.Repository {
 	if target == nil {
 		target = &models.Repository{
-			Id: uuid.NewString(),
+			Id:     uuid.NewString(),
+			Active: true,
 		}
 	}
 

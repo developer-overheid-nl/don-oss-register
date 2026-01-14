@@ -37,7 +37,6 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
 	trimmedRepoURL := strings.TrimSpace(repository.Url)
 	repository.Url = trimmedRepoURL
-	repository.Active = true
 
 	var existing models.Repository
 	found := false

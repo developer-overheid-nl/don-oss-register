@@ -71,13 +71,13 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri)
 	require.NoError(t, err)
-	require.Len(t, results, 3)
-	assert.Equal(t, 3, pagination.TotalRecords)
+	require.Len(t, results, 2)
+	assert.Equal(t, 2, pagination.TotalRecords)
 	ids := make([]string, len(results))
 	for i, repo := range results {
 		ids[i] = repo.Id
 	}
-	assert.ElementsMatch(t, []string{"repo-1", "repo-2", "repo-4"}, ids)
+	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
