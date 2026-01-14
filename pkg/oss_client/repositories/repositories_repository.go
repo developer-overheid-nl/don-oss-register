@@ -197,7 +197,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 	}
 
 	base := r.db.WithContext(ctx)
-	base = base.Where("(active IS NULL OR active = ?)", true)
+	base = base.Where("(active = ?)", true)
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		base = base.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
