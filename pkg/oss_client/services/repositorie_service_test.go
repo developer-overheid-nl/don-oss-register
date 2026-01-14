@@ -2,6 +2,7 @@ package services_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -137,6 +138,22 @@ func TestRetrieveRepository_ReturnsDetail(t *testing.T) {
 	require.NotNil(t, detail)
 	assert.Equal(t, "repo-1", detail.Id)
 	assert.Equal(t, lastActivity, detail.LastActivityAt)
+}
+
+func TestRetrieveRepository_InvalidIDReturnsBadRequest(t *testing.T) {
+	repo := &stubRepo{
+		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
+			t.Fatalf("expected GetRepositoryByID not to be called for invalid id")
+			return nil, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	_, err := svc.RetrieveRepository(context.Background(), "bad\x00id")
+	require.Error(t, err)
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
 
 func TestRetrieveRepository_NotFoundPassesThrough(t *testing.T) {

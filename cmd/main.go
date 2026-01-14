@@ -98,7 +98,7 @@ func init() {
 		}
 
 		// 3) Alles anders → 500
-		internal := problem.NewInternalServerError(err.Error())
+		internal := problem.NewInternalServerError("Internal server error")
 		c.Header("Content-Type", "application/problem+json")
 		return internal.Status, internal
 	})

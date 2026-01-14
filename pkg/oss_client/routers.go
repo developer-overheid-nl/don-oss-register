@@ -2,6 +2,7 @@ package oss_client
 
 import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
@@ -30,6 +31,12 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	g.Use(cors.New(config))
 
 	g.Use(APIVersionMiddleware(apiVersion))
+	g.NoRoute(func(c *gin.Context) {
+		apiErr := problem.NewNotFound("Resource does not exist")
+		c.Header("API-Version", apiVersion)
+		c.Header("Content-Type", "application/problem+json")
+		c.AbortWithStatusJSON(apiErr.Status, apiErr)
+	})
 	f := fizz.NewFromEngine(g)
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")

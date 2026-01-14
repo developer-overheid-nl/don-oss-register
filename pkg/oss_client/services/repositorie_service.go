@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
@@ -98,6 +99,9 @@ func (s *RepositoryService) CreateGitOrganisatie(ctx context.Context, requestBod
 }
 
 func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (*models.RepositoryDetail, error) {
+	if err := validateRepositoryID(id); err != nil {
+		return nil, err
+	}
 	api, err := s.repo.GetRepositoryByID(ctx, id)
 	if err != nil || api == nil {
 		return nil, err
@@ -169,6 +173,9 @@ func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody mo
 }
 
 func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
+	if err := validateRepositoryID(id); err != nil {
+		return nil, err
+	}
 	existing, err := s.repo.GetRepositoryByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -271,6 +278,15 @@ func bodyError(field, code, detail string) problem.ErrorDetail {
 	}
 }
 
+func pathError(field, code, detail string) problem.ErrorDetail {
+	return problem.ErrorDetail{
+		In:       "path",
+		Location: fmt.Sprintf("#/%s", field),
+		Code:     code,
+		Detail:   detail,
+	}
+}
+
 func queryError(field, code, detail string) problem.ErrorDetail {
 	return problem.ErrorDetail{
 		In:       "query",
@@ -285,4 +301,23 @@ func trimPtr(val *string) string {
 		return ""
 	}
 	return strings.TrimSpace(*val)
+}
+
+func validateRepositoryID(id string) error {
+	if id == "" {
+		return problem.NewBadRequest("Invalid input",
+			pathError("id", "required", "id is required"),
+		)
+	}
+	if strings.ContainsRune(id, 0) {
+		return problem.NewBadRequest("Invalid input",
+			pathError("id", "invalid", "id must not contain NUL bytes"),
+		)
+	}
+	if !utf8.ValidString(id) {
+		return problem.NewBadRequest("Invalid input",
+			pathError("id", "invalid", "id must be valid UTF-8"),
+		)
+	}
+	return nil
 }
