@@ -18,7 +18,7 @@ type serviceStubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, organisation *string) ([]models.Repository, models.Pagination, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
-	getOrgFunc          func(ctx context.Context) ([]models.Organisation, error)
+	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
@@ -61,11 +61,11 @@ func (s *serviceStubRepo) AllRepositorys(ctx context.Context) ([]models.Reposito
 	return nil, nil
 }
 
-func (s *serviceStubRepo) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
+func (s *serviceStubRepo) GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
 	if s.getOrgFunc != nil {
-		return s.getOrgFunc(ctx)
+		return s.getOrgFunc(ctx, page, perPage)
 	}
-	return nil, nil
+	return nil, models.Pagination{}, nil
 }
 
 func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
@@ -155,8 +155,13 @@ func TestSearchRepositorys_UsesService(t *testing.T) {
 func TestListOrganisations_SetsHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		getOrgFunc: func(ctx context.Context) ([]models.Organisation, error) {
-			return []models.Organisation{{Uri: "org-1", Label: "Org 1"}}, nil
+		getOrgFunc: func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
+			return []models.Organisation{{Uri: "org-1", Label: "Org 1"}}, models.Pagination{
+				TotalRecords:  1,
+				TotalPages:    1,
+				CurrentPage:   1,
+				RecordsPerPage: 10,
+			}, nil
 		},
 	}
 	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
@@ -169,7 +174,7 @@ func TestListOrganisations_SetsHeader(t *testing.T) {
 	orgs, err := ctrl.ListOrganisations(ctx, &models.ListOrganisationsParams{})
 	require.NoError(t, err)
 	require.Len(t, orgs, 1)
-	assert.Empty(t, w.Header().Get("Total-Count"))
+	assert.Equal(t, "1", w.Header().Get("Total-Count"))
 }
 
 func TestCreateOrganisation_DelegatesToService(t *testing.T) {

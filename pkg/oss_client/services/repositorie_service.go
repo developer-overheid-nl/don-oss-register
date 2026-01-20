@@ -227,10 +227,10 @@ func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, req
 	return util.ToRepositoryDetail(updated), nil
 }
 
-func (s *RepositoryService) ListOrganisations(ctx context.Context, _ *models.ListOrganisationsParams) ([]models.OrganisationSummary, error) {
-	organisations, err := s.repo.GetOrganisations(ctx)
+func (s *RepositoryService) ListOrganisations(ctx context.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, models.Pagination, error) {
+	organisations, pagination, err := s.repo.GetOrganisations(ctx, p.Page, p.PerPage)
 	if err != nil {
-		return nil, err
+		return nil, models.Pagination{}, err
 	}
 
 	orgSummaries := make([]models.OrganisationSummary, len(organisations))
@@ -238,7 +238,7 @@ func (s *RepositoryService) ListOrganisations(ctx context.Context, _ *models.Lis
 		orgSummaries[i] = models.OrganisationSummary(org)
 	}
 
-	return orgSummaries, nil
+	return orgSummaries, pagination, nil
 }
 
 // CreateOrganisation validates and stores a new organisation

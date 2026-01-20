@@ -151,7 +151,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	t.Run("list organisations", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/organisations")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		require.Empty(t, resp.Header.Get("Total-Count"))
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
 		body := decodeBody[[]models.OrganisationSummary](t, resp)
 		require.Len(t, body, 1)

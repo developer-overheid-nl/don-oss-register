@@ -19,7 +19,7 @@ type RepositoriesRepository interface {
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	SaveOrganisatie(organisation *models.Organisation) error
 	AllRepositorys(ctx context.Context) ([]models.Repository, error)
-	GetOrganisations(ctx context.Context) ([]models.Organisation, error)
+	GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error)
 	GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error)
@@ -264,12 +264,45 @@ func (r *repositoriesRepository) AllRepositorys(ctx context.Context) ([]models.R
 	return repositories, nil
 }
 
-func (r *repositoriesRepository) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
-	var organisations []models.Organisation
-	if err := r.db.WithContext(ctx).Order("label asc").Find(&organisations).Error; err != nil {
-		return nil, err
+func (r *repositoriesRepository) GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
+	if page < 1 {
+		page = 1
 	}
-	return organisations, nil
+	if perPage <= 0 {
+		perPage = 20
+	}
+	offset := (page - 1) * perPage
+
+	var organisations []models.Organisation
+	if err := r.db.WithContext(ctx).Order("label asc").Offset(offset).Limit(perPage).Find(&organisations).Error; err != nil {
+		return nil, models.Pagination{}, err
+	}
+
+	var totalRecords int64
+	if err := r.db.Model(&models.Organisation{}).Count(&totalRecords).Error; err != nil {
+		return nil, models.Pagination{}, err
+	}
+
+	totalPages := 0
+	if totalRecords > 0 {
+		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	}
+	pagination := models.Pagination{
+		CurrentPage:    page,
+		RecordsPerPage: perPage,
+		TotalPages:     totalPages,
+		TotalRecords:   int(totalRecords),
+	}
+	if page < totalPages {
+		next := page + 1
+		pagination.Next = &next
+	}
+	if page > 1 && totalPages > 0 {
+		prev := page - 1
+		pagination.Previous = &prev
+	}
+
+	return organisations, pagination, nil
 }
 
 func (r *repositoriesRepository) FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error) {

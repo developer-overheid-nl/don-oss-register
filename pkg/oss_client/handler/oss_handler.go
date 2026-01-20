@@ -66,10 +66,14 @@ func (c *OSSController) CreateRepository(ctx *gin.Context, body *models.Reposito
 
 // ListOrganisations handles GET /organisations
 func (c *OSSController) ListOrganisations(ctx *gin.Context, p *models.ListOrganisationsParams) ([]models.OrganisationSummary, error) {
-	orgs, err := c.Service.ListOrganisations(ctx.Request.Context(), p)
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
+	p.PerPage = 100
+	p.BaseURL = ctx.FullPath()
+	orgs, pagination, err := c.Service.ListOrganisations(ctx.Request.Context(), p)
 	if err != nil {
 		return nil, err
 	}
+	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
 
 	return orgs, nil
 }

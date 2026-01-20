@@ -19,7 +19,7 @@ type stubRepo struct {
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
-	getOrgFunc          func(ctx context.Context) ([]models.Organisation, error)
+	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	findOrgByURIF       func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
@@ -62,11 +62,11 @@ func (s *stubRepo) AllRepositorys(ctx context.Context) ([]models.Repository, err
 	return nil, nil
 }
 
-func (s *stubRepo) GetOrganisations(ctx context.Context) ([]models.Organisation, error) {
+func (s *stubRepo) GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
 	if s.getOrgFunc != nil {
-		return s.getOrgFunc(ctx)
+		return s.getOrgFunc(ctx, page, perPage)
 	}
-	return nil, nil
+	return nil, models.Pagination{}, nil
 }
 
 func (s *stubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
