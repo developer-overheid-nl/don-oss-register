@@ -90,15 +90,6 @@
               "type": "string",
               "format": "uri"
             }
-          },
-          {
-            "name": "publiccode",
-            "in": "query",
-            "required": false,
-            "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL, false: only repositories without a publiccode.yaml URL. Omit for all repositories.",
-            "schema": {
-              "type": "boolean"
-            }
           }
         ],
         "responses": {
@@ -566,6 +557,15 @@
             "schema": {
               "type": "string",
               "format": "uri"
+            }
+          },
+          {
+            "name": "publiccode",
+            "in": "query",
+            "required": false,
+            "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL, false: only repositories without a publiccode.yaml URL. Omit for all repositories.",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
