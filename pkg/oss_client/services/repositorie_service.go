@@ -28,7 +28,7 @@ func NewRepositoryService(repo repositories.RepositoriesRepository) *RepositoryS
 }
 
 func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, models.Pagination, error) {
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, p.IncludeNonPublicCode)
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, p.PublicCode)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}

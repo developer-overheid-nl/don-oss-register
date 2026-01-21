@@ -13,7 +13,7 @@ import (
 )
 
 type RepositoriesRepository interface {
-	GetRepositorys(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error)
+	GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
@@ -80,7 +80,7 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 	return r.db.WithContext(ctx).Create(repository).Error
 }
 
-func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -95,8 +95,12 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	if organisation != nil && strings.TrimSpace(*organisation) != "" {
 		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 	}
-	if !includeNonPublicCode {
-		db = db.Where("public_code_url IS NOT NULL AND public_code_url <> ''")
+	if publicCode != nil {
+		if *publicCode {
+			db = db.Where("public_code_url IS NOT NULL AND public_code_url <> ''")
+		} else {
+			db = db.Where("public_code_url IS NULL OR public_code_url = ''")
+		}
 	}
 
 	var totalRecords int64

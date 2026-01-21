@@ -65,11 +65,11 @@ type RepositoryInput struct {
 	LastActivityAt   time.Time `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 type ListRepositorysParams struct {
-	Page                  int     `query:"page" validate:"omitempty,min=1"`
-	PerPage               int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation          *string `query:"organisation"`
-	IncludeNonPublicCode  bool    `query:"includeNonPublicCode"`
-	BaseURL               string
+	Page         int     `query:"page" validate:"omitempty,min=1"`
+	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation *string `query:"organisation"`
+	PublicCode   *bool   `query:"publiccode"`
+	BaseURL      string
 }
 
 type RepositoryParams struct {

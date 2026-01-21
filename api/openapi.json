@@ -92,13 +92,12 @@
             }
           },
           {
-            "name": "includeNonPublicCode",
+            "name": "publiccode",
             "in": "query",
             "required": false,
-            "description": "Include repositories without a publiccode.yaml URL.",
+            "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL, false: only repositories without a publiccode.yaml URL. Omit for all repositories.",
             "schema": {
-              "type": "boolean",
-              "default": false
+              "type": "boolean"
             }
           }
         ],
@@ -533,7 +532,7 @@
           "Repositories"
         ],
         "summary": "List repositories",
-        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Standaard alleen repositories met een publiccode.yaml URL; zet includeNonPublicCode=true om alles te zien.",
+        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Laat publiccode weg voor alle repositories, publiccode=true voor alleen repositories met een publiccode.yaml URL, publiccode=false voor alleen repositories zonder publiccode.yaml URL.",
         "operationId": "listRepositories",
         "parameters": [
           {

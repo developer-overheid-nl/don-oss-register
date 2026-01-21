@@ -15,7 +15,7 @@ import (
 )
 
 type stubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
@@ -26,9 +26,9 @@ type stubRepo struct {
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
 
-func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation, includeNonPublicCode)
+		return s.listFunc(ctx, page, perPage, organisation, publicCode)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -101,7 +101,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string, includeNonPublicCode bool) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
 					Id:               "repo-1",
