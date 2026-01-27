@@ -55,7 +55,7 @@
           "Git organisations"
         ],
         "summary": "List git organisations",
-        "description": "Geeft een lijst terug met git organisations die in het register zijn opgenomen.",
+        "description": "Returns a list of git organisations that are included in the register.",
         "operationId": "listGitOrganisations",
         "parameters": [
           {
@@ -307,7 +307,7 @@
           "Git organisations"
         ],
         "summary": "Create git organisation",
-        "description": "Registreer een nieuwe git organisatie in het register.",
+        "description": "Register a new git organisation in the register.",
         "operationId": "createGitOrganisation",
         "requestBody": {
           "required": true,
@@ -523,7 +523,7 @@
           "Repositories"
         ],
         "summary": "List repositories",
-        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Laat publiccode weg voor alle repositories, publiccode=true voor alleen repositories met een publiccode.yaml URL, publiccode=false voor alleen repositories zonder publiccode.yaml URL.",
+        "description": "Returns a list of OSS repositories included in the register. Omit publiccode for all repositories, publiccode=true for repositories with a publiccode.yaml URL only, publiccode=false for repositories without a publiccode.yaml URL.",
         "operationId": "listRepositories",
         "parameters": [
           {
@@ -644,7 +644,7 @@
                       "url": {
                         "type": "string",
                         "format": "uri",
-                        "description": "URL van de broncode repository.",
+                        "description": "URL of the source code repository.",
                         "examples": [
                           "https://github.com/developer-overheid-nl/don-site"
                         ]
@@ -682,15 +682,15 @@
                       },
                       "publicCodeUrl": {
                         "type": "string",
-                        "description": "Url van publiccode.yaml in de repository."
+                        "description": "URL of publiccode.yaml in the repository."
                       },
                       "shortDescription": {
                         "type": "string",
-                        "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                       },
                       "name": {
                         "type": "string",
-                        "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                       },
                       "createdAt": {
                         "type": "string",
@@ -798,7 +798,7 @@
           "Repositories"
         ],
         "summary": "Create repository",
-        "description": "Registreer een nieuwe OSS repository in het register.",
+        "description": "Register a new OSS repository in the register.",
         "operationId": "createRepository",
         "requestBody": {
           "required": true,
@@ -814,7 +814,7 @@
                   "url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "URL van de broncode repository.",
+                    "description": "URL of the source code repository.",
                     "examples": [
                       "https://github.com/developer-overheid-nl/don-site"
                     ]
@@ -852,15 +852,15 @@
                   },
                   "publicCodeUrl": {
                     "type": "string",
-                    "description": "Url van publiccode.yaml in de repository."
+                    "description": "URL of publiccode.yaml in the repository."
                   },
                   "shortDescription": {
                     "type": "string",
-                    "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                    "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                   },
                   "name": {
                     "type": "string",
-                    "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                    "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                   },
                   "createdAt": {
                     "type": "string",
@@ -918,7 +918,7 @@
                         "url": {
                           "type": "string",
                           "format": "uri",
-                          "description": "URL van de broncode repository.",
+                          "description": "URL of the source code repository.",
                           "examples": [
                             "https://github.com/developer-overheid-nl/don-site"
                           ]
@@ -956,15 +956,15 @@
                         },
                         "publicCodeUrl": {
                           "type": "string",
-                          "description": "Url van publiccode.yaml in de repository."
+                          "description": "URL of publiccode.yaml in the repository."
                         },
                         "shortDescription": {
                           "type": "string",
-                          "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                         },
                         "name": {
                           "type": "string",
-                          "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                         },
                         "createdAt": {
                           "type": "string",
@@ -1082,7 +1082,7 @@
           "Repositories"
         ],
         "summary": "Search repositories",
-        "description": "Geeft een lijst terug met OSS repositories die in het register zijn opgenomen.",
+        "description": "Returns a list of OSS repositories included in the register.",
         "operationId": "searchRepositories",
         "parameters": [
           {
@@ -1203,7 +1203,7 @@
                       "url": {
                         "type": "string",
                         "format": "uri",
-                        "description": "URL van de broncode repository.",
+                        "description": "URL of the source code repository.",
                         "examples": [
                           "https://github.com/developer-overheid-nl/don-site"
                         ]
@@ -1241,15 +1241,15 @@
                       },
                       "publicCodeUrl": {
                         "type": "string",
-                        "description": "Url van publiccode.yaml in de repository."
+                        "description": "URL of publiccode.yaml in the repository."
                       },
                       "shortDescription": {
                         "type": "string",
-                        "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                       },
                       "name": {
                         "type": "string",
-                        "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                       },
                       "createdAt": {
                         "type": "string",
@@ -1380,7 +1380,7 @@
           "Repositories"
         ],
         "summary": "Get repository by id",
-        "description": "Geeft één OSS repository terug op basis van het id.",
+        "description": "Returns a single OSS repository by id.",
         "operationId": "getRepositoryById",
         "responses": {
           "200": {
@@ -1423,7 +1423,7 @@
                         "url": {
                           "type": "string",
                           "format": "uri",
-                          "description": "URL van de broncode repository.",
+                          "description": "URL of the source code repository.",
                           "examples": [
                             "https://github.com/developer-overheid-nl/don-site"
                           ]
@@ -1461,15 +1461,15 @@
                         },
                         "publicCodeUrl": {
                           "type": "string",
-                          "description": "Url van publiccode.yaml in de repository."
+                          "description": "URL of publiccode.yaml in the repository."
                         },
                         "shortDescription": {
                           "type": "string",
-                          "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                         },
                         "name": {
                           "type": "string",
-                          "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                         },
                         "createdAt": {
                           "type": "string",
@@ -1600,7 +1600,7 @@
                   "url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "URL van de broncode repository.",
+                    "description": "URL of the source code repository.",
                     "examples": [
                       "https://github.com/developer-overheid-nl/don-site"
                     ]
@@ -1638,15 +1638,15 @@
                   },
                   "publicCodeUrl": {
                     "type": "string",
-                    "description": "Url van publiccode.yaml in de repository."
+                    "description": "URL of publiccode.yaml in the repository."
                   },
                   "shortDescription": {
                     "type": "string",
-                    "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                    "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                   },
                   "name": {
                     "type": "string",
-                    "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                    "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                   },
                   "createdAt": {
                     "type": "string",
@@ -1704,7 +1704,7 @@
                         "url": {
                           "type": "string",
                           "format": "uri",
-                          "description": "URL van de broncode repository.",
+                          "description": "URL of the source code repository.",
                           "examples": [
                             "https://github.com/developer-overheid-nl/don-site"
                           ]
@@ -1742,15 +1742,15 @@
                         },
                         "publicCodeUrl": {
                           "type": "string",
-                          "description": "Url van publiccode.yaml in de repository."
+                          "description": "URL of publiccode.yaml in the repository."
                         },
                         "shortDescription": {
                           "type": "string",
-                          "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
                         },
                         "name": {
                           "type": "string",
-                          "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                         },
                         "createdAt": {
                           "type": "string",
@@ -1952,8 +1952,8 @@
           "Public endpoints",
           "Organisations"
         ],
-        "summary": "Alle organisaties ophalen",
-        "description": "Alle organisaties ophalen",
+        "summary": "List organisations",
+        "description": "List organisations",
         "operationId": "listOrganisations",
         "responses": {
           "200": {
@@ -2025,8 +2025,8 @@
           "Private endpoints",
           "Organisations"
         ],
-        "summary": "Organisatie aanmaken",
-        "description": "Maak een nieuwe organisatie aan.",
+        "summary": "Create organisation",
+        "description": "Create a new organisation.",
         "operationId": "createOrganisation",
         "requestBody": {
           "content": {
@@ -2562,7 +2562,7 @@
           "url": {
             "type": "string",
             "format": "uri",
-            "description": "URL van de broncode repository.",
+            "description": "URL of the source code repository.",
             "examples": [
               "https://github.com/developer-overheid-nl/don-site"
             ]
@@ -2600,15 +2600,15 @@
           },
           "publicCodeUrl": {
             "type": "string",
-            "description": "Url van publiccode.yaml in de repository."
+            "description": "URL of publiccode.yaml in the repository."
           },
           "shortDescription": {
             "type": "string",
-            "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
           },
           "name": {
             "type": "string",
-            "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
           },
           "createdAt": {
             "type": "string",
@@ -2637,7 +2637,7 @@
           "url": {
             "type": "string",
             "format": "uri",
-            "description": "URL van de broncode repository.",
+            "description": "URL of the source code repository.",
             "examples": [
               "https://github.com/developer-overheid-nl/don-site"
             ]
@@ -2675,15 +2675,15 @@
           },
           "publicCodeUrl": {
             "type": "string",
-            "description": "Url van publiccode.yaml in de repository."
+            "description": "URL of publiccode.yaml in the repository."
           },
           "shortDescription": {
             "type": "string",
-            "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
           },
           "name": {
             "type": "string",
-            "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+            "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
           },
           "createdAt": {
             "type": "string",
@@ -2723,7 +2723,7 @@
               "url": {
                 "type": "string",
                 "format": "uri",
-                "description": "URL van de broncode repository.",
+                "description": "URL of the source code repository.",
                 "examples": [
                   "https://github.com/developer-overheid-nl/don-site"
                 ]
@@ -2761,15 +2761,15 @@
               },
               "publicCodeUrl": {
                 "type": "string",
-                "description": "Url van publiccode.yaml in de repository."
+                "description": "URL of publiccode.yaml in the repository."
               },
               "shortDescription": {
                 "type": "string",
-                "description": "Beschrijving van de repository afkomstig uit de git-hosting (bijvoorbeeld de repository description). Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
               },
               "name": {
                 "type": "string",
-                "description": "naam van de repository afkomstig uit de git-hosting. Wordt gebruikt als alternatief wanneer geen publiccode.yaml beschikbaar is."
+                "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
               },
               "createdAt": {
                 "type": "string",
