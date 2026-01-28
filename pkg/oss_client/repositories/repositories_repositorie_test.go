@@ -59,17 +59,19 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	require.NoError(t, repo.SaveOrganisatie(org2))
 
 	repositoriesToSave := []*models.Repository{
-		{Id: "repo-1", Name: "Repo One", OrganisationID: &org1.Uri, Active: true},
-		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org1.Uri, Active: true},
+		{Id: "repo-1", Name: "Repo One", OrganisationID: &org1.Uri, PublicCodeUrl: "https://publiccode.net/repo-1", Active: true},
+		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org1.Uri, PublicCodeUrl: "https://publiccode.net/repo-2", Active: true},
 		{Id: "repo-3", Name: "Repo Three", OrganisationID: &org2.Uri, Active: true},
 		{Id: "repo-4", Name: "Repo Four", OrganisationID: &org1.Uri, Active: false},
+		{Id: "repo-5", Name: "Repo Five", OrganisationID: &org1.Uri, Active: true},
 	}
 	for _, r := range repositoriesToSave {
 		require.NoError(t, repo.SaveRepository(ctx, r))
 	}
 	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "repo-2").Error)
 
-	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri)
+	publicCodeOnly := true
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &org1.Uri, &publicCodeOnly)
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
@@ -78,6 +80,23 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 		ids[i] = repo.Id
 	}
 	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
+
+	publicCodeMissing := false
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &org1.Uri, &publicCodeMissing)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, 1, pagination.TotalRecords)
+	assert.Equal(t, "repo-5", results[0].Id)
+
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &org1.Uri, nil)
+	require.NoError(t, err)
+	require.Len(t, results, 3)
+	assert.Equal(t, 3, pagination.TotalRecords)
+	ids = make([]string, len(results))
+	for i, repo := range results {
+		ids[i] = repo.Id
+	}
+	assert.ElementsMatch(t, []string{"repo-1", "repo-2", "repo-5"}, ids)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {

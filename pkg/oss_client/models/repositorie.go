@@ -68,6 +68,7 @@ type ListRepositorysParams struct {
 	Page         int     `query:"page" validate:"omitempty,min=1"`
 	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
 	Organisation *string `query:"organisation"`
+	PublicCode   *bool   `query:"publiccode"`
 	BaseURL      string
 }
 
