@@ -1,6 +1,8 @@
 package util_test
 
 import (
+	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -144,6 +146,46 @@ description:
 	assert.Equal(t, "Handmatige naam", repo.Name)
 	assert.Equal(t, "Handmatige korte omschrijving", repo.ShortDescription)
 	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
+}
+
+func TestApplyRepositoryInputLogsPublicCodeParseError(t *testing.T) {
+	invalid := `
+publiccodeYmlVersion: '0.2'
+description:
+      In maart 2020 startte de gemeente Rotterdam met de ontwikkeling.
+  nl:
+    shortDescription:
+      Korte beschrijving
+`
+
+	var buf bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	originalPrefix := log.Prefix()
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	log.SetPrefix("")
+	defer func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+		log.SetPrefix(originalPrefix)
+	}()
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:              strPtr("https://manual.example/repo"),
+		Name:             strPtr("Handmatige naam"),
+		ShortDescription: strPtr("Handmatige korte omschrijving"),
+		PublicCodeUrl:    strPtr(invalid),
+	})
+
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "Handmatige naam", repo.Name)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.ShortDescription)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
+	assert.Contains(t, buf.String(), "publiccode parse validation failed:")
+	assert.Contains(t, buf.String(), "yaml: mapping values are not allowed in this context")
+
+	t.Logf("captured parse log:\n%s", buf.String())
 }
 
 func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {

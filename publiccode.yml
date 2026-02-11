@@ -19,14 +19,20 @@ description:
   nl:
     # Mand!
     shortDescription: API van het OSS register (oss.developer.overheid.nl)
+    longDescription: De API van het OSS-register maakt open source software van de overheid beter vindbaar en herbruikbaar. Via deze API kunnen organisaties, ontwikkelaars en dienstverleners actuele metadata over repositories ophalen en verwerken in eigen toepassingen.
+    features:
+      - Doorzoekbare catalogus van open source repositories
 legal:
   license: EUPL-1.2
   mainCopyrightOwner: Stichting Geonovum
-  repoOwner: Stichting Geonovum
+
+organisation:
+  name: Stichting Geonovum
+  uri: https://www.geonovum.nl/
 
 intendedAudience:
   countries:
-    - nl
+    - NL
   scope:
     - government
 

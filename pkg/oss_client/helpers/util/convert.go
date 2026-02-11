@@ -2,6 +2,7 @@ package util
 
 import (
 	"io"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -105,10 +106,8 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			target.PublicCodeUrl = publicCodeRaw
 		}
 
-		url, name, shortDesc, longDesc := parsePublicCodeYAML(content)
-		if url != "" {
-			target.Url = url
-		}
+		_, name, shortDesc, longDesc := parsePublicCodeYAML(content)
+
 		if name != "" {
 			target.Name = name
 		}
@@ -134,6 +133,11 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
 	if parsed == nil || hasValidationErrors(parseErr) {
+		if parseErr != nil {
+			log.Printf("publiccode parse validation failed: %v", parseErr)
+		} else {
+			log.Printf("publiccode parse validation failed: empty parse result")
+		}
 		return "", "", "", ""
 	}
 
