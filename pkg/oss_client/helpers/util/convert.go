@@ -3,6 +3,7 @@ package util
 import (
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -124,9 +125,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 }
 
 type publicCodeYAML struct {
-	URL         string                                    `yaml:"url"`
-	Name        string                                    `yaml:"name"`
-	Description map[string]publicCodeLocalizedDescription `yaml:"description"`
+	URL         any `yaml:"url"`
+	Name        any `yaml:"name"`
+	Description any `yaml:"description"`
 }
 
 type publicCodeLocalizedDescription struct {
@@ -141,26 +142,171 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 	}
 
 	desc := selectDescription(parsed.Description)
-	return strings.TrimSpace(parsed.URL),
-		strings.TrimSpace(parsed.Name),
+	return extractPreferredString(parsed.URL),
+		extractPreferredString(parsed.Name),
 		strings.TrimSpace(desc.ShortDescription),
 		strings.TrimSpace(desc.LongDescription)
 }
 
-func selectDescription(descriptions map[string]publicCodeLocalizedDescription) publicCodeLocalizedDescription {
-	if len(descriptions) == 0 {
+func selectDescription(descriptions any) publicCodeLocalizedDescription {
+	descriptionMap, ok := asStringAnyMap(descriptions)
+	if !ok || len(descriptionMap) == 0 {
+		if text, ok := descriptions.(string); ok {
+			trimmed := strings.TrimSpace(text)
+			return publicCodeLocalizedDescription{
+				ShortDescription: trimmed,
+				LongDescription:  trimmed,
+			}
+		}
 		return publicCodeLocalizedDescription{}
 	}
-	if d, ok := descriptions["nl"]; ok {
-		return d
+
+	// Support flat descriptions:
+	// description:
+	//   shortDescription: ...
+	//   longDescription: ...
+	if looksLikeDescriptionObject(descriptionMap) {
+		return parseDescriptionObject(descriptionMap)
 	}
-	if d, ok := descriptions["en"]; ok {
-		return d
+
+	// Support localized descriptions:
+	// description:
+	//   nl: { shortDescription: ... }
+	//   en: { shortDescription: ... }
+	for _, key := range preferredLocaleKeys(descriptionMap) {
+		if parsed := parseLocalizedDescription(descriptionMap[key]); hasDescription(parsed) {
+			return parsed
+		}
 	}
-	for _, d := range descriptions {
-		return d
-	}
+
 	return publicCodeLocalizedDescription{}
+}
+
+func parseLocalizedDescription(raw any) publicCodeLocalizedDescription {
+	if text, ok := raw.(string); ok {
+		trimmed := strings.TrimSpace(text)
+		return publicCodeLocalizedDescription{
+			ShortDescription: trimmed,
+			LongDescription:  trimmed,
+		}
+	}
+
+	descMap, ok := asStringAnyMap(raw)
+	if !ok {
+		return publicCodeLocalizedDescription{}
+	}
+
+	if looksLikeDescriptionObject(descMap) {
+		return parseDescriptionObject(descMap)
+	}
+
+	text := selectLocalizedString(descMap)
+	if text == "" {
+		return publicCodeLocalizedDescription{}
+	}
+
+	return publicCodeLocalizedDescription{
+		ShortDescription: text,
+		LongDescription:  text,
+	}
+}
+
+func looksLikeDescriptionObject(values map[string]any) bool {
+	_, hasShort := values["shortDescription"]
+	_, hasLong := values["longDescription"]
+	return hasShort || hasLong
+}
+
+func parseDescriptionObject(values map[string]any) publicCodeLocalizedDescription {
+	short := extractPreferredString(values["shortDescription"])
+	long := extractPreferredString(values["longDescription"])
+	if short == "" {
+		short = long
+	}
+	return publicCodeLocalizedDescription{
+		ShortDescription: short,
+		LongDescription:  long,
+	}
+}
+
+func hasDescription(value publicCodeLocalizedDescription) bool {
+	return strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != ""
+}
+
+func extractPreferredString(raw any) string {
+	switch typed := raw.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	default:
+		values, ok := asStringAnyMap(raw)
+		if !ok {
+			return ""
+		}
+		return selectLocalizedString(values)
+	}
+}
+
+func selectLocalizedString(values map[string]any) string {
+	for _, key := range preferredLocaleKeys(values) {
+		if text, ok := values[key].(string); ok {
+			trimmed := strings.TrimSpace(text)
+			if trimmed != "" {
+				return trimmed
+			}
+		}
+	}
+	return ""
+}
+
+func preferredLocaleKeys(values map[string]any) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	ordered := make([]string, 0, len(keys))
+	seen := make(map[string]struct{}, len(keys))
+	appendMatches := func(match func(key string) bool) {
+		for _, key := range keys {
+			lower := strings.ToLower(key)
+			if !match(lower) {
+				continue
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			ordered = append(ordered, key)
+		}
+	}
+
+	appendMatches(func(key string) bool { return key == "nl" })
+	appendMatches(func(key string) bool { return strings.HasPrefix(key, "nl-") })
+	appendMatches(func(key string) bool { return key == "en" })
+	appendMatches(func(key string) bool { return strings.HasPrefix(key, "en-") })
+	appendMatches(func(_ string) bool { return true })
+
+	return ordered
+}
+
+func asStringAnyMap(raw any) (map[string]any, bool) {
+	switch typed := raw.(type) {
+	case map[string]any:
+		return typed, true
+	case map[interface{}]interface{}:
+		converted := make(map[string]any, len(typed))
+		for key, value := range typed {
+			keyString, ok := key.(string)
+			if !ok {
+				continue
+			}
+			converted[keyString] = value
+		}
+		return converted, len(converted) > 0
+	default:
+		return nil, false
+	}
 }
 
 func isLikelyURL(val string) bool {
