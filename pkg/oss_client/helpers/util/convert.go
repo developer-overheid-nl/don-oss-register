@@ -107,7 +107,6 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		}
 
 		_, name, shortDesc, longDesc := parsePublicCodeYAML(content)
-
 		if name != "" {
 			target.Name = name
 		}

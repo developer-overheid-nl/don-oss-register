@@ -63,11 +63,13 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
       - Video appointment
 `)
 
+	inputURL := "https://manual.example/repo"
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
 		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "https://example.org/repo", repo.Url)
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 	assert.Equal(t, "De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.", repo.LongDescription)
@@ -116,11 +118,13 @@ func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
       - Videoafspraak
 `, "0.2")
 
+	inputURL := "https://manual.example/repo"
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
 		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "https://example.org/repo", repo.Url)
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 }
@@ -203,12 +207,14 @@ func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
 	defer server.Close()
 
 	publicCodeURL := server.URL + "/publiccode.yml"
+	inputURL := "https://manual.example/repo"
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
 		PublicCodeUrl: &publicCodeURL,
 	})
 
 	assert.Equal(t, publicCodeURL, repo.PublicCodeUrl)
-	assert.Equal(t, "https://example.org/repo", repo.Url)
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 }
