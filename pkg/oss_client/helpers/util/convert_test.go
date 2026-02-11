@@ -47,18 +47,19 @@ func TestApplyRepositoryInputKeepsExistingTimestampsWhenZero(t *testing.T) {
 	assert.Equal(t, lastActivity, repo.LastActivityAt)
 }
 
-func TestApplyRepositoryInputParsesLocalizedPublicCodeYAML(t *testing.T) {
-	publicCode := `
-url: https://example.org/repo
-name: Digitale Balie
-description:
+func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
   nl:
-    shortDescription: Korte beschrijving
-    longDescription: Lange beschrijving
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
   en:
-    shortDescription: Short description
-    longDescription: Long description
-`
+    shortDescription: English short description.
+    longDescription: The Digital Desk supports personal digital public services through secure video calls and integrated process steps for municipal service delivery workflows while maintaining continuity, accessibility and trust in daily contact moments.
+    features:
+      - Video appointment
+`)
 
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
 		PublicCodeUrl: strPtr(publicCode),
@@ -66,76 +67,96 @@ description:
 
 	assert.Equal(t, "https://example.org/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
-	assert.Equal(t, "Korte beschrijving", repo.ShortDescription)
-	assert.Equal(t, "Lange beschrijving", repo.LongDescription)
+	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
+	assert.Equal(t, "De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.", repo.LongDescription)
 }
 
-func TestApplyRepositoryInputParsesFlatDescriptionPublicCodeYAML(t *testing.T) {
-	publicCode := `
-url: https://example.org/repo
+func TestApplyRepositoryInputParsesRegionalLocaleDescription(t *testing.T) {
+	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
-description:
-  shortDescription: Korte beschrijving
-  longDescription: Lange beschrijving
-`
-
-	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
-		PublicCodeUrl: strPtr(publicCode),
-	})
-
-	assert.Equal(t, "https://example.org/repo", repo.Url)
-	assert.Equal(t, "Digitale Balie", repo.Name)
-	assert.Equal(t, "Korte beschrijving", repo.ShortDescription)
-	assert.Equal(t, "Lange beschrijving", repo.LongDescription)
-}
-
-func TestApplyRepositoryInputParsesStringDescriptionPublicCodeYAML(t *testing.T) {
-	publicCode := `
 url: https://example.org/repo
-name: Digitale Balie
-description: Beschrijving van de Digitale Balie
-`
-
-	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
-		PublicCodeUrl: strPtr(publicCode),
-	})
-
-	assert.Equal(t, "https://example.org/repo", repo.Url)
-	assert.Equal(t, "Digitale Balie", repo.Name)
-	assert.Equal(t, "Beschrijving van de Digitale Balie", repo.ShortDescription)
-	assert.Equal(t, "Beschrijving van de Digitale Balie", repo.LongDescription)
-}
-
-func TestApplyRepositoryInputParsesRegionalLocaleDescriptionPublicCodeYAML(t *testing.T) {
-	publicCode := `
-url: https://example.org/repo
-name: Digitale Balie
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
 description:
   nl-NL:
-    shortDescription: Korte beschrijving NL
-    longDescription: Lange beschrijving NL
-  en:
-    shortDescription: Short description EN
-    longDescription: Long description EN
+    shortDescription: Korte beschrijving NL.
+    longDescription: Deze regionale Nederlandse beschrijving bevat voldoende tekst om aan de minimale lengte te voldoen en beschrijft helder wat de Digitale Balie voor gemeenten en inwoners betekent.
+    features:
+      - Videoafspraak
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team Digitale Balie
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - nl-NL
 `
 
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
 		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "Korte beschrijving NL", repo.ShortDescription)
-	assert.Equal(t, "Lange beschrijving NL", repo.LongDescription)
+	assert.Equal(t, "Korte beschrijving NL.", repo.ShortDescription)
+	assert.Equal(t, "Deze regionale Nederlandse beschrijving bevat voldoende tekst om aan de minimale lengte te voldoen en beschrijft helder wat de Digitale Balie voor gemeenten en inwoners betekent.", repo.LongDescription)
+}
+
+func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`, "0.2")
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	assert.Equal(t, "https://example.org/repo", repo.Url)
+	assert.Equal(t, "Digitale Balie", repo.Name)
+	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
+}
+
+func TestApplyRepositoryInputIgnoresInvalidPublicCodeYAML(t *testing.T) {
+	invalid := `
+publiccodeYmlVersion: '0.2'
+description:
+      In maart 2020 startte de gemeente Rotterdam met de ontwikkeling.
+  nl:
+    shortDescription:
+      Korte beschrijving
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:              strPtr("https://manual.example/repo"),
+		Name:             strPtr("Handmatige naam"),
+		ShortDescription: strPtr("Handmatige korte omschrijving"),
+		PublicCodeUrl:    strPtr(invalid),
+	})
+
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "Handmatige naam", repo.Name)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.ShortDescription)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
 }
 
 func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`)
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`
-url: https://example.org/repo
-name: Digitale Balie
-description:
-  shortDescription: Korte beschrijving
-  longDescription: Lange beschrijving
-`))
+		_, _ = w.Write([]byte(publicCode))
 	}))
 	defer server.Close()
 
@@ -147,8 +168,35 @@ description:
 	assert.Equal(t, publicCodeURL, repo.PublicCodeUrl)
 	assert.Equal(t, "https://example.org/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
-	assert.Equal(t, "Korte beschrijving", repo.ShortDescription)
-	assert.Equal(t, "Lange beschrijving", repo.LongDescription)
+	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
+}
+
+func validPublicCodeYAML(descriptionBlock string, version ...string) string {
+	parsedVersion := "0.5.0"
+	if len(version) > 0 && version[0] != "" {
+		parsedVersion = version[0]
+	}
+
+	return `publiccodeYmlVersion: "` + parsedVersion + `"
+name: Digitale Balie
+url: https://example.org/repo
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+` + descriptionBlock + `
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team Digitale Balie
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - nl
+`
 }
 
 func strPtr(val string) *string {

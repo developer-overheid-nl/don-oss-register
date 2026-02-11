@@ -8,7 +8,7 @@ import (
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
+	publiccode "github.com/italia/publiccode-parser-go/v5"
 )
 
 func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
@@ -124,143 +124,98 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	return target
 }
 
-type publicCodeYAML struct {
-	URL         any `yaml:"url"`
-	Name        any `yaml:"name"`
-	Description any `yaml:"description"`
-}
-
-type publicCodeLocalizedDescription struct {
-	ShortDescription string `yaml:"shortDescription"`
-	LongDescription  string `yaml:"longDescription"`
-}
-
 func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string) {
-	var parsed publicCodeYAML
-	if err := yaml.Unmarshal([]byte(raw), &parsed); err != nil {
+	parser, err := publiccode.NewParser(publiccode.ParserConfig{
+		DisableExternalChecks: true,
+	})
+	if err != nil {
 		return "", "", "", ""
 	}
 
-	desc := selectDescription(parsed.Description)
-	return extractPreferredString(parsed.URL),
-		extractPreferredString(parsed.Name),
-		strings.TrimSpace(desc.ShortDescription),
-		strings.TrimSpace(desc.LongDescription)
-}
-
-func selectDescription(descriptions any) publicCodeLocalizedDescription {
-	descriptionMap, ok := asStringAnyMap(descriptions)
-	if !ok || len(descriptionMap) == 0 {
-		if text, ok := descriptions.(string); ok {
-			trimmed := strings.TrimSpace(text)
-			return publicCodeLocalizedDescription{
-				ShortDescription: trimmed,
-				LongDescription:  trimmed,
-			}
-		}
-		return publicCodeLocalizedDescription{}
+	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
+	if parsed == nil || hasValidationErrors(parseErr) {
+		return "", "", "", ""
 	}
 
-	// Support flat descriptions:
-	// description:
-	//   shortDescription: ...
-	//   longDescription: ...
-	if looksLikeDescriptionObject(descriptionMap) {
-		return parseDescriptionObject(descriptionMap)
-	}
-
-	// Support localized descriptions:
-	// description:
-	//   nl: { shortDescription: ... }
-	//   en: { shortDescription: ... }
-	for _, key := range preferredLocaleKeys(descriptionMap) {
-		if parsed := parseLocalizedDescription(descriptionMap[key]); hasDescription(parsed) {
-			return parsed
-		}
-	}
-
-	return publicCodeLocalizedDescription{}
-}
-
-func parseLocalizedDescription(raw any) publicCodeLocalizedDescription {
-	if text, ok := raw.(string); ok {
-		trimmed := strings.TrimSpace(text)
-		return publicCodeLocalizedDescription{
-			ShortDescription: trimmed,
-			LongDescription:  trimmed,
-		}
-	}
-
-	descMap, ok := asStringAnyMap(raw)
+	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
-		return publicCodeLocalizedDescription{}
+		return "", "", "", ""
 	}
 
-	if looksLikeDescriptionObject(descMap) {
-		return parseDescriptionObject(descMap)
+	if v0.URL != nil {
+		url = strings.TrimSpace(v0.URL.String())
 	}
 
-	text := selectLocalizedString(descMap)
-	if text == "" {
-		return publicCodeLocalizedDescription{}
+	name = strings.TrimSpace(v0.Name)
+
+	desc := selectDescription(v0.Description)
+	if name == "" && desc.LocalisedName != nil {
+		name = strings.TrimSpace(*desc.LocalisedName)
 	}
 
-	return publicCodeLocalizedDescription{
-		ShortDescription: text,
-		LongDescription:  text,
+	shortDescription = strings.TrimSpace(desc.ShortDescription)
+	longDescription = strings.TrimSpace(desc.LongDescription)
+	if shortDescription == "" {
+		shortDescription = longDescription
 	}
+	if longDescription == "" {
+		longDescription = shortDescription
+	}
+
+	return url, name, shortDescription, longDescription
 }
 
-func looksLikeDescriptionObject(values map[string]any) bool {
-	_, hasShort := values["shortDescription"]
-	_, hasLong := values["longDescription"]
-	return hasShort || hasLong
-}
-
-func parseDescriptionObject(values map[string]any) publicCodeLocalizedDescription {
-	short := extractPreferredString(values["shortDescription"])
-	long := extractPreferredString(values["longDescription"])
-	if short == "" {
-		short = long
+func hasValidationErrors(err error) bool {
+	if err == nil {
+		return false
 	}
-	return publicCodeLocalizedDescription{
-		ShortDescription: short,
-		LongDescription:  long,
+
+	results, ok := err.(publiccode.ValidationResults)
+	if !ok {
+		return true
 	}
+
+	for _, item := range results {
+		if _, isError := item.(publiccode.ValidationError); isError {
+			return true
+		}
+	}
+
+	return false
 }
 
-func hasDescription(value publicCodeLocalizedDescription) bool {
-	return strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != ""
-}
-
-func extractPreferredString(raw any) string {
-	switch typed := raw.(type) {
-	case string:
-		return strings.TrimSpace(typed)
+func asPublicCodeV0(pc publiccode.PublicCode) (publiccode.PublicCodeV0, bool) {
+	switch typed := pc.(type) {
+	case publiccode.PublicCodeV0:
+		return typed, true
+	case *publiccode.PublicCodeV0:
+		if typed == nil {
+			return publiccode.PublicCodeV0{}, false
+		}
+		return *typed, true
 	default:
-		values, ok := asStringAnyMap(raw)
-		if !ok {
-			return ""
-		}
-		return selectLocalizedString(values)
+		return publiccode.PublicCodeV0{}, false
 	}
 }
 
-func selectLocalizedString(values map[string]any) string {
-	for _, key := range preferredLocaleKeys(values) {
-		if text, ok := values[key].(string); ok {
-			trimmed := strings.TrimSpace(text)
-			if trimmed != "" {
-				return trimmed
-			}
+func selectDescription(descriptions map[string]publiccode.DescV0) publiccode.DescV0 {
+	if len(descriptions) == 0 {
+		return publiccode.DescV0{}
+	}
+
+	for _, key := range preferredLocaleKeys(descriptions) {
+		value := descriptions[key]
+		if strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != "" {
+			return value
 		}
 	}
-	return ""
+
+	return publiccode.DescV0{}
 }
 
-func preferredLocaleKeys(values map[string]any) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
+func preferredLocaleKeys(descriptions map[string]publiccode.DescV0) []string {
+	keys := make([]string, 0, len(descriptions))
+	for key := range descriptions {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -288,25 +243,6 @@ func preferredLocaleKeys(values map[string]any) []string {
 	appendMatches(func(_ string) bool { return true })
 
 	return ordered
-}
-
-func asStringAnyMap(raw any) (map[string]any, bool) {
-	switch typed := raw.(type) {
-	case map[string]any:
-		return typed, true
-	case map[interface{}]interface{}:
-		converted := make(map[string]any, len(typed))
-		for key, value := range typed {
-			keyString, ok := key.(string)
-			if !ok {
-				continue
-			}
-			converted[keyString] = value
-		}
-		return converted, len(converted) > 0
-	default:
-		return nil, false
-	}
 }
 
 func isLikelyURL(val string) bool {
