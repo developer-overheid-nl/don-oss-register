@@ -242,9 +242,7 @@ func preferredLocaleKeys(descriptions map[string]publiccode.DescV0) []string {
 	}
 
 	appendMatches(func(key string) bool { return key == "nl" })
-	appendMatches(func(key string) bool { return strings.HasPrefix(key, "nl-") })
 	appendMatches(func(key string) bool { return key == "en" })
-	appendMatches(func(key string) bool { return strings.HasPrefix(key, "en-") })
 	appendMatches(func(_ string) bool { return true })
 
 	return ordered
