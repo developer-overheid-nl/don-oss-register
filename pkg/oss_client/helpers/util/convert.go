@@ -127,6 +127,7 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		DisableExternalChecks: true,
 	})
 	if err != nil {
+		log.Printf("publiccode parser initialization failed: %s, %v", url, err)
 		return "", "", "", ""
 	}
 
@@ -142,6 +143,7 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
+		log.Printf("publiccode parse result is not version 0: %T", parsed)
 		return "", "", "", ""
 	}
 
@@ -159,10 +161,10 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 	shortDescription = strings.TrimSpace(desc.ShortDescription)
 	longDescription = strings.TrimSpace(desc.LongDescription)
 	if shortDescription == "" {
-		shortDescription = longDescription
+		log.Printf("publiccode description does not contain a short description for repository with url %q", url)
 	}
 	if longDescription == "" {
-		longDescription = shortDescription
+		log.Printf("publiccode description does not contain a long description for repository with url %q", url)
 	}
 
 	return url, name, shortDescription, longDescription
