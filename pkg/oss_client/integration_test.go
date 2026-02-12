@@ -165,4 +165,21 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		})
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
+
+	t.Run("method not allowed returns 405 with RFC7807 envelope", func(t *testing.T) {
+		// Send a PATCH request to an existing route that only supports GET
+		resp := env.doRequest(t, http.MethodPatch, "/v1/repositories")
+		require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+		require.Equal(t, "test-version", resp.Header.Get("API-Version"))
+		require.Equal(t, "application/problem+json", resp.Header.Get("Content-Type"))
+
+		// Decode and verify RFC7807 problem response
+		type problemResponse struct {
+			Status int    `json:"status"`
+			Title  string `json:"title"`
+		}
+		body := decodeBody[problemResponse](t, resp)
+		require.Equal(t, http.StatusMethodNotAllowed, body.Status)
+		require.Equal(t, "Method not allowed", body.Title)
+	})
 }

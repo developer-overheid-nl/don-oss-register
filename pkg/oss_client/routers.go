@@ -1,6 +1,8 @@
 package oss_client
 
 import (
+	"net/http"
+
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/gin-contrib/cors"
@@ -21,6 +23,7 @@ var (
 func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz {
 	//gin.SetMode(gin.ReleaseMode)
 	g := gin.Default()
+	g.HandleMethodNotAllowed = true
 
 	// Configure CORS to allow access from everywhere
 	config := cors.DefaultConfig()
@@ -31,11 +34,19 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	g.Use(cors.New(config))
 
 	g.Use(APIVersionMiddleware(apiVersion))
-	g.NoRoute(func(c *gin.Context) {
-		apiErr := problem.NewNotFound("Resource does not exist")
+	g.NoMethod(func(c *gin.Context) {
+		apiErr := problem.New(http.StatusMethodNotAllowed, "Method not allowed")
+		c.Abort()
 		c.Header("API-Version", apiVersion)
 		c.Header("Content-Type", "application/problem+json")
-		c.AbortWithStatusJSON(apiErr.Status, apiErr)
+		c.JSON(apiErr.Status, apiErr)
+	})
+	g.NoRoute(func(c *gin.Context) {
+		apiErr := problem.NewNotFound("Resource does not exist")
+		c.Abort()
+		c.Header("API-Version", apiVersion)
+		c.Header("Content-Type", "application/problem+json")
+		c.JSON(apiErr.Status, apiErr)
 	})
 	f := fizz.NewFromEngine(g)
 

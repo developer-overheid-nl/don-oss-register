@@ -35,9 +35,6 @@ func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 }
 
 func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository *models.Repository) error {
-	trimmedRepoURL := strings.TrimSpace(repository.Url)
-	repository.Url = trimmedRepoURL
-
 	var existing models.Repository
 	found := false
 	if repository.Id != "" {
@@ -50,13 +47,13 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 		}
 	}
 
-	if !found && trimmedRepoURL != "" {
-		err := r.db.WithContext(ctx).Where("repository_url = ?", trimmedRepoURL).First(&existing).Error
+	if !found && repository.Url != "" {
+		err := r.db.WithContext(ctx).Where("repository_url = ?", repository.Url).First(&existing).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		if err == nil {
-			log.Printf("SaveRepository: found existing repository for url %q with id %s", trimmedRepoURL, existing.Id)
+			log.Printf("SaveRepository: found existing repository for url %q with id %s", repository.Url, existing.Id)
 			found = true
 		}
 	}
