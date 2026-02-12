@@ -127,7 +127,7 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		DisableExternalChecks: true,
 	})
 	if err != nil {
-		log.Printf("publiccode parser initialization failed: %s, %v", url, err)
+		log.Printf("publiccode parser initialization failed: %v", err)
 		return "", "", "", ""
 	}
 
