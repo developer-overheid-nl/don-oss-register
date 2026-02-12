@@ -107,6 +107,45 @@ localisation:
 	assert.Equal(t, "Deze regionale Nederlandse beschrijving bevat voldoende tekst om aan de minimale lengte te voldoen en beschrijft helder wat de Digitale Balie voor gemeenten en inwoners betekent.", repo.LongDescription)
 }
 
+func TestApplyRepositoryInputSelectsDescriptionUsingAvailableLanguages(t *testing.T) {
+	publicCode := `publiccodeYmlVersion: "0.5.0"
+name: Service Guichet
+url: https://example.org/repo
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+  en:
+    shortDescription: English short description.
+    longDescription: This English long description is present but should not be selected when French is the preferred available language in localisation settings.
+    features:
+      - English feature
+  fr:
+    shortDescription: Description courte en francais.
+    longDescription: Cette description longue francaise doit etre selectionnee car la langue preferee indiquee dans localisation est le francais.
+    features:
+      - Fonctionnalite francaise
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team Service Guichet
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - fr
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	assert.Equal(t, "Description courte en francais.", repo.ShortDescription)
+	assert.Equal(t, "Cette description longue francaise doit etre selectionnee car la langue preferee indiquee dans localisation est le francais.", repo.LongDescription)
+}
+
 func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
 	publicCode := validPublicCodeYAML(`
   nl:

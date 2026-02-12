@@ -164,7 +164,7 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 
 	name = strings.TrimSpace(v0.Name)
 
-	desc := selectDescription(v0.Description)
+	desc := selectDescription(v0.Description, v0.Localisation.AvailableLanguages)
 	if name == "" && desc.LocalisedName != nil {
 		name = strings.TrimSpace(*desc.LocalisedName)
 	}
@@ -215,12 +215,12 @@ func asPublicCodeV0(pc publiccode.PublicCode) (publiccode.PublicCodeV0, bool) {
 	}
 }
 
-func selectDescription(descriptions map[string]publiccode.DescV0) publiccode.DescV0 {
+func selectDescription(descriptions map[string]publiccode.DescV0, preferredLocales []string) publiccode.DescV0 {
 	if len(descriptions) == 0 {
 		return publiccode.DescV0{}
 	}
 
-	for _, key := range preferredLocaleKeys(descriptions) {
+	for _, key := range preferredLocaleKeys(descriptions, preferredLocales) {
 		value := descriptions[key]
 		if strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != "" {
 			return value
@@ -230,7 +230,7 @@ func selectDescription(descriptions map[string]publiccode.DescV0) publiccode.Des
 	return publiccode.DescV0{}
 }
 
-func preferredLocaleKeys(descriptions map[string]publiccode.DescV0) []string {
+func preferredLocaleKeys(descriptions map[string]publiccode.DescV0, preferredLocales []string) []string {
 	keys := make([]string, 0, len(descriptions))
 	for key := range descriptions {
 		keys = append(keys, key)
@@ -253,8 +253,22 @@ func preferredLocaleKeys(descriptions map[string]publiccode.DescV0) []string {
 		}
 	}
 
-	appendMatches(func(key string) bool { return key == "nl" })
-	appendMatches(func(key string) bool { return key == "en" })
+	for _, preferred := range preferredLocales {
+		normalized := strings.ToLower(strings.TrimSpace(preferred))
+		if normalized == "" {
+			continue
+		}
+
+		appendMatches(func(key string) bool { return key == normalized })
+		appendMatches(func(key string) bool { return strings.HasPrefix(key, normalized+"-") })
+
+		if idx := strings.IndexRune(normalized, '-'); idx > 0 {
+			base := normalized[:idx]
+			appendMatches(func(key string) bool { return key == base })
+			appendMatches(func(key string) bool { return strings.HasPrefix(key, base+"-") })
+		}
+	}
+
 	appendMatches(func(_ string) bool { return true })
 
 	return ordered
