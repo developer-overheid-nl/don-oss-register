@@ -140,8 +140,16 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		}
 		return "", "", "", ""
 	}
-	if hasValidationErrors(parseErr) {
-		log.Printf("publiccode parse validation issues ignored: %v", parseErr)
+	if parseErr != nil {
+		// Only continue if error is ValidationResults (validation warnings/errors)
+		// Non-validation errors (e.g., YAML parse errors) are fatal
+		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
+			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
+			return "", "", "", ""
+		}
+		if hasValidationErrors(parseErr) {
+			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
+		}
 	}
 
 	v0, ok := asPublicCodeV0(parsed)
@@ -180,7 +188,8 @@ func hasValidationErrors(err error) bool {
 
 	results, ok := err.(publiccode.ValidationResults)
 	if !ok {
-		return true
+		// Not a ValidationResults error, should be handled as fatal by caller
+		return false
 	}
 
 	for _, item := range results {
