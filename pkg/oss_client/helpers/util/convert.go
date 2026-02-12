@@ -132,13 +132,16 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 	}
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
-	if parsed == nil || hasValidationErrors(parseErr) {
+	if parsed == nil {
 		if parseErr != nil {
-			log.Printf("publiccode parse validation failed: %v", parseErr)
+			log.Printf("publiccode parse failed: %v", parseErr)
 		} else {
-			log.Printf("publiccode parse validation failed: empty parse result")
+			log.Printf("publiccode parse failed: empty parse result")
 		}
 		return "", "", "", ""
+	}
+	if hasValidationErrors(parseErr) {
+		log.Printf("publiccode parse validation issues ignored: %v", parseErr)
 	}
 
 	v0, ok := asPublicCodeV0(parsed)
