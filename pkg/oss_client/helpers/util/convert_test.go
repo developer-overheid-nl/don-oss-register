@@ -129,6 +129,40 @@ func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 }
 
+func TestApplyRepositoryInputParsesPublicCodeWithValidationErrorsBestEffort(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Beschikbaar ondanks ontbrekende verplichte velden.
+`, "0.4")
+
+	var buf bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	originalPrefix := log.Prefix()
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	log.SetPrefix("")
+	defer func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+		log.SetPrefix(originalPrefix)
+	}()
+
+	inputURL := "https://manual.example/repo"
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "Digitale Balie", repo.Name)
+	assert.Equal(t, "Beschikbaar ondanks ontbrekende verplichte velden.", repo.ShortDescription)
+	assert.Equal(t, "Beschikbaar ondanks ontbrekende verplichte velden.", repo.LongDescription)
+	assert.Contains(t, buf.String(), "publiccode parse validation issues (ignored):")
+	assert.Contains(t, buf.String(), "longDescription is a required field")
+	assert.Contains(t, buf.String(), "features must contain more than 0 items")
+}
+
 func TestApplyRepositoryInputIgnoresInvalidPublicCodeYAML(t *testing.T) {
 	invalid := `
 publiccodeYmlVersion: '0.2'
