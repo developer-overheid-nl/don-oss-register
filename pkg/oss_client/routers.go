@@ -36,15 +36,17 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	g.Use(APIVersionMiddleware(apiVersion))
 	g.NoMethod(func(c *gin.Context) {
 		apiErr := problem.New(http.StatusMethodNotAllowed, "Method not allowed")
+		c.Abort()
 		c.Header("API-Version", apiVersion)
 		c.Header("Content-Type", "application/problem+json")
-		c.AbortWithStatusJSON(apiErr.Status, apiErr)
+		c.JSON(apiErr.Status, apiErr)
 	})
 	g.NoRoute(func(c *gin.Context) {
 		apiErr := problem.NewNotFound("Resource does not exist")
+		c.Abort()
 		c.Header("API-Version", apiVersion)
 		c.Header("Content-Type", "application/problem+json")
-		c.AbortWithStatusJSON(apiErr.Status, apiErr)
+		c.JSON(apiErr.Status, apiErr)
 	})
 	f := fizz.NewFromEngine(g)
 
