@@ -2,12 +2,14 @@ package util
 
 import (
 	"io"
+	"log"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
+	publiccode "github.com/italia/publiccode-parser-go/v5"
 )
 
 func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
@@ -104,10 +106,7 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			target.PublicCodeUrl = publicCodeRaw
 		}
 
-		url, name, shortDesc, longDesc := parsePublicCodeYAML(content)
-		if url != "" {
-			target.Url = url
-		}
+		_, name, shortDesc, longDesc := parsePublicCodeYAML(content)
 		if name != "" {
 			target.Name = name
 		}
@@ -123,44 +122,156 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	return target
 }
 
-type publicCodeYAML struct {
-	URL         string                                    `yaml:"url"`
-	Name        string                                    `yaml:"name"`
-	Description map[string]publicCodeLocalizedDescription `yaml:"description"`
-}
-
-type publicCodeLocalizedDescription struct {
-	ShortDescription string `yaml:"shortDescription"`
-	LongDescription  string `yaml:"longDescription"`
-}
-
 func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string) {
-	var parsed publicCodeYAML
-	if err := yaml.Unmarshal([]byte(raw), &parsed); err != nil {
+	parser, err := publiccode.NewParser(publiccode.ParserConfig{
+		DisableExternalChecks: true,
+	})
+	if err != nil {
+		log.Printf("publiccode parser initialization failed: %v", err)
 		return "", "", "", ""
 	}
 
-	desc := selectDescription(parsed.Description)
-	return strings.TrimSpace(parsed.URL),
-		strings.TrimSpace(parsed.Name),
-		strings.TrimSpace(desc.ShortDescription),
-		strings.TrimSpace(desc.LongDescription)
+	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
+	if parsed == nil {
+		if parseErr != nil {
+			log.Printf("publiccode parse failed: %v", parseErr)
+		} else {
+			log.Printf("publiccode parse failed: empty parse result")
+		}
+		return "", "", "", ""
+	}
+	if parseErr != nil {
+		// Only continue if error is ValidationResults (validation warnings/errors)
+		// Non-validation errors (e.g., YAML parse errors) are fatal
+		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
+			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
+			return "", "", "", ""
+		}
+		if hasValidationErrors(parseErr) {
+			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
+		}
+	}
+
+	v0, ok := asPublicCodeV0(parsed)
+	if !ok {
+		log.Printf("publiccode parse result is not version 0: %T", parsed)
+		return "", "", "", ""
+	}
+
+	if v0.URL != nil {
+		url = strings.TrimSpace(v0.URL.String())
+	}
+
+	name = strings.TrimSpace(v0.Name)
+
+	desc := selectDescription(v0.Description, v0.Localisation.AvailableLanguages)
+	if name == "" && desc.LocalisedName != nil {
+		name = strings.TrimSpace(*desc.LocalisedName)
+	}
+
+	shortDescription = strings.TrimSpace(desc.ShortDescription)
+	longDescription = strings.TrimSpace(desc.LongDescription)
+	if shortDescription == "" {
+		log.Printf("publiccode description does not contain a short description for repository with url %q", url)
+	}
+	if longDescription == "" {
+		log.Printf("publiccode description does not contain a long description for repository with url %q", url)
+	}
+
+	return url, name, shortDescription, longDescription
 }
 
-func selectDescription(descriptions map[string]publicCodeLocalizedDescription) publicCodeLocalizedDescription {
+func hasValidationErrors(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	results, ok := err.(publiccode.ValidationResults)
+	if !ok {
+		// Not a ValidationResults error, should be handled as fatal by caller
+		return false
+	}
+
+	for _, item := range results {
+		if _, isError := item.(publiccode.ValidationError); isError {
+			return true
+		}
+	}
+
+	return false
+}
+
+func asPublicCodeV0(pc publiccode.PublicCode) (publiccode.PublicCodeV0, bool) {
+	switch typed := pc.(type) {
+	case publiccode.PublicCodeV0:
+		return typed, true
+	case *publiccode.PublicCodeV0:
+		if typed == nil {
+			return publiccode.PublicCodeV0{}, false
+		}
+		return *typed, true
+	default:
+		return publiccode.PublicCodeV0{}, false
+	}
+}
+
+func selectDescription(descriptions map[string]publiccode.DescV0, preferredLocales []string) publiccode.DescV0 {
 	if len(descriptions) == 0 {
-		return publicCodeLocalizedDescription{}
+		return publiccode.DescV0{}
 	}
-	if d, ok := descriptions["nl"]; ok {
-		return d
+
+	for _, key := range preferredLocaleKeys(descriptions, preferredLocales) {
+		value := descriptions[key]
+		if strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != "" {
+			return value
+		}
 	}
-	if d, ok := descriptions["en"]; ok {
-		return d
+
+	return publiccode.DescV0{}
+}
+
+func preferredLocaleKeys(descriptions map[string]publiccode.DescV0, preferredLocales []string) []string {
+	keys := make([]string, 0, len(descriptions))
+	for key := range descriptions {
+		keys = append(keys, key)
 	}
-	for _, d := range descriptions {
-		return d
+	sort.Strings(keys)
+
+	ordered := make([]string, 0, len(keys))
+	seen := make(map[string]struct{}, len(keys))
+	appendMatches := func(match func(key string) bool) {
+		for _, key := range keys {
+			lower := strings.ToLower(key)
+			if !match(lower) {
+				continue
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			ordered = append(ordered, key)
+		}
 	}
-	return publicCodeLocalizedDescription{}
+
+	for _, preferred := range preferredLocales {
+		normalized := strings.ToLower(strings.TrimSpace(preferred))
+		if normalized == "" {
+			continue
+		}
+
+		appendMatches(func(key string) bool { return key == normalized })
+		appendMatches(func(key string) bool { return strings.HasPrefix(key, normalized+"-") })
+
+		if idx := strings.IndexRune(normalized, '-'); idx > 0 {
+			base := normalized[:idx]
+			appendMatches(func(key string) bool { return key == base })
+			appendMatches(func(key string) bool { return strings.HasPrefix(key, base+"-") })
+		}
+	}
+
+	appendMatches(func(_ string) bool { return true })
+
+	return ordered
 }
 
 func isLikelyURL(val string) bool {
