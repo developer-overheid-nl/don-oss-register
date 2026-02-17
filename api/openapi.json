@@ -8,7 +8,7 @@
       "name": "Team developer.overheid.nl",
       "url": "https://github.com/developer-overheid-nl/don-oss-register/issues"
     },
-    "description": "API to access the OSS register of developer.overheid.nl.\n\n## Auth\n\nThis API distinguishes between public and private endpoints.\nPublic endpoints can be accessed with either an API key or a client credentials token.\nPrivate endpoints can only be accessed with a client credentials token.\n\n### API key\n\nUsing an API key, you can access all public endpoints of the API register.\nThese requests can also be made from the browser.\nSimply pass the obtained API key with each request using the `X-Api-Key` header.\n\n### Client credentials token\n\nUsing a client credentials token, you can access both public and private endpoints of the OSS register.\nTo obtain the token, you need to perform a `POST` request to `https://auth.developer.overheid.nl/realms/don/protocol/openid-connect/token` with the following Form URL Encoded body:\n- `grant_type`: `client_credentials`\n- `scope`: depending on the access you need and the client you are, you can request one or more of the following scopes:\n  - `repositories:read`\n  - `repositories:write`\n  - `gitOrganisations:read`\n  - `gitOrganisations:write`\n  - `organisations:read`\n  - `organisations:write`\n- `client_id`: the client id you received from us\n- `client_secret`: the client secret you received from us\n\nPass the obtained token with each request using the `Authorization` header. Example:\n\n`Authorization`: `Bearer {ACCESS_TOKEN}` (replace `{ACCESS_TOKEN}` with the obtained `access_token`)\n\n## Pagination\n\nPagination of collections is done using the `Link` header.\nThere are various libraries available (such as [parse-link-header](https://www.npmjs.com/package/parse-link-header) for Javascript) that can parse this header.\nAdditionally, the following headers provide extra support for implementing pagination in the client:\n- `Current-Page`: the current page in the collection\n- `Per-Page`: the number of items per page\n- `Total-Count`: the total number of items\n- `Total-Pages`: the total number of pages\n"
+    "description": "API to access the OSS register of developer.overheid.nl.\n\n## Auth\n\nThis API distinguishes between public and private endpoints.\nPublic endpoints can be accessed with either an API key or a client credentials token.\nPrivate endpoints can only be accessed with a client credentials token.\n\n### API key\n\nUsing an API key, you can access all public endpoints of the API register.\nThese requests can also be made from the browser.\nRequest a read-only API key at https://apis.developer.overheid.nl/apis/key-aanvragen.\nSimply pass the obtained API key with each request using the `X-Api-Key` header.\n\n### Client credentials token\n\nUsing a client credentials token, you can access both public and private endpoints of the OSS register.\nTo obtain the token, you need to perform a `POST` request to `https://auth.developer.overheid.nl/realms/don/protocol/openid-connect/token` with the following Form URL Encoded body:\n- `grant_type`: `client_credentials`\n- `scope`: depending on the access you need and the client you are, you can request one or more of the following scopes:\n  - `repositories:read`\n  - `repositories:write`\n  - `gitOrganisations:read`\n  - `gitOrganisations:write`\n  - `organisations:read`\n  - `organisations:write`\n- `client_id`: the client id you received from us\n- `client_secret`: the client secret you received from us\n\nPass the obtained token with each request using the `Authorization` header. Example:\n\n`Authorization`: `Bearer {ACCESS_TOKEN}` (replace `{ACCESS_TOKEN}` with the obtained `access_token`)\n\n## Pagination\n\nPagination of collections is done using the `Link` header.\nThere are various libraries available (such as [parse-link-header](https://www.npmjs.com/package/parse-link-header) for Javascript) that can parse this header.\nAdditionally, the following headers provide extra support for implementing pagination in the client:\n- `Current-Page`: the current page in the collection\n- `Per-Page`: the number of items per page\n- `Total-Count`: the total number of items\n- `Total-Pages`: the total number of pages\n"
   },
   "servers": [
     {
@@ -701,6 +701,11 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
+                      },
+                      "lastActivityAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
                       }
                     }
                   }
@@ -821,33 +826,13 @@
                   },
                   "organisationUri": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationSummary.schema.json",
-                    "title": "Organisation summary",
-                    "description": "An organisation from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "uri": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationUri.schema.json",
-                        "title": "Organisation URI",
-                        "description": "The unique identifier for an organisation",
-                        "type": "string",
-                        "format": "uri",
-                        "examples": [
-                          "https://developer.overheid.nl"
-                        ]
-                      },
-                      "label": {
-                        "description": "The label of the organisation",
-                        "type": "string",
-                        "examples": [
-                          "developer.overheid.nl"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "uri",
-                      "label"
+                    "$id": "https://example.com/OrganisationUri.schema.json",
+                    "title": "Organisation URI",
+                    "description": "The unique identifier for an organisation",
+                    "type": "string",
+                    "format": "uri",
+                    "examples": [
+                      "https://developer.overheid.nl"
                     ]
                   },
                   "publicCodeUrl": {
@@ -871,6 +856,10 @@
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
+                  },
+                  "lastActivityAt": {
+                    "type": "string",
+                    "format": "date-time"
                   }
                 }
               }
@@ -975,6 +964,15 @@
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
+                        },
+                        "lastActivityAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "readOnly": true
+                        },
+                        "longDescription": {
+                          "type": "string",
+                          "description": "Long description of the repository, typically from publiccode.yaml."
                         }
                       }
                     }
@@ -1260,6 +1258,11 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
+                      },
+                      "lastActivityAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
                       }
                     }
                   }
@@ -1480,6 +1483,15 @@
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
+                        },
+                        "lastActivityAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "readOnly": true
+                        },
+                        "longDescription": {
+                          "type": "string",
+                          "description": "Long description of the repository, typically from publiccode.yaml."
                         }
                       }
                     }
@@ -1607,33 +1619,13 @@
                   },
                   "organisationUri": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationSummary.schema.json",
-                    "title": "Organisation summary",
-                    "description": "An organisation from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "uri": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationUri.schema.json",
-                        "title": "Organisation URI",
-                        "description": "The unique identifier for an organisation",
-                        "type": "string",
-                        "format": "uri",
-                        "examples": [
-                          "https://developer.overheid.nl"
-                        ]
-                      },
-                      "label": {
-                        "description": "The label of the organisation",
-                        "type": "string",
-                        "examples": [
-                          "developer.overheid.nl"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "uri",
-                      "label"
+                    "$id": "https://example.com/OrganisationUri.schema.json",
+                    "title": "Organisation URI",
+                    "description": "The unique identifier for an organisation",
+                    "type": "string",
+                    "format": "uri",
+                    "examples": [
+                      "https://developer.overheid.nl"
                     ]
                   },
                   "publicCodeUrl": {
@@ -1657,6 +1649,10 @@
                     "type": "string",
                     "format": "date-time",
                     "readOnly": true
+                  },
+                  "lastActivityAt": {
+                    "type": "string",
+                    "format": "date-time"
                   }
                 }
               }
@@ -1761,6 +1757,15 @@
                           "type": "string",
                           "format": "date-time",
                           "readOnly": true
+                        },
+                        "lastActivityAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "readOnly": true
+                        },
+                        "longDescription": {
+                          "type": "string",
+                          "description": "Long description of the repository, typically from publiccode.yaml."
                         }
                       }
                     }
@@ -1969,6 +1974,45 @@
                     "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
                   }
                 }
+              },
+              "Link": {
+                "description": "Links to the previous, next, last or first pages",
+                "schema": {
+                  "type": "string",
+                  "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
+                  "externalDocs": {
+                    "description": "W3C reference",
+                    "url": "https://www.w3.org/wiki/LinkHeader"
+                  }
+                }
+              },
+              "Total-Count": {
+                "description": "Total number of items available",
+                "schema": {
+                  "type": "integer",
+                  "example": 124
+                }
+              },
+              "Current-Page": {
+                "description": "Current page number",
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              },
+              "Per-Page": {
+                "description": "Number of items per page",
+                "schema": {
+                  "type": "integer",
+                  "example": 10
+                }
+              },
+              "Total-Pages": {
+                "description": "Total number of pages available",
+                "schema": {
+                  "type": "integer",
+                  "example": 13
+                }
               }
             },
             "description": "OK",
@@ -2010,8 +2054,115 @@
                 }
               }
             }
+          },
+          "400": {
+            "headers": {
+              "API-Version": {
+                "description": "Semver of this API",
+                "schema": {
+                  "type": "string",
+                  "example": "1.0.0",
+                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+                  "externalDocs": {
+                    "description": " /core/version-header: Return the full version number in a response header",
+                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
+                  }
+                }
+              }
+            },
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://example.com/ProblemJson.schema.json",
+                  "title": "Problem JSON",
+                  "description": "Problem JSON schema representing errors and status code",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
+                      "example": 400
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "A short, human-readable summary of the problem type",
+                      "example": "Request validation failed"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "List of errors encountered during processing",
+                        "properties": {
+                          "in": {
+                            "type": "string",
+                            "description": "Location of the error (e.g., body, query, header)",
+                            "enum": [
+                              "body",
+                              "query"
+                            ]
+                          },
+                          "location": {
+                            "type": "string",
+                            "description": "Location in the document where the error occurred (JSON Pointer)",
+                            "example": "#/foo[0]/bar"
+                          },
+                          "code": {
+                            "type": "string",
+                            "description": "A code representing the type of error",
+                            "example": "date.format"
+                          },
+                          "detail": {
+                            "type": "string",
+                            "description": "A detailed message describing the error",
+                            "example": "must be ISO 8601"
+                          }
+                        },
+                        "required": [
+                          "in",
+                          "location",
+                          "code",
+                          "detail"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "title"
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number (1-based).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "description": "Number of results per page.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ]
       },
       "post": {
         "security": [
@@ -2218,7 +2369,8 @@
       "apiKey": {
         "type": "apiKey",
         "name": "X-Api-Key",
-        "in": "header"
+        "in": "header",
+        "description": "Read-only API keys for public endpoints can be requested at https://apis.developer.overheid.nl/apis/key-aanvragen."
       },
       "clientCredentials": {
         "type": "oauth2",
@@ -2644,33 +2796,13 @@
           },
           "organisationUri": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": "https://example.com/OrganisationSummary.schema.json",
-            "title": "Organisation summary",
-            "description": "An organisation from the catalog",
-            "type": "object",
-            "properties": {
-              "uri": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://example.com/OrganisationUri.schema.json",
-                "title": "Organisation URI",
-                "description": "The unique identifier for an organisation",
-                "type": "string",
-                "format": "uri",
-                "examples": [
-                  "https://developer.overheid.nl"
-                ]
-              },
-              "label": {
-                "description": "The label of the organisation",
-                "type": "string",
-                "examples": [
-                  "developer.overheid.nl"
-                ]
-              }
-            },
-            "required": [
-              "uri",
-              "label"
+            "$id": "https://example.com/OrganisationUri.schema.json",
+            "title": "Organisation URI",
+            "description": "The unique identifier for an organisation",
+            "type": "string",
+            "format": "uri",
+            "examples": [
+              "https://developer.overheid.nl"
             ]
           },
           "publicCodeUrl": {
@@ -2785,6 +2917,10 @@
                 "type": "string",
                 "format": "date-time",
                 "readOnly": true
+              },
+              "longDescription": {
+                "type": "string",
+                "description": "Long description of the repository, typically from publiccode.yaml."
               }
             }
           }
