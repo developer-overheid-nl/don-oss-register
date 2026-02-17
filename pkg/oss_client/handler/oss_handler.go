@@ -31,7 +31,7 @@ func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListReposito
 	return repos, nil
 }
 
-// SearchRepositorys handles GET /Repositorys/_search
+// SearchRepositorys handles GET /Repositorys/search
 func (c *OSSController) SearchRepositorys(ctx *gin.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, error) {
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 	p.BaseURL = ctx.FullPath()

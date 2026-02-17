@@ -139,7 +139,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	})
 
 	t.Run("search repositories", func(t *testing.T) {
-		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/_search?q=Integration")
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/search?q=Integration")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
