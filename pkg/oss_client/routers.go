@@ -52,24 +52,11 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")
 
-	root.GET("/repositories/search",
+	root.GET("/repositories/_search",
 		[]fizz.OperationOption{
 			fizz.ID("searchRepositories"),
 			fizz.Summary("Search repositories"),
 			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen."),
-			fizz.Security(&openapi.SecurityRequirement{
-				"clientCredentials": {},
-			}),
-			apiVersionHeader,
-		},
-		tonic.Handler(controller.SearchRepositorys, 200),
-	)
-
-	root.GET("/repositories/_search",
-		[]fizz.OperationOption{
-			fizz.ID("searchRepositoriesLegacy"),
-			fizz.Summary("Search repositories (legacy)"),
-			fizz.Description("Legacy alias for /repositories/search."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),

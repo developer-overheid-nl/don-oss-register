@@ -2081,7 +2081,7 @@
         }
       }
     },
-    "/repositories/search": {
+    "/repositories/_search": {
       "get": {
         "tags": [
           "Public endpoints",

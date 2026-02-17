@@ -143,7 +143,7 @@ func TestSearchRepositorys_UsesService(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	req := httptest.NewRequest(http.MethodGet, "/v1/repositories/search?q=repo", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/repositories/_search?q=repo", nil)
 	ctx.Request = req
 
 	results, err := ctrl.SearchRepositorys(ctx, &models.ListRepositorysSearchParams{Query: "repo"})
