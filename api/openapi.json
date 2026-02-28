@@ -692,6 +692,9 @@
                         "type": "string",
                         "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                       },
+                      "publicCode": {
+                        "$ref": "#/components/schemas/PublicCode"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -955,6 +958,9 @@
                           "type": "string",
                           "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                         },
+                        "publicCode": {
+                          "$ref": "#/components/schemas/PublicCode"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -1191,6 +1197,9 @@
                         "name": {
                           "type": "string",
                           "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
+                        },
+                        "publicCode": {
+                          "$ref": "#/components/schemas/PublicCode"
                         },
                         "createdAt": {
                           "type": "string",
@@ -1465,6 +1474,9 @@
                         "name": {
                           "type": "string",
                           "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
+                        },
+                        "publicCode": {
+                          "$ref": "#/components/schemas/PublicCode"
                         },
                         "createdAt": {
                           "type": "string",
@@ -2257,6 +2269,9 @@
                         "type": "string",
                         "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                       },
+                      "publicCode": {
+                        "$ref": "#/components/schemas/PublicCode"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -2365,6 +2380,178 @@
     }
   },
   "components": {
+    "schemas": {
+      "PublicCode": {
+        "type": "object",
+        "description": "Mandatory and conditionally mandatory fields extracted from publiccode.yml v0.5.0.",
+        "properties": {
+          "publiccodeYmlVersion": {
+            "type": "string",
+            "description": "Version of the publiccode.yml schema."
+          },
+          "name": {
+            "type": "string",
+            "description": "Software name from publiccode.yml."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Repository or project URL from publiccode.yml."
+          },
+          "platforms": {
+            "type": "array",
+            "description": "Supported platforms.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "developmentStatus": {
+            "type": "string",
+            "description": "Development status from publiccode.yml."
+          },
+          "softwareType": {
+            "type": "string",
+            "description": "Software type from publiccode.yml."
+          },
+          "legal": {
+            "type": "object",
+            "properties": {
+              "license": {
+                "type": "string",
+                "description": "SPDX license expression."
+              }
+            }
+          },
+          "description": {
+            "type": "object",
+            "description": "Localized description blocks keyed by language tag.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "shortDescription": {
+                  "type": "string"
+                },
+                "longDescription": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "maintenance": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "contacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "contractors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "until": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "localisation": {
+            "type": "object",
+            "properties": {
+              "localisationReady": {
+                "type": "boolean"
+              },
+              "availableLanguages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "organisation": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "dependsOn": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "proprietary": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "hardware": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "fundedBy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "securitySchemes": {
       "apiKey": {
         "type": "apiKey",
