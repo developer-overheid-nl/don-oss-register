@@ -9,6 +9,7 @@ import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestApplyRepositoryInputSetsTimestamps(t *testing.T) {
@@ -71,6 +72,27 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 	assert.Equal(t, "De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.", repo.LongDescription)
+	require.NotNil(t, repo.PublicCode)
+	assert.Equal(t, "0.5.0", repo.PublicCode.PubliccodeYmlVersion)
+	assert.Equal(t, "Digitale Balie", repo.PublicCode.Name)
+	assert.Equal(t, "https://example.org/repo", repo.PublicCode.Url)
+	assert.Equal(t, []string{"web"}, repo.PublicCode.Platforms)
+	assert.Equal(t, "stable", repo.PublicCode.DevelopmentStatus)
+	assert.Equal(t, "configurationFiles", repo.PublicCode.SoftwareType)
+	require.NotNil(t, repo.PublicCode.Legal)
+	assert.Equal(t, "EUPL-1.2", repo.PublicCode.Legal.License)
+	require.NotNil(t, repo.PublicCode.Maintenance)
+	assert.Equal(t, "internal", repo.PublicCode.Maintenance.Type)
+	require.Len(t, repo.PublicCode.Maintenance.Contacts, 1)
+	assert.Equal(t, "Team Digitale Balie", repo.PublicCode.Maintenance.Contacts[0].Name)
+	require.NotNil(t, repo.PublicCode.Localisation)
+	require.NotNil(t, repo.PublicCode.Localisation.LocalisationReady)
+	assert.False(t, *repo.PublicCode.Localisation.LocalisationReady)
+	assert.Equal(t, []string{"nl"}, repo.PublicCode.Localisation.AvailableLanguages)
+	require.Contains(t, repo.PublicCode.Description, "nl")
+	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.PublicCode.Description["nl"].ShortDescription)
+	assert.NotEmpty(t, repo.PublicCode.Description["nl"].LongDescription)
+	assert.Equal(t, []string{"Videoafspraak"}, repo.PublicCode.Description["nl"].Features)
 }
 
 func TestApplyRepositoryInputParsesRegionalLocaleDescription(t *testing.T) {
@@ -144,6 +166,61 @@ localisation:
 
 	assert.Equal(t, "Description courte en francais.", repo.ShortDescription)
 	assert.Equal(t, "Cette description longue francaise doit etre selectionnee car la langue preferee indiquee dans localisation est le francais.", repo.LongDescription)
+}
+
+func TestApplyRepositoryInputParsesContractMaintenanceAndSpecialMandatoryFields(t *testing.T) {
+	publicCode := `publiccodeYmlVersion: "0.5.0"
+name: Zaaksysteem
+url: https://example.org/repo
+softwareType: standalone/web
+developmentStatus: beta
+platforms:
+  - web
+description:
+  nl:
+    shortDescription: Zaaksysteem voor publieke dienstverlening.
+    longDescription: Dit zaaksysteem ondersteunt het volledige proces van publieke dienstverlening, van intake en registratie tot afhandeling en rapportage, en biedt robuuste integraties met bestaande basisregistraties en veilige gegevensuitwisseling.
+    features:
+      - Zaakafhandeling
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: contract
+  contractors:
+    - name: Acme Maintenance BV
+      until: "2027-12-31"
+organisation:
+  uri: https://example.org/organisations/zaaksysteem
+fundedBy:
+  - name: Ministerie van Binnenlandse Zaken
+dependsOn:
+  open:
+    - name: PostgreSQL
+      versionMin: "14"
+  hardware:
+    - name: Smartcard Reader
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - nl
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	require.NotNil(t, repo.PublicCode)
+	require.NotNil(t, repo.PublicCode.Maintenance)
+	assert.Equal(t, "contract", repo.PublicCode.Maintenance.Type)
+	require.Len(t, repo.PublicCode.Maintenance.Contractors, 1)
+	assert.Equal(t, "Acme Maintenance BV", repo.PublicCode.Maintenance.Contractors[0].Name)
+	assert.Equal(t, "2027-12-31", repo.PublicCode.Maintenance.Contractors[0].Until)
+	require.NotNil(t, repo.PublicCode.Organisation)
+	assert.Equal(t, "https://example.org/organisations/zaaksysteem", repo.PublicCode.Organisation.Uri)
+	require.NotNil(t, repo.PublicCode.DependsOn)
+	assert.Equal(t, []models.PublicCodeDependency{{Name: "PostgreSQL"}}, repo.PublicCode.DependsOn.Open)
+	assert.Equal(t, []models.PublicCodeDependency{{Name: "Smartcard Reader"}}, repo.PublicCode.DependsOn.Hardware)
+	assert.Equal(t, []models.PublicCodeOrganisationReference{{Name: "Ministerie van Binnenlandse Zaken"}}, repo.PublicCode.FundedBy)
 }
 
 func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {

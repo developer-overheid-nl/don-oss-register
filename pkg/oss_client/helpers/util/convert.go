@@ -36,6 +36,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
+		PublicCode:        repo.PublicCode,
 		LongDescription:   repo.LongDescription,
 	}
 	return detail
@@ -86,6 +87,8 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	publicCodeRaw := ""
 	if input.PublicCodeUrl != nil {
 		publicCodeRaw = strings.TrimSpace(*input.PublicCodeUrl)
+		target.PublicCodeUrl = publicCodeRaw
+		target.PublicCode = nil
 	}
 
 	if publicCodeRaw != "" {
@@ -103,10 +106,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 					}
 				}
 			}
-			target.PublicCodeUrl = publicCodeRaw
 		}
 
-		_, name, shortDesc, longDesc := parsePublicCodeYAML(content)
+		_, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
 		if name != "" {
 			target.Name = name
 		}
@@ -117,18 +119,21 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		if longDesc != "" {
 			target.LongDescription = longDesc
 		}
+		if publicCode != nil {
+			target.PublicCode = publicCode
+		}
 	}
 
 	return target
 }
 
-func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string) {
+func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string, details *models.PublicCode) {
 	parser, err := publiccode.NewParser(publiccode.ParserConfig{
 		DisableExternalChecks: true,
 	})
 	if err != nil {
 		log.Printf("publiccode parser initialization failed: %v", err)
-		return "", "", "", ""
+		return "", "", "", "", nil
 	}
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
@@ -138,14 +143,14 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		} else {
 			log.Printf("publiccode parse failed: empty parse result")
 		}
-		return "", "", "", ""
+		return "", "", "", "", nil
 	}
 	if parseErr != nil {
 		// Only continue if error is ValidationResults (validation warnings/errors)
 		// Non-validation errors (e.g., YAML parse errors) are fatal
 		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
 			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
-			return "", "", "", ""
+			return "", "", "", "", nil
 		}
 		if hasValidationErrors(parseErr) {
 			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
@@ -155,8 +160,9 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
 		log.Printf("publiccode parse result is not version 0: %T", parsed)
-		return "", "", "", ""
+		return "", "", "", "", nil
 	}
+	details = mapPublicCodeMandatoryFields(v0)
 
 	if v0.URL != nil {
 		url = strings.TrimSpace(v0.URL.String())
@@ -178,7 +184,283 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		log.Printf("publiccode description does not contain a long description for repository with url %q", url)
 	}
 
-	return url, name, shortDescription, longDescription
+	return url, name, shortDescription, longDescription, details
+}
+
+func mapPublicCodeMandatoryFields(v0 publiccode.PublicCodeV0) *models.PublicCode {
+	name := strings.TrimSpace(v0.Name)
+	if name == "" {
+		desc := selectDescription(v0.Description, v0.Localisation.AvailableLanguages)
+		if desc.LocalisedName != nil {
+			name = strings.TrimSpace(*desc.LocalisedName)
+		}
+	}
+
+	result := &models.PublicCode{
+		PubliccodeYmlVersion: strings.TrimSpace(v0.PubliccodeYamlVersion),
+		Name:                 name,
+		Platforms:            trimNonEmpty(v0.Platforms),
+		DevelopmentStatus:    strings.TrimSpace(v0.DevelopmentStatus),
+		SoftwareType:         strings.TrimSpace(v0.SoftwareType),
+	}
+
+	if v0.URL != nil {
+		result.Url = strings.TrimSpace(v0.URL.String())
+	}
+
+	if license := strings.TrimSpace(v0.Legal.License); license != "" {
+		result.Legal = &models.PublicCodeLegal{
+			License: license,
+		}
+	}
+
+	if descriptions := mapMandatoryDescriptions(v0.Description); len(descriptions) > 0 {
+		result.Description = descriptions
+	}
+
+	if maintenance := mapMandatoryMaintenance(v0); maintenance != nil {
+		result.Maintenance = maintenance
+	}
+
+	if localisation := mapMandatoryLocalisation(v0); localisation != nil {
+		result.Localisation = localisation
+	}
+
+	if v0.Organisation != nil {
+		if uri := strings.TrimSpace(v0.Organisation.URI); uri != "" {
+			result.Organisation = &models.PublicCodeOrganisation{
+				Uri: uri,
+			}
+		}
+	}
+
+	if v0.DependsOn != nil {
+		if dependsOn := mapMandatoryDependsOn(v0.DependsOn.Open, v0.DependsOn.Proprietary, v0.DependsOn.Hardware); dependsOn != nil {
+			result.DependsOn = dependsOn
+		}
+	}
+
+	if fundedBy := mapMandatoryFundedBy(v0.FundedBy); len(fundedBy) > 0 {
+		result.FundedBy = fundedBy
+	}
+
+	if isEmptyPublicCode(result) {
+		return nil
+	}
+
+	return result
+}
+
+func mapMandatoryDescriptions(descriptions map[string]publiccode.DescV0) map[string]models.PublicCodeDescription {
+	if len(descriptions) == 0 {
+		return nil
+	}
+
+	mapped := make(map[string]models.PublicCodeDescription, len(descriptions))
+	for lang, desc := range descriptions {
+		item := models.PublicCodeDescription{
+			ShortDescription: strings.TrimSpace(desc.ShortDescription),
+			LongDescription:  strings.TrimSpace(desc.LongDescription),
+			Features:         trimNonEmpty(derefStrings(desc.Features)),
+		}
+		if item.ShortDescription == "" && item.LongDescription == "" && len(item.Features) == 0 {
+			continue
+		}
+		mapped[lang] = item
+	}
+
+	if len(mapped) == 0 {
+		return nil
+	}
+
+	return mapped
+}
+
+func mapMandatoryMaintenance(v0 publiccode.PublicCodeV0) *models.PublicCodeMaintenance {
+	maintenance := &models.PublicCodeMaintenance{
+		Type: strings.TrimSpace(v0.Maintenance.Type),
+	}
+
+	if v0.Maintenance.Contractors != nil {
+		maintenance.Contractors = mapMandatoryContractors(*v0.Maintenance.Contractors)
+	}
+	if v0.Maintenance.Contacts != nil {
+		maintenance.Contacts = mapMandatoryContacts(*v0.Maintenance.Contacts)
+	}
+
+	if maintenance.Type == "" && len(maintenance.Contractors) == 0 && len(maintenance.Contacts) == 0 {
+		return nil
+	}
+
+	return maintenance
+}
+
+func mapMandatoryContractors(input []publiccode.ContractorV0) []models.PublicCodeContractor {
+	if len(input) == 0 {
+		return nil
+	}
+
+	result := make([]models.PublicCodeContractor, 0, len(input))
+	for _, contractor := range input {
+		item := models.PublicCodeContractor{
+			Name:  strings.TrimSpace(contractor.Name),
+			Until: strings.TrimSpace(contractor.Until),
+		}
+		if item.Name == "" && item.Until == "" {
+			continue
+		}
+		result = append(result, item)
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func mapMandatoryContacts(input []publiccode.ContactV0) []models.PublicCodeContact {
+	if len(input) == 0 {
+		return nil
+	}
+
+	result := make([]models.PublicCodeContact, 0, len(input))
+	for _, contact := range input {
+		name := strings.TrimSpace(contact.Name)
+		if name == "" {
+			continue
+		}
+		result = append(result, models.PublicCodeContact{Name: name})
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func mapMandatoryLocalisation(v0 publiccode.PublicCodeV0) *models.PublicCodeLocalisation {
+	languages := trimNonEmpty(v0.Localisation.AvailableLanguages)
+	if v0.Localisation.LocalisationReady == nil && len(languages) == 0 {
+		return nil
+	}
+
+	return &models.PublicCodeLocalisation{
+		LocalisationReady:  v0.Localisation.LocalisationReady,
+		AvailableLanguages: languages,
+	}
+}
+
+func mapMandatoryDependsOn(
+	open *[]publiccode.DependencyV0,
+	proprietary *[]publiccode.DependencyV0,
+	hardware *[]publiccode.DependencyV0,
+) *models.PublicCodeDependsOn {
+	result := &models.PublicCodeDependsOn{
+		Open:        mapMandatoryDependencies(open),
+		Proprietary: mapMandatoryDependencies(proprietary),
+		Hardware:    mapMandatoryDependencies(hardware),
+	}
+
+	if len(result.Open) == 0 && len(result.Proprietary) == 0 && len(result.Hardware) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func mapMandatoryDependencies(input *[]publiccode.DependencyV0) []models.PublicCodeDependency {
+	if input == nil || len(*input) == 0 {
+		return nil
+	}
+
+	result := make([]models.PublicCodeDependency, 0, len(*input))
+	for _, dependency := range *input {
+		name := strings.TrimSpace(dependency.Name)
+		if name == "" {
+			continue
+		}
+		result = append(result, models.PublicCodeDependency{Name: name})
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func mapMandatoryFundedBy(input *[]publiccode.OrganisationV0) []models.PublicCodeOrganisationReference {
+	if input == nil || len(*input) == 0 {
+		return nil
+	}
+
+	result := make([]models.PublicCodeOrganisationReference, 0, len(*input))
+	for _, organisation := range *input {
+		if organisation.Name == nil {
+			continue
+		}
+		name := strings.TrimSpace(*organisation.Name)
+		if name == "" {
+			continue
+		}
+		result = append(result, models.PublicCodeOrganisationReference{Name: name})
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func derefStrings(items *[]string) []string {
+	if items == nil {
+		return nil
+	}
+	return *items
+}
+
+func trimNonEmpty(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func isEmptyPublicCode(data *models.PublicCode) bool {
+	if data == nil {
+		return true
+	}
+
+	return data.PubliccodeYmlVersion == "" &&
+		data.Name == "" &&
+		data.Url == "" &&
+		len(data.Platforms) == 0 &&
+		data.DevelopmentStatus == "" &&
+		data.SoftwareType == "" &&
+		data.Legal == nil &&
+		len(data.Description) == 0 &&
+		data.Maintenance == nil &&
+		data.Localisation == nil &&
+		data.Organisation == nil &&
+		data.DependsOn == nil &&
+		len(data.FundedBy) == 0
 }
 
 func hasValidationErrors(err error) bool {
