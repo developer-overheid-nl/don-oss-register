@@ -188,9 +188,17 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 }
 
 func mapPublicCodeMandatoryFields(v0 publiccode.PublicCodeV0) *models.PublicCode {
+	name := strings.TrimSpace(v0.Name)
+	if name == "" {
+		desc := selectDescription(v0.Description, v0.Localisation.AvailableLanguages)
+		if desc.LocalisedName != nil {
+			name = strings.TrimSpace(*desc.LocalisedName)
+		}
+	}
+
 	result := &models.PublicCode{
 		PubliccodeYmlVersion: strings.TrimSpace(v0.PubliccodeYamlVersion),
-		Name:                 strings.TrimSpace(v0.Name),
+		Name:                 name,
 		Platforms:            trimNonEmpty(v0.Platforms),
 		DevelopmentStatus:    strings.TrimSpace(v0.DevelopmentStatus),
 		SoftwareType:         strings.TrimSpace(v0.SoftwareType),
