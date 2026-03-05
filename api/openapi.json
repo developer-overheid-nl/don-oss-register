@@ -692,9 +692,6 @@
                         "type": "string",
                         "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
                       },
-                      "publicCode": {
-                        "$ref": "#/components/schemas/PublicCode"
-                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -2268,9 +2265,6 @@
                       "name": {
                         "type": "string",
                         "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                      },
-                      "publicCode": {
-                        "$ref": "#/components/schemas/PublicCode"
                       },
                       "createdAt": {
                         "type": "string",

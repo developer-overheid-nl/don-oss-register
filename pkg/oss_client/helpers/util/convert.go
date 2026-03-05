@@ -26,7 +26,6 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		Name:             repo.Name,
 		ShortDescription: repo.ShortDescription,
 		PublicCodeUrl:    repo.PublicCodeUrl,
-		PublicCode:       repo.PublicCode,
 		CreatedAt:        repo.CreatedAt,
 		LastCrawledAt:    repo.LastCrawledAt,
 		LastActivityAt:   repo.LastActivityAt,
@@ -37,6 +36,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
 	detail := &models.RepositoryDetail{
 		RepositorySummary: ToRepositorySummary(repo),
+		PublicCode:        repo.PublicCode,
 		LongDescription:   repo.LongDescription,
 	}
 	return detail
