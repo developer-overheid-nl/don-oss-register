@@ -87,6 +87,8 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	publicCodeRaw := ""
 	if input.PublicCodeUrl != nil {
 		publicCodeRaw = strings.TrimSpace(*input.PublicCodeUrl)
+		target.PublicCodeUrl = publicCodeRaw
+		target.PublicCode = nil
 	}
 
 	if publicCodeRaw != "" {
@@ -104,7 +106,6 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 					}
 				}
 			}
-			target.PublicCodeUrl = publicCodeRaw
 		}
 
 		_, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
