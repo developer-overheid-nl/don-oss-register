@@ -1,0 +1,25 @@
+name: JSON CI
+
+on:
+  pull_request:
+    paths:
+      - '**/*.json'
+      - '.github/workflows/json-ci.yml'
+
+jobs:
+  lint-and-validate:
+    name: JSON Lint & OpenAPI Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run Super-Linter
+        uses: super-linter/super-linter@v8
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_JSON: true
+          VALIDATE_OPENAPI: true

@@ -1,6 +1,13 @@
 name: Go CI/CD
 
-on: push
+on:
+  pull_request:
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
+      - '.github/workflows/go-ci.yml'
 
 jobs:
   lint:
