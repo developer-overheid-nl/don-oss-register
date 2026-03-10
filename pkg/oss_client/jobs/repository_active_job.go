@@ -3,13 +3,17 @@ package jobs
 import (
 	"context"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 )
 
 const (
-	DefaultRepositoryActiveStaleAfter = 48 * time.Hour
+	DefaultRepositoryActiveStaleAfterHours = 48
+	DefaultRepositoryActiveStaleAfter      = DefaultRepositoryActiveStaleAfterHours * time.Hour
+	EnvCrawlStaleAfterHours                = "CRAWL_STALE_AFTER_HOURS"
 )
 
 type RepositoryActiveJob struct {
@@ -18,12 +22,27 @@ type RepositoryActiveJob struct {
 	runAtHour  int
 }
 
+func staleAfterFromEnv() time.Duration {
+	if v := os.Getenv(EnvCrawlStaleAfterHours); v != "" {
+		hours, err := strconv.Atoi(v)
+		if err == nil && hours > 0 {
+			return time.Duration(hours) * time.Hour
+		}
+		log.Printf("invalid %s value %q, using default %d hours", EnvCrawlStaleAfterHours, v, DefaultRepositoryActiveStaleAfterHours)
+	}
+	return DefaultRepositoryActiveStaleAfter
+}
+
 func NewRepositoryActiveJob(repo repositories.RepositoriesRepository) *RepositoryActiveJob {
 	return &RepositoryActiveJob{
 		repo:       repo,
-		staleAfter: DefaultRepositoryActiveStaleAfter,
+		staleAfter: staleAfterFromEnv(),
 		runAtHour:  13,
 	}
+}
+
+func (j *RepositoryActiveJob) StaleAfter() time.Duration {
+	return j.staleAfter
 }
 
 func (j *RepositoryActiveJob) Start(ctx context.Context) {
