@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: read
       statuses: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6.0.2
         with:
@@ -24,3 +26,4 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: true
           VALIDATE_OPENAPI: true
+          ENABLE_GITHUB_PULL_REQUEST_SUMMARY_COMMENT: true
