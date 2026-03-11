@@ -155,3 +155,56 @@ type Pagination struct {
 	TotalPages     int
 	TotalRecords   int
 }
+
+type FilterOption struct {
+	Value       string  `json:"value"`
+	Label       string  `json:"label"`
+	Description *string `json:"description"`
+	Count       int     `json:"count"`
+	Selected    bool    `json:"selected"`
+}
+
+type FilterGroup struct {
+	Key         string         `json:"key"`
+	Label       string         `json:"label"`
+	Description string         `json:"description"`
+	Type        string         `json:"type"`
+	Value       string         `json:"value,omitempty"`
+	Count       *int           `json:"count,omitempty"`
+	Options     []FilterOption `json:"options,omitempty"`
+}
+
+type FilterCount struct {
+	Value string
+	Count int
+}
+
+type OrgFilterCount struct {
+	Value string
+	Label string
+	Count int
+}
+
+type RepositoryFilterCounts struct {
+	PublicCode         int
+	LastActivityAfter  *int
+	SoftwareType       []FilterCount
+	DevelopmentStatus  []FilterCount
+	MaintenanceType    []FilterCount
+	License            []FilterCount
+	Platforms          []FilterCount
+	AvailableLanguages []FilterCount
+	Organisation       []OrgFilterCount
+}
+
+type RepositoryFiltersParams struct {
+	Organisation       *string  `query:"organisation"`
+	PublicCode         *bool    `query:"publiccode"`
+	LastActivityAfter  *string  `query:"lastActivityAfter"`
+	SoftwareType       []string `query:"softwareType"`
+	DevelopmentStatus  []string `query:"developmentStatus"`
+	AvailableLanguages []string `query:"availableLanguages"`
+	MaintenanceType    []string `query:"maintenanceType"`
+	License            []string `query:"license"`
+	Platforms          []string `query:"platforms"`
+}

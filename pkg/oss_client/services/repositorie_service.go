@@ -271,6 +271,24 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 	return org, nil
 }
 
+func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.RepositoryFiltersParams) ([]models.FilterGroup, error) {
+	counts, err := s.repo.GetRepositoryFilterCounts(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	return []models.FilterGroup{
+		buildPublicCodeGroup(p, counts),
+		buildLastActivityGroup(p, counts),
+		buildSoftwareTypeGroup(p, counts),
+		buildDevelopmentStatusGroup(p, counts),
+		buildMaintenanceTypeGroup(p, counts),
+		buildPlatformsGroup(p, counts),
+		buildAvailableLanguagesGroup(p, counts),
+		buildLicenseGroup(p, counts),
+		buildOrganisationGroup(p, counts),
+	}, nil
+}
+
 func bodyError(field, code, detail string) problem.ErrorDetail {
 	return problem.ErrorDetail{
 		In:       "body",

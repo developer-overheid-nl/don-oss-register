@@ -93,6 +93,10 @@ func (s *serviceStubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models
 	return nil
 }
 
+func (s *serviceStubRepo) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	return &models.RepositoryFilterCounts{}, nil
+}
+
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{

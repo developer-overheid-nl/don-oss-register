@@ -458,6 +458,106 @@
         ]
       }
     },
+    "/repositories/filters": {
+      "get": {
+        "tags": ["Public endpoints", "Repositories"],
+        "summary": "List repository filter options",
+        "description": "Returns all available filter options with counts per option. Counts are computed using faceted search: each filter group ignores its own active filter but applies all others, so counts always reflect realistic results.",
+        "operationId": "listRepositoryFilters",
+        "parameters": [
+          {
+            "name": "organisation",
+            "in": "query",
+            "required": false,
+            "description": "Filter by organisation URI.",
+            "schema": { "type": "string", "format": "uri" }
+          },
+          {
+            "name": "publiccode",
+            "in": "query",
+            "required": false,
+            "description": "Filter by publiccode.yaml presence.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "lastActivityAfter",
+            "in": "query",
+            "required": false,
+            "description": "Filter by last activity date. Format: ISO 8601 (yyyy-MM-dd).",
+            "schema": { "type": "string", "format": "date", "example": "2026-01-01" }
+          },
+          {
+            "name": "softwareType",
+            "in": "query",
+            "required": false,
+            "description": "Filter by software type. Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "developmentStatus",
+            "in": "query",
+            "required": false,
+            "description": "Filter by development status. Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "maintenanceType",
+            "in": "query",
+            "required": false,
+            "description": "Filter by maintenance type. Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "platforms",
+            "in": "query",
+            "required": false,
+            "description": "Filter by platform. Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "availableLanguages",
+            "in": "query",
+            "required": false,
+            "description": "Filter by available language (ISO 639-1). Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "license",
+            "in": "query",
+            "required": false,
+            "description": "Filter by license (SPDX identifier). Repeatable for multiple values.",
+            "schema": { "type": "array", "items": { "type": "string" } },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FilterGroup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/repositories": {
       "get": {
         "tags": ["Public endpoints", "Repositories"],
@@ -2138,6 +2238,73 @@
   },
   "components": {
     "schemas": {
+      "FilterOption": {
+        "type": "object",
+        "description": "A single option within a multi-select filter group.",
+        "required": ["value", "label", "count", "selected"],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "The filter value to pass as a query parameter."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label for the option."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Optional description of the filter value."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of repositories matching this option, given the other active filters."
+          },
+          "selected": {
+            "type": "boolean",
+            "description": "Whether this option is currently selected."
+          }
+        }
+      },
+      "FilterGroup": {
+        "type": "object",
+        "description": "A filter group with metadata and available options or current value.",
+        "required": ["key", "label", "description", "type"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Unique key of the filter group, matching the query parameter name.",
+            "examples": ["softwareType", "publiccode", "lastActivityAfter"]
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label for the filter group."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what this filter does."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["toggle", "date", "multi-select"],
+            "description": "Filter type. toggle: on/off switch. date: date input (ISO 8601). multi-select: multiple values selectable."
+          },
+          "value": {
+            "type": "string",
+            "description": "Current filter value. For toggle: 'true' or 'false'. For date: ISO 8601 date (yyyy-MM-dd) or empty string. Not present for multi-select."
+          },
+          "count": {
+            "type": ["integer", "null"],
+            "description": "Number of repositories for the current value. Always present for toggle. Only present for date when a date is set. Not present for multi-select."
+          },
+          "options": {
+            "type": "array",
+            "description": "Available options with counts. Only present for multi-select type.",
+            "items": {
+              "$ref": "#/components/schemas/FilterOption"
+            }
+          }
+        }
+      },
       "PublicCode": {
         "type": "object",
         "description": "Mandatory and conditionally mandatory fields extracted from publiccode.yml v0.5.0.",

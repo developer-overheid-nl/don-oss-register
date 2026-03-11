@@ -24,6 +24,7 @@ type stubRepo struct {
 	findOrgByURIF       func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
+	filterCountsFunc    func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
 }
 
 func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
@@ -95,6 +96,13 @@ func (s *stubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrg
 		return s.saveGitOrgFunc(ctx, gitOrg)
 	}
 	return nil
+}
+
+func (s *stubRepo) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	if s.filterCountsFunc != nil {
+		return s.filterCountsFunc(ctx, p)
+	}
+	return &models.RepositoryFilterCounts{}, nil
 }
 
 func TestListRepositories_ReturnsSummaries(t *testing.T) {
@@ -210,4 +218,107 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	created, err := svc.CreateOrganisation(context.Background(), org)
 	require.NoError(t, err)
 	assert.Equal(t, saved, created)
+}
+
+func TestGetRepositoryFilters_ReturnsAllGroups(t *testing.T) {
+	repo := &stubRepo{}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+
+	keys := make([]string, len(groups))
+	for i, g := range groups {
+		keys[i] = g.Key
+	}
+	assert.Contains(t, keys, "publiccode")
+	assert.Contains(t, keys, "lastActivityAfter")
+	assert.Contains(t, keys, "softwareType")
+	assert.Contains(t, keys, "developmentStatus")
+	assert.Contains(t, keys, "maintenanceType")
+	assert.Contains(t, keys, "platforms")
+	assert.Contains(t, keys, "availableLanguages")
+	assert.Contains(t, keys, "license")
+	assert.Contains(t, keys, "organisation")
+}
+
+func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
+	n := 42
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{PublicCode: n}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+
+	var publiccodeGroup models.FilterGroup
+	for _, g := range groups {
+		if g.Key == "publiccode" {
+			publiccodeGroup = g
+		}
+	}
+	require.NotNil(t, publiccodeGroup.Count)
+	assert.Equal(t, n, *publiccodeGroup.Count)
+	assert.Equal(t, "toggle", publiccodeGroup.Type)
+	assert.Equal(t, "false", publiccodeGroup.Value)
+}
+
+func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
+	repo := &stubRepo{}
+	svc := services.NewRepositoryService(repo)
+	trueVal := true
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &trueVal})
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "publiccode" {
+			assert.Equal(t, "true", g.Value)
+		}
+	}
+}
+
+func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{
+				SoftwareType: []models.FilterCount{
+					{Value: "library", Count: 10},
+					{Value: "addon", Count: 5},
+				},
+			}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+	p := &models.RepositoryFiltersParams{SoftwareType: []string{"library"}}
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), p)
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "softwareType" {
+			require.Len(t, g.Options, 2)
+			assert.True(t, g.Options[0].Selected)
+			assert.False(t, g.Options[1].Selected)
+		}
+	}
+}
+
+func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
+	repo := &stubRepo{}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "lastActivityAfter" {
+			assert.Equal(t, "date", g.Type)
+			assert.Equal(t, "", g.Value)
+			assert.Nil(t, g.Count)
+		}
+	}
 }
