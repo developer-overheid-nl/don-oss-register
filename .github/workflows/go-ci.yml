@@ -8,6 +8,9 @@ on:
       - 'go.sum'
       - 'Dockerfile'
       - '.github/workflows/go-ci.yml'
+  push:
+    branches:
+      - main
 
 jobs:
   lint:
