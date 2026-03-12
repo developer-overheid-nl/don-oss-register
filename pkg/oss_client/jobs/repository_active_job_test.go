@@ -12,7 +12,7 @@ import (
 )
 
 type stubRepositoriesRepo struct {
-	all  []models.Repository
+	all   []models.Repository
 	saved []*models.Repository
 }
 
@@ -59,6 +59,10 @@ func (s *stubRepositoriesRepo) FindGitOrganisationByURL(_ context.Context, _ str
 
 func (s *stubRepositoriesRepo) SaveGitOrganisatie(_ context.Context, _ *models.GitOrganisatie) error {
 	return nil
+}
+
+func (s *stubRepositoriesRepo) GetRepositoryFilterCounts(_ context.Context, _ *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	return &models.RepositoryFilterCounts{}, nil
 }
 
 func TestNewRepositoryActiveJob_DefaultStaleAfter(t *testing.T) {
