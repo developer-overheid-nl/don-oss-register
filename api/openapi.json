@@ -55,94 +55,19 @@
         "description": "Returns a list of git organisations that are included in the register.",
         "operationId": "listGitOrganisations",
         "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Page number (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Number of results per page.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter on organisation URI.",
-            "schema": {
-              "type": "string",
-              "format": "uri"
-            }
-          }
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/OrganisationFilter" }
         ],
         "responses": {
           "200": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              },
-              "Link": {
-                "description": "Links to the previous, next, last or first pages",
-                "schema": {
-                  "type": "string",
-                  "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
-                  "externalDocs": {
-                    "description": "W3C reference",
-                    "url": "https://www.w3.org/wiki/LinkHeader"
-                  }
-                }
-              },
-              "Total-Count": {
-                "description": "Total number of items available",
-                "schema": {
-                  "type": "integer",
-                  "example": 124
-                }
-              },
-              "Current-Page": {
-                "description": "Current page number",
-                "schema": {
-                  "type": "integer",
-                  "example": 1
-                }
-              },
-              "Per-Page": {
-                "description": "Number of items per page",
-                "schema": {
-                  "type": "integer",
-                  "example": 10
-                }
-              },
-              "Total-Pages": {
-                "description": "Total number of pages available",
-                "schema": {
-                  "type": "integer",
-                  "example": 13
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
+              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
+              "Per-Page": { "$ref": "#/components/headers/PerPage" },
+              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
             },
             "description": "OK",
             "content": {
@@ -150,128 +75,13 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/GitOrganisation.schema.json",
-                    "title": "GitOrganisation",
-                    "description": "A git organisation from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "readOnly": true
-                      },
-                      "organisation": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationSummary.schema.json",
-                        "title": "Organisation summary",
-                        "description": "An organisation from the catalog",
-                        "type": "object",
-                        "properties": {
-                          "uri": {
-                            "$schema": "https://json-schema.org/draft/2020-12/schema",
-                            "$id": "https://example.com/OrganisationUri.schema.json",
-                            "title": "Organisation URI",
-                            "description": "The unique identifier for an organisation",
-                            "type": "string",
-                            "format": "uri",
-                            "examples": ["https://developer.overheid.nl"]
-                          },
-                          "label": {
-                            "description": "The label of the organisation",
-                            "type": "string",
-                            "examples": ["developer.overheid.nl"]
-                          }
-                        },
-                        "required": ["uri", "label"]
-                      },
-                      "url": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/GitOrganisationUrl.schema.json",
-                        "title": "Git organisation URI",
-                        "description": "URL of the git organisation",
-                        "type": "string",
-                        "format": "uri",
-                        "examples": ["https://github.com/developer-overheid-nl"]
-                      }
-                    },
-                    "required": ["id", "organisation", "url"]
+                    "$ref": "#/components/schemas/GitOrganisation"
                   }
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       },
       "post": {
@@ -284,27 +94,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://example.com/GitOrganisationInput.schema.json",
-                "title": "Git Organisation Input",
-                "description": "A git organisation input for creating or updating a git organisation in the catalog",
-                "properties": {
-                  "organisationUri": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationUri.schema.json",
-                    "title": "Organisation URI",
-                    "description": "The unique identifier for an organisation",
-                    "type": "string",
-                    "format": "uri",
-                    "examples": ["https://developer.overheid.nl"]
-                  },
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "URL of the git organisation.",
-                    "example": "https://github.com/developer-overheid-nl"
-                  }
-                }
+                "$ref": "#/components/schemas/GitOrganisationInput"
               }
             }
           }
@@ -313,143 +103,17 @@
           "201": {
             "description": "Created",
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/GitOrganisation.schema.json",
-                  "title": "GitOrganisation",
-                  "description": "A git organisation from the catalog",
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "readOnly": true
-                    },
-                    "organisation": {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/OrganisationSummary.schema.json",
-                      "title": "Organisation summary",
-                      "description": "An organisation from the catalog",
-                      "type": "object",
-                      "properties": {
-                        "uri": {
-                          "$schema": "https://json-schema.org/draft/2020-12/schema",
-                          "$id": "https://example.com/OrganisationUri.schema.json",
-                          "title": "Organisation URI",
-                          "description": "The unique identifier for an organisation",
-                          "type": "string",
-                          "format": "uri",
-                          "examples": ["https://developer.overheid.nl"]
-                        },
-                        "label": {
-                          "description": "The label of the organisation",
-                          "type": "string",
-                          "examples": ["developer.overheid.nl"]
-                        }
-                      },
-                      "required": ["uri", "label"]
-                    },
-                    "url": {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/GitOrganisationUrl.schema.json",
-                      "title": "Git organisation URI",
-                      "description": "URL of the git organisation",
-                      "type": "string",
-                      "format": "uri",
-                      "examples": ["https://github.com/developer-overheid-nl"]
-                    }
-                  },
-                  "required": ["id", "organisation", "url"]
+                  "$ref": "#/components/schemas/GitOrganisation"
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         },
         "security": [
           {
@@ -465,84 +129,21 @@
         "description": "Returns all available filter options with counts per option. Counts are computed using faceted search: each filter group ignores its own active filter but applies all others, so counts always reflect realistic results.",
         "operationId": "listRepositoryFilters",
         "parameters": [
-          {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter by organisation URI.",
-            "schema": { "type": "string", "format": "uri" }
-          },
-          {
-            "name": "publiccode",
-            "in": "query",
-            "required": false,
-            "description": "Filter by publiccode.yaml presence.",
-            "schema": { "type": "boolean" }
-          },
-          {
-            "name": "lastActivityAfter",
-            "in": "query",
-            "required": false,
-            "description": "Filter by last activity date. Format: ISO 8601 (yyyy-MM-dd).",
-            "schema": { "type": "string", "format": "date", "example": "2026-01-01" }
-          },
-          {
-            "name": "softwareType",
-            "in": "query",
-            "required": false,
-            "description": "Filter by software type. Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          },
-          {
-            "name": "developmentStatus",
-            "in": "query",
-            "required": false,
-            "description": "Filter by development status. Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          },
-          {
-            "name": "maintenanceType",
-            "in": "query",
-            "required": false,
-            "description": "Filter by maintenance type. Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          },
-          {
-            "name": "platforms",
-            "in": "query",
-            "required": false,
-            "description": "Filter by platform. Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          },
-          {
-            "name": "availableLanguages",
-            "in": "query",
-            "required": false,
-            "description": "Filter by available language (ISO 639-1). Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          },
-          {
-            "name": "license",
-            "in": "query",
-            "required": false,
-            "description": "Filter by license (SPDX identifier). Repeatable for multiple values.",
-            "schema": { "type": "array", "items": { "type": "string" } },
-            "style": "form",
-            "explode": true
-          }
+          { "$ref": "#/components/parameters/OrganisationFilter" },
+          { "$ref": "#/components/parameters/PublicCodeFilter" },
+          { "$ref": "#/components/parameters/LastActivityAfterFilter" },
+          { "$ref": "#/components/parameters/SoftwareTypeFilter" },
+          { "$ref": "#/components/parameters/DevelopmentStatusFilter" },
+          { "$ref": "#/components/parameters/MaintenanceTypeFilter" },
+          { "$ref": "#/components/parameters/PlatformsFilter" },
+          { "$ref": "#/components/parameters/AvailableLanguagesFilter" },
+          { "$ref": "#/components/parameters/LicenseFilter" }
         ],
         "responses": {
           "200": {
+            "headers": {
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
+            },
             "description": "OK",
             "content": {
               "application/json": {
@@ -554,7 +155,8 @@
                 }
               }
             }
-          }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
         },
         "security": [
           {
@@ -567,106 +169,30 @@
       "get": {
         "tags": ["Public endpoints", "Repositories"],
         "summary": "List repositories",
-        "description": "Returns a list of OSS repositories included in the register. Omit publiccode for all repositories, publiccode=true for repositories with a publiccode.yaml URL only, publiccode=false for repositories without a publiccode.yaml URL.",
+        "description": "Returns a list of OSS repositories included in the register. Supports the same filter query parameters as the repository filter endpoint.",
         "operationId": "listRepositories",
         "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Page number (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Number of results per page.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter on organisation URI.",
-            "schema": {
-              "type": "string",
-              "format": "uri"
-            }
-          },
-          {
-            "name": "publiccode",
-            "in": "query",
-            "required": false,
-            "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL, false: only repositories without a publiccode.yaml URL. Omit for all repositories.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/OrganisationFilter" },
+          { "$ref": "#/components/parameters/PublicCodeFilter" },
+          { "$ref": "#/components/parameters/LastActivityAfterFilter" },
+          { "$ref": "#/components/parameters/SoftwareTypeFilter" },
+          { "$ref": "#/components/parameters/DevelopmentStatusFilter" },
+          { "$ref": "#/components/parameters/MaintenanceTypeFilter" },
+          { "$ref": "#/components/parameters/PlatformsFilter" },
+          { "$ref": "#/components/parameters/AvailableLanguagesFilter" },
+          { "$ref": "#/components/parameters/LicenseFilter" }
         ],
         "responses": {
           "200": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              },
-              "Link": {
-                "description": "Links to the previous, next, last or first pages",
-                "schema": {
-                  "type": "string",
-                  "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
-                  "externalDocs": {
-                    "description": "W3C reference",
-                    "url": "https://www.w3.org/wiki/LinkHeader"
-                  }
-                }
-              },
-              "Total-Count": {
-                "description": "Total number of items available",
-                "schema": {
-                  "type": "integer",
-                  "example": 124
-                }
-              },
-              "Current-Page": {
-                "description": "Current page number",
-                "schema": {
-                  "type": "integer",
-                  "example": 1
-                }
-              },
-              "Per-Page": {
-                "description": "Number of items per page",
-                "schema": {
-                  "type": "integer",
-                  "example": 10
-                }
-              },
-              "Total-Pages": {
-                "description": "Total number of pages available",
-                "schema": {
-                  "type": "integer",
-                  "example": 13
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
+              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
+              "Per-Page": { "$ref": "#/components/headers/PerPage" },
+              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
             },
             "description": "OK",
             "content": {
@@ -674,153 +200,13 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/Repository.schema.json",
-                    "title": "Repository",
-                    "description": "An OSS repository from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "readOnly": true
-                      },
-                      "url": {
-                        "type": "string",
-                        "format": "uri",
-                        "description": "URL of the source code repository.",
-                        "examples": [
-                          "https://github.com/developer-overheid-nl/don-site"
-                        ]
-                      },
-                      "organisation": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationSummary.schema.json",
-                        "title": "Organisation summary",
-                        "description": "An organisation from the catalog",
-                        "type": "object",
-                        "properties": {
-                          "uri": {
-                            "$schema": "https://json-schema.org/draft/2020-12/schema",
-                            "$id": "https://example.com/OrganisationUri.schema.json",
-                            "title": "Organisation URI",
-                            "description": "The unique identifier for an organisation",
-                            "type": "string",
-                            "format": "uri",
-                            "examples": ["https://developer.overheid.nl"]
-                          },
-                          "label": {
-                            "description": "The label of the organisation",
-                            "type": "string",
-                            "examples": ["developer.overheid.nl"]
-                          }
-                        },
-                        "required": ["uri", "label"]
-                      },
-                      "publicCodeUrl": {
-                        "type": "string",
-                        "description": "URL of publiccode.yaml in the repository."
-                      },
-                      "shortDescription": {
-                        "type": "string",
-                        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                      },
-                      "name": {
-                        "type": "string",
-                        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      },
-                      "lastCrawledAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      },
-                      "lastActivityAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      }
-                    }
+                    "$ref": "#/components/schemas/RepositorySummary"
                   }
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       },
       "post": {
@@ -833,56 +219,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://example.com/Repository.schema.json",
-                "title": "Repository",
-                "description": "An OSS repository from the catalog",
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "URL of the source code repository.",
-                    "examples": [
-                      "https://github.com/developer-overheid-nl/don-site"
-                    ]
-                  },
-                  "organisationUri": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationUri.schema.json",
-                    "title": "Organisation URI",
-                    "description": "The unique identifier for an organisation",
-                    "type": "string",
-                    "format": "uri",
-                    "examples": ["https://developer.overheid.nl"]
-                  },
-                  "publicCodeUrl": {
-                    "type": "string",
-                    "description": "URL of publiccode.yaml in the repository."
-                  },
-                  "shortDescription": {
-                    "type": "string",
-                    "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                  },
-                  "createdAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  },
-                  "lastCrawledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  },
-                  "lastActivityAt": {
-                    "type": "string",
-                    "format": "date-time"
-                  }
-                }
+                "$ref": "#/components/schemas/RepositoryInput"
               }
             }
           }
@@ -891,184 +228,17 @@
           "201": {
             "description": "Created",
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/Repository.schema.json",
-                  "title": "Repository",
-                  "description": "An OSS repository from the catalog",
-                  "type": "object",
-                  "allOf": [
-                    {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/Repository.schema.json",
-                      "title": "Repository",
-                      "description": "An OSS repository from the catalog",
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "readOnly": true
-                        },
-                        "url": {
-                          "type": "string",
-                          "format": "uri",
-                          "description": "URL of the source code repository.",
-                          "examples": [
-                            "https://github.com/developer-overheid-nl/don-site"
-                          ]
-                        },
-                        "organisation": {
-                          "$schema": "https://json-schema.org/draft/2020-12/schema",
-                          "$id": "https://example.com/OrganisationSummary.schema.json",
-                          "title": "Organisation summary",
-                          "description": "An organisation from the catalog",
-                          "type": "object",
-                          "properties": {
-                            "uri": {
-                              "$schema": "https://json-schema.org/draft/2020-12/schema",
-                              "$id": "https://example.com/OrganisationUri.schema.json",
-                              "title": "Organisation URI",
-                              "description": "The unique identifier for an organisation",
-                              "type": "string",
-                              "format": "uri",
-                              "examples": ["https://developer.overheid.nl"]
-                            },
-                            "label": {
-                              "description": "The label of the organisation",
-                              "type": "string",
-                              "examples": ["developer.overheid.nl"]
-                            }
-                          },
-                          "required": ["uri", "label"]
-                        },
-                        "publicCodeUrl": {
-                          "type": "string",
-                          "description": "URL of publiccode.yaml in the repository."
-                        },
-                        "shortDescription": {
-                          "type": "string",
-                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "publicCode": {
-                          "$ref": "#/components/schemas/PublicCode"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastCrawledAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastActivityAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "longDescription": {
-                          "type": "string",
-                          "description": "Long description of the repository, typically from publiccode.yaml."
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RepositoryDetail"
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         },
         "security": [
           {
@@ -1079,15 +249,7 @@
     },
     "/repositories/{id}": {
       "parameters": [
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "description": "Unique identifier of the resource.",
-          "schema": {
-            "type": "string"
-          }
-        }
+        { "$ref": "#/components/parameters/ResourceId" }
       ],
       "get": {
         "security": [
@@ -1106,184 +268,17 @@
           "200": {
             "description": "OK",
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/Repository.schema.json",
-                  "title": "Repository",
-                  "description": "An OSS repository from the catalog",
-                  "type": "object",
-                  "allOf": [
-                    {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/Repository.schema.json",
-                      "title": "Repository",
-                      "description": "An OSS repository from the catalog",
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "readOnly": true
-                        },
-                        "url": {
-                          "type": "string",
-                          "format": "uri",
-                          "description": "URL of the source code repository.",
-                          "examples": [
-                            "https://github.com/developer-overheid-nl/don-site"
-                          ]
-                        },
-                        "organisation": {
-                          "$schema": "https://json-schema.org/draft/2020-12/schema",
-                          "$id": "https://example.com/OrganisationSummary.schema.json",
-                          "title": "Organisation summary",
-                          "description": "An organisation from the catalog",
-                          "type": "object",
-                          "properties": {
-                            "uri": {
-                              "$schema": "https://json-schema.org/draft/2020-12/schema",
-                              "$id": "https://example.com/OrganisationUri.schema.json",
-                              "title": "Organisation URI",
-                              "description": "The unique identifier for an organisation",
-                              "type": "string",
-                              "format": "uri",
-                              "examples": ["https://developer.overheid.nl"]
-                            },
-                            "label": {
-                              "description": "The label of the organisation",
-                              "type": "string",
-                              "examples": ["developer.overheid.nl"]
-                            }
-                          },
-                          "required": ["uri", "label"]
-                        },
-                        "publicCodeUrl": {
-                          "type": "string",
-                          "description": "URL of publiccode.yaml in the repository."
-                        },
-                        "shortDescription": {
-                          "type": "string",
-                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "publicCode": {
-                          "$ref": "#/components/schemas/PublicCode"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastCrawledAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastActivityAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "longDescription": {
-                          "type": "string",
-                          "description": "Long description of the repository, typically from publiccode.yaml."
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RepositoryDetail"
                 }
               }
             }
           },
-          "404": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Resource does not exist",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       },
       "put": {
@@ -1300,56 +295,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://example.com/Repository.schema.json",
-                "title": "Repository",
-                "description": "An OSS repository from the catalog",
-                "type": "object",
-                "properties": {
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "URL of the source code repository.",
-                    "examples": [
-                      "https://github.com/developer-overheid-nl/don-site"
-                    ]
-                  },
-                  "organisationUri": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationUri.schema.json",
-                    "title": "Organisation URI",
-                    "description": "The unique identifier for an organisation",
-                    "type": "string",
-                    "format": "uri",
-                    "examples": ["https://developer.overheid.nl"]
-                  },
-                  "publicCodeUrl": {
-                    "type": "string",
-                    "description": "URL of publiccode.yaml in the repository."
-                  },
-                  "shortDescription": {
-                    "type": "string",
-                    "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                  },
-                  "createdAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  },
-                  "lastCrawledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  },
-                  "lastActivityAt": {
-                    "type": "string",
-                    "format": "date-time"
-                  }
-                }
+                "$ref": "#/components/schemas/RepositoryInput"
               }
             }
           }
@@ -1357,256 +303,19 @@
         "responses": {
           "200": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
             },
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/Repository.schema.json",
-                  "title": "Repository",
-                  "description": "An OSS repository from the catalog",
-                  "type": "object",
-                  "allOf": [
-                    {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/Repository.schema.json",
-                      "title": "Repository",
-                      "description": "An OSS repository from the catalog",
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "readOnly": true
-                        },
-                        "url": {
-                          "type": "string",
-                          "format": "uri",
-                          "description": "URL of the source code repository.",
-                          "examples": [
-                            "https://github.com/developer-overheid-nl/don-site"
-                          ]
-                        },
-                        "organisation": {
-                          "$schema": "https://json-schema.org/draft/2020-12/schema",
-                          "$id": "https://example.com/OrganisationSummary.schema.json",
-                          "title": "Organisation summary",
-                          "description": "An organisation from the catalog",
-                          "type": "object",
-                          "properties": {
-                            "uri": {
-                              "$schema": "https://json-schema.org/draft/2020-12/schema",
-                              "$id": "https://example.com/OrganisationUri.schema.json",
-                              "title": "Organisation URI",
-                              "description": "The unique identifier for an organisation",
-                              "type": "string",
-                              "format": "uri",
-                              "examples": ["https://developer.overheid.nl"]
-                            },
-                            "label": {
-                              "description": "The label of the organisation",
-                              "type": "string",
-                              "examples": ["developer.overheid.nl"]
-                            }
-                          },
-                          "required": ["uri", "label"]
-                        },
-                        "publicCodeUrl": {
-                          "type": "string",
-                          "description": "URL of publiccode.yaml in the repository."
-                        },
-                        "shortDescription": {
-                          "type": "string",
-                          "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                        },
-                        "publicCode": {
-                          "$ref": "#/components/schemas/PublicCode"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastCrawledAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "lastActivityAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "readOnly": true
-                        },
-                        "longDescription": {
-                          "type": "string",
-                          "description": "Long description of the repository, typically from publiccode.yaml."
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RepositoryDetail"
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          },
-          "404": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Resource does not exist",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
@@ -1627,57 +336,12 @@
         "responses": {
           "200": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              },
-              "Link": {
-                "description": "Links to the previous, next, last or first pages",
-                "schema": {
-                  "type": "string",
-                  "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
-                  "externalDocs": {
-                    "description": "W3C reference",
-                    "url": "https://www.w3.org/wiki/LinkHeader"
-                  }
-                }
-              },
-              "Total-Count": {
-                "description": "Total number of items available",
-                "schema": {
-                  "type": "integer",
-                  "example": 124
-                }
-              },
-              "Current-Page": {
-                "description": "Current page number",
-                "schema": {
-                  "type": "integer",
-                  "example": 1
-                }
-              },
-              "Per-Page": {
-                "description": "Number of items per page",
-                "schema": {
-                  "type": "integer",
-                  "example": 10
-                }
-              },
-              "Total-Pages": {
-                "description": "Total number of pages available",
-                "schema": {
-                  "type": "integer",
-                  "example": 13
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
+              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
+              "Per-Page": { "$ref": "#/components/headers/PerPage" },
+              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
             },
             "description": "OK",
             "content": {
@@ -1685,129 +349,17 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationSummary.schema.json",
-                    "title": "Organisation summary",
-                    "description": "An organisation from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "uri": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationUri.schema.json",
-                        "title": "Organisation URI",
-                        "description": "The unique identifier for an organisation",
-                        "type": "string",
-                        "format": "uri",
-                        "examples": ["https://developer.overheid.nl"]
-                      },
-                      "label": {
-                        "description": "The label of the organisation",
-                        "type": "string",
-                        "examples": ["developer.overheid.nl"]
-                      }
-                    },
-                    "required": ["uri", "label"]
+                    "$ref": "#/components/schemas/OrganisationSummary"
                   }
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         },
         "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Page number (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Number of results per page.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          }
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
         ]
       },
       "post": {
@@ -1824,28 +376,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://example.com/OrganisationSummary.schema.json",
-                "title": "Organisation summary",
-                "description": "An organisation from the catalog",
-                "type": "object",
-                "properties": {
-                  "uri": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/OrganisationUri.schema.json",
-                    "title": "Organisation URI",
-                    "description": "The unique identifier for an organisation",
-                    "type": "string",
-                    "format": "uri",
-                    "examples": ["https://developer.overheid.nl"]
-                  },
-                  "label": {
-                    "description": "The label of the organisation",
-                    "type": "string",
-                    "examples": ["developer.overheid.nl"]
-                  }
-                },
-                "required": ["uri", "label"]
+                "$ref": "#/components/schemas/OrganisationSummary"
               }
             }
           }
@@ -1853,129 +384,18 @@
         "responses": {
           "201": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" }
             },
             "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/Organisation.schema.json",
-                  "title": "Organisation",
-                  "description": "An organisation from the catalog",
-                  "type": "object",
-                  "allOf": [
-                    {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "$id": "https://example.com/OrganisationSummary.schema.json",
-                      "title": "Organisation summary",
-                      "description": "An organisation from the catalog",
-                      "type": "object",
-                      "properties": {
-                        "uri": {
-                          "$schema": "https://json-schema.org/draft/2020-12/schema",
-                          "$id": "https://example.com/OrganisationUri.schema.json",
-                          "title": "Organisation URI",
-                          "description": "The unique identifier for an organisation",
-                          "type": "string",
-                          "format": "uri",
-                          "examples": ["https://developer.overheid.nl"]
-                        },
-                        "label": {
-                          "description": "The label of the organisation",
-                          "type": "string",
-                          "examples": ["developer.overheid.nl"]
-                        }
-                      },
-                      "required": ["uri", "label"]
-                    }
-                  ]
+                  "$ref": "#/components/schemas/OrganisationSummary"
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       }
     },
@@ -1986,103 +406,20 @@
         "description": "Returns a list of OSS repositories included in the register.",
         "operationId": "searchRepositories",
         "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Page number (1-based).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "perPage",
-            "in": "query",
-            "required": false,
-            "description": "Number of results per page.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "organisation",
-            "in": "query",
-            "required": false,
-            "description": "Filter on organisation URI.",
-            "schema": {
-              "type": "string",
-              "format": "uri"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "description": "Search term.",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/OrganisationFilter" },
+          { "$ref": "#/components/parameters/SearchQuery" }
         ],
         "responses": {
           "200": {
             "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              },
-              "Link": {
-                "description": "Links to the previous, next, last or first pages",
-                "schema": {
-                  "type": "string",
-                  "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
-                  "externalDocs": {
-                    "description": "W3C reference",
-                    "url": "https://www.w3.org/wiki/LinkHeader"
-                  }
-                }
-              },
-              "Total-Count": {
-                "description": "Total number of items available",
-                "schema": {
-                  "type": "integer",
-                  "example": 124
-                }
-              },
-              "Current-Page": {
-                "description": "Current page number",
-                "schema": {
-                  "type": "integer",
-                  "example": 1
-                }
-              },
-              "Per-Page": {
-                "description": "Number of items per page",
-                "schema": {
-                  "type": "integer",
-                  "example": 10
-                }
-              },
-              "Total-Pages": {
-                "description": "Total number of pages available",
-                "schema": {
-                  "type": "integer",
-                  "example": 13
-                }
-              }
+              "API-Version": { "$ref": "#/components/headers/APIVersion" },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
+              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
+              "Per-Page": { "$ref": "#/components/headers/PerPage" },
+              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
             },
             "description": "OK",
             "content": {
@@ -2090,159 +427,494 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "https://example.com/Repository.schema.json",
-                    "title": "Repository",
-                    "description": "An OSS repository from the catalog",
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "readOnly": true
-                      },
-                      "url": {
-                        "type": "string",
-                        "format": "uri",
-                        "description": "URL of the source code repository.",
-                        "examples": [
-                          "https://github.com/developer-overheid-nl/don-site"
-                        ]
-                      },
-                      "organisation": {
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "$id": "https://example.com/OrganisationSummary.schema.json",
-                        "title": "Organisation summary",
-                        "description": "An organisation from the catalog",
-                        "type": "object",
-                        "properties": {
-                          "uri": {
-                            "$schema": "https://json-schema.org/draft/2020-12/schema",
-                            "$id": "https://example.com/OrganisationUri.schema.json",
-                            "title": "Organisation URI",
-                            "description": "The unique identifier for an organisation",
-                            "type": "string",
-                            "format": "uri",
-                            "examples": ["https://developer.overheid.nl"]
-                          },
-                          "label": {
-                            "description": "The label of the organisation",
-                            "type": "string",
-                            "examples": ["developer.overheid.nl"]
-                          }
-                        },
-                        "required": ["uri", "label"]
-                      },
-                      "publicCodeUrl": {
-                        "type": "string",
-                        "description": "URL of publiccode.yaml in the repository."
-                      },
-                      "shortDescription": {
-                        "type": "string",
-                        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
-                      },
-                      "name": {
-                        "type": "string",
-                        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      },
-                      "lastCrawledAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      },
-                      "lastActivityAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                      }
-                    }
+                    "$ref": "#/components/schemas/RepositorySummary"
                   }
                 }
               }
             }
           },
-          "400": {
-            "headers": {
-              "API-Version": {
-                "description": "Semver of this API",
-                "schema": {
-                  "type": "string",
-                  "example": "1.0.0",
-                  "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-                  "externalDocs": {
-                    "description": " /core/version-header: Return the full version number in a response header",
-                    "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
-                  }
-                }
-              }
-            },
-            "description": "Bad request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://example.com/ProblemJson.schema.json",
-                  "title": "Problem JSON",
-                  "description": "Problem JSON schema representing errors and status code",
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
-                      "example": 400
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "A short, human-readable summary of the problem type",
-                      "example": "Request validation failed"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "description": "List of errors encountered during processing",
-                        "properties": {
-                          "in": {
-                            "type": "string",
-                            "description": "Location of the error (e.g., body, query, header)",
-                            "enum": ["body", "query"]
-                          },
-                          "location": {
-                            "type": "string",
-                            "description": "Location in the document where the error occurred (JSON Pointer)",
-                            "example": "#/foo[0]/bar"
-                          },
-                          "code": {
-                            "type": "string",
-                            "description": "A code representing the type of error",
-                            "example": "date.format"
-                          },
-                          "detail": {
-                            "type": "string",
-                            "description": "A detailed message describing the error",
-                            "example": "must be ISO 8601"
-                          }
-                        },
-                        "required": ["in", "location", "code", "detail"]
-                      }
-                    }
-                  },
-                  "required": ["status", "title"]
-                }
-              }
-            }
-          }
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       }
     }
   },
   "components": {
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Page number (1-based).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "PerPage": {
+        "name": "perPage",
+        "in": "query",
+        "required": false,
+        "description": "Number of results per page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "OrganisationFilter": {
+        "name": "organisation",
+        "in": "query",
+        "required": false,
+        "description": "Filter by organisation URI.",
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "PublicCodeFilter": {
+        "name": "publiccode",
+        "in": "query",
+        "required": false,
+        "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL. Omit or set false for all repositories.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "LastActivityAfterFilter": {
+        "name": "lastActivityAfter",
+        "in": "query",
+        "required": false,
+        "description": "Filter by last activity date. Format: ISO 8601 (yyyy-MM-dd).",
+        "schema": {
+          "type": "string",
+          "format": "date",
+          "example": "2026-01-01"
+        }
+      },
+      "SoftwareTypeFilter": {
+        "name": "softwareType",
+        "in": "query",
+        "required": false,
+        "description": "Filter by software type. Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "DevelopmentStatusFilter": {
+        "name": "developmentStatus",
+        "in": "query",
+        "required": false,
+        "description": "Filter by development status. Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "MaintenanceTypeFilter": {
+        "name": "maintenanceType",
+        "in": "query",
+        "required": false,
+        "description": "Filter by maintenance type. Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "PlatformsFilter": {
+        "name": "platforms",
+        "in": "query",
+        "required": false,
+        "description": "Filter by platform. Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "AvailableLanguagesFilter": {
+        "name": "availableLanguages",
+        "in": "query",
+        "required": false,
+        "description": "Filter by available language (ISO 639-1). Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "LicenseFilter": {
+        "name": "license",
+        "in": "query",
+        "required": false,
+        "description": "Filter by license (SPDX identifier). Repeatable for multiple values.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "style": "form",
+        "explode": true
+      },
+      "ResourceId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Unique identifier of the resource.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": true,
+        "description": "Search term.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "headers": {
+      "APIVersion": {
+        "description": "Semver of this API",
+        "schema": {
+          "type": "string",
+          "example": "1.0.0",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+          "externalDocs": {
+            "description": " /core/version-header: Return the full version number in a response header",
+            "url": "https://logius-standaarden.github.io/API-Design-Rules/#/core/version-header"
+          }
+        }
+      },
+      "Link": {
+        "description": "Links to the previous, next, last or first pages",
+        "schema": {
+          "type": "string",
+          "example": "<https://api.developer.overheid.nl/api-register/v1/apis?page=2>; rel='prev', <https://api.developer.overheid.nl/api-register/v1/apis?page=3>; rel='next'",
+          "externalDocs": {
+            "description": "W3C reference",
+            "url": "https://www.w3.org/wiki/LinkHeader"
+          }
+        }
+      },
+      "TotalCount": {
+        "description": "Total number of items available",
+        "schema": {
+          "type": "integer",
+          "example": 124
+        }
+      },
+      "CurrentPage": {
+        "description": "Current page number",
+        "schema": {
+          "type": "integer",
+          "example": 1
+        }
+      },
+      "PerPage": {
+        "description": "Number of items per page",
+        "schema": {
+          "type": "integer",
+          "example": 10
+        }
+      },
+      "TotalPages": {
+        "description": "Total number of pages available",
+        "schema": {
+          "type": "integer",
+          "example": 13
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "headers": {
+          "API-Version": {
+            "$ref": "#/components/headers/APIVersion"
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemJson"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource does not exist",
+        "headers": {
+          "API-Version": {
+            "$ref": "#/components/headers/APIVersion"
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemJson"
+            }
+          }
+        }
+      }
+    },
     "schemas": {
+      "ProblemJson": {
+        "title": "Problem JSON",
+        "description": "Problem JSON schema representing errors and status code",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "The HTTP status code generated by the origin server for this occurrence of the problem",
+            "example": 400
+          },
+          "title": {
+            "type": "string",
+            "description": "A short, human-readable summary of the problem type",
+            "example": "Request validation failed"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "List of errors encountered during processing",
+              "properties": {
+                "in": {
+                  "type": "string",
+                  "description": "Location of the error (e.g., body, query, header)",
+                  "enum": ["body", "query"]
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Location in the document where the error occurred (JSON Pointer)",
+                  "example": "#/foo[0]/bar"
+                },
+                "code": {
+                  "type": "string",
+                  "description": "A code representing the type of error",
+                  "example": "date.format"
+                },
+                "detail": {
+                  "type": "string",
+                  "description": "A detailed message describing the error",
+                  "example": "must be ISO 8601"
+                }
+              },
+              "required": ["in", "location", "code", "detail"]
+            }
+          }
+        },
+        "required": ["status", "title"]
+      },
+      "ResourceUuid": {
+        "type": "string",
+        "format": "uuid",
+        "readOnly": true
+      },
+      "OrganisationUri": {
+        "title": "Organisation URI",
+        "description": "The unique identifier for an organisation",
+        "type": "string",
+        "format": "uri",
+        "example": "https://developer.overheid.nl"
+      },
+      "GitOrganisationUrl": {
+        "title": "Git organisation URI",
+        "description": "URL of the git organisation",
+        "type": "string",
+        "format": "uri",
+        "example": "https://github.com/developer-overheid-nl"
+      },
+      "RepositoryUrl": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL of the source code repository.",
+        "example": "https://github.com/developer-overheid-nl/don-site"
+      },
+      "PublicCodeUrl": {
+        "type": "string",
+        "description": "URL of publiccode.yaml in the repository."
+      },
+      "RepositoryShortDescription": {
+        "type": "string",
+        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
+      },
+      "RepositoryName": {
+        "type": "string",
+        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
+      },
+      "CreatedAt": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true
+      },
+      "LastCrawledAt": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true
+      },
+      "LastActivityAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "OrganisationSummary": {
+        "title": "Organisation summary",
+        "description": "An organisation from the catalog",
+        "type": "object",
+        "properties": {
+          "uri": {
+            "$ref": "#/components/schemas/OrganisationUri"
+          },
+          "label": {
+            "description": "The label of the organisation",
+            "type": "string",
+            "example": "developer.overheid.nl"
+          }
+        },
+        "required": ["uri", "label"]
+      },
+      "GitOrganisationInput": {
+        "title": "Git Organisation Input",
+        "description": "A git organisation input for creating or updating a git organisation in the catalog",
+        "type": "object",
+        "properties": {
+          "organisationUri": {
+            "$ref": "#/components/schemas/OrganisationUri"
+          },
+          "url": {
+            "$ref": "#/components/schemas/GitOrganisationUrl"
+          }
+        }
+      },
+      "GitOrganisation": {
+        "title": "GitOrganisation",
+        "description": "A git organisation from the catalog",
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ResourceUuid"
+          },
+          "organisation": {
+            "$ref": "#/components/schemas/OrganisationSummary"
+          },
+          "url": {
+            "$ref": "#/components/schemas/GitOrganisationUrl"
+          }
+        },
+        "required": ["id", "organisation", "url"]
+      },
+      "RepositorySummary": {
+        "title": "Repository",
+        "description": "An OSS repository from the catalog",
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ResourceUuid"
+          },
+          "url": {
+            "$ref": "#/components/schemas/RepositoryUrl"
+          },
+          "organisation": {
+            "$ref": "#/components/schemas/OrganisationSummary"
+          },
+          "publicCodeUrl": {
+            "$ref": "#/components/schemas/PublicCodeUrl"
+          },
+          "shortDescription": {
+            "$ref": "#/components/schemas/RepositoryShortDescription"
+          },
+          "name": {
+            "$ref": "#/components/schemas/RepositoryName"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/CreatedAt"
+          },
+          "lastCrawledAt": {
+            "$ref": "#/components/schemas/LastCrawledAt"
+          },
+          "lastActivityAt": {
+            "$ref": "#/components/schemas/LastActivityAt",
+            "readOnly": true
+          }
+        }
+      },
+      "RepositoryInput": {
+        "title": "Repository input",
+        "description": "A repository input for creating or updating a repository in the catalog",
+        "type": "object",
+        "properties": {
+          "url": {
+            "$ref": "#/components/schemas/RepositoryUrl"
+          },
+          "organisationUri": {
+            "$ref": "#/components/schemas/OrganisationUri"
+          },
+          "publicCodeUrl": {
+            "$ref": "#/components/schemas/PublicCodeUrl"
+          },
+          "shortDescription": {
+            "$ref": "#/components/schemas/RepositoryShortDescription"
+          },
+          "name": {
+            "$ref": "#/components/schemas/RepositoryName"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/CreatedAt"
+          },
+          "lastCrawledAt": {
+            "$ref": "#/components/schemas/LastCrawledAt"
+          },
+          "lastActivityAt": {
+            "$ref": "#/components/schemas/LastActivityAt"
+          }
+        }
+      },
+      "RepositoryDetail": {
+        "title": "Repository detail",
+        "description": "A detailed OSS repository from the catalog",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RepositorySummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "publicCode": {
+                "$ref": "#/components/schemas/PublicCode"
+              },
+              "longDescription": {
+                "type": "string",
+                "description": "Long description of the repository, typically from publiccode.yaml."
+              }
+            }
+          }
+        ]
+      },
       "FilterOption": {
         "type": "object",
         "description": "A single option within a multi-select filter group.",
@@ -2278,7 +950,7 @@
           "key": {
             "type": "string",
             "description": "Unique key of the filter group, matching the query parameter name.",
-            "examples": ["softwareType", "publiccode", "lastActivityAfter"]
+            "example": "softwareType"
           },
           "label": {
             "type": "string",
@@ -2462,17 +1134,16 @@
               }
             },
             "required": ["localisationReady", "availableLanguages"]
-          },
-          "organisation": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "uri": {
-                "type": "string",
-                "format": "uri"
-              }
-            },
-            "required": ["uri"]
+              },
+              "organisation": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "uri": {
+                    "$ref": "#/components/schemas/OrganisationUri"
+                  }
+                },
+                "required": ["uri"]
           },
           "dependsOn": {
             "type": "object",

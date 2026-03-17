@@ -69,7 +69,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		[]fizz.OperationOption{
 			fizz.ID("listRepositories"),
 			fizz.Summary("List repositories"),
-			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen."),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Ondersteunt dezelfde filterquery's als het filterendpoint."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),

@@ -15,7 +15,7 @@ import (
 )
 
 type stubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
@@ -27,9 +27,9 @@ type stubRepo struct {
 	filterCountsFunc    func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
 }
 
-func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation, publicCode)
+		return s.listFunc(ctx, page, perPage, p)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -109,7 +109,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
 					Id:               "repo-1",
@@ -130,6 +130,40 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	assert.Equal(t, "repo-1", results[0].Id)
 	assert.Equal(t, lastActivity, results[0].LastActivityAt)
 	assert.Equal(t, 1, pagination.TotalRecords)
+}
+
+func TestListRepositories_ForwardsAllFilters(t *testing.T) {
+	orgURI := "org-1"
+	date := "2024-01-01"
+	publicCode := true
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+			require.Equal(t, &orgURI, p.Organisation)
+			require.Equal(t, &publicCode, p.PublicCode)
+			require.Equal(t, &date, p.LastActivityAfter)
+			require.Equal(t, []string{"library"}, p.SoftwareType)
+			require.Equal(t, []string{"stable"}, p.DevelopmentStatus)
+			require.Equal(t, []string{"nl"}, p.AvailableLanguages)
+			require.Equal(t, []string{"internal"}, p.MaintenanceType)
+			require.Equal(t, []string{"MIT"}, p.License)
+			require.Equal(t, []string{"web"}, p.Platforms)
+			return []models.Repository{}, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
+		Organisation:       &orgURI,
+		PublicCode:         &publicCode,
+		LastActivityAfter:  &date,
+		SoftwareType:       []string{"library"},
+		DevelopmentStatus:  []string{"stable"},
+		AvailableLanguages: []string{"nl"},
+		MaintenanceType:    []string{"internal"},
+		License:            []string{"MIT"},
+		Platforms:          []string{"web"},
+	})
+	require.NoError(t, err)
 }
 
 func TestRetrieveRepository_ReturnsDetail(t *testing.T) {

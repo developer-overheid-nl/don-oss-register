@@ -15,7 +15,7 @@ import (
 )
 
 type serviceStubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
@@ -25,9 +25,9 @@ type serviceStubRepo struct {
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 }
 
-func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, organisation, publicCode)
+		return s.listFunc(ctx, page, perPage, p)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -100,7 +100,7 @@ func (s *serviceStubRepo) GetRepositoryFilterCounts(ctx context.Context, p *mode
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 			org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 			return []models.Repository{
 				{Id: "repo-1", Name: "Repo One", Organisation: org},
@@ -161,9 +161,9 @@ func TestListOrganisations_SetsHeader(t *testing.T) {
 	repo := &serviceStubRepo{
 		getOrgFunc: func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
 			return []models.Organisation{{Uri: "org-1", Label: "Org 1"}}, models.Pagination{
-				TotalRecords:  1,
-				TotalPages:    1,
-				CurrentPage:   1,
+				TotalRecords:   1,
+				TotalPages:     1,
+				CurrentPage:    1,
 				RecordsPerPage: 10,
 			}, nil
 		},

@@ -148,6 +148,43 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Equal(t, "repo-1", body[0].Id)
 	})
 
+	t.Run("list repositories supports filter endpoint query params", func(t *testing.T) {
+		repoWithPublicCode := &models.Repository{
+			Id:             "repo-2",
+			Name:           "Library Repo",
+			OrganisationID: &org.Uri,
+			Url:            "https://example.org/repos/repo-2",
+			PublicCodeUrl:  "https://publiccode.net/repo-2",
+			PublicCode: &models.PublicCode{
+				SoftwareType:      "library",
+				DevelopmentStatus: "stable",
+			},
+			Active: true,
+		}
+		repoWithoutMatch := &models.Repository{
+			Id:             "repo-3",
+			Name:           "Other Repo",
+			OrganisationID: &org.Uri,
+			Url:            "https://example.org/repos/repo-3",
+			PublicCodeUrl:  "https://publiccode.net/repo-3",
+			PublicCode: &models.PublicCode{
+				SoftwareType:      "standalone/mobile",
+				DevelopmentStatus: "beta",
+			},
+			Active: true,
+		}
+		require.NoError(t, env.repo.SaveRepository(ctx, repoWithPublicCode))
+		require.NoError(t, env.repo.SaveRepository(ctx, repoWithoutMatch))
+
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?softwareType=library&developmentStatus=stable")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
+
+		body := decodeBody[[]models.RepositorySummary](t, resp)
+		require.Len(t, body, 1)
+		require.Equal(t, "repo-2", body[0].Id)
+	})
+
 	t.Run("list organisations", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/organisations")
 		require.Equal(t, http.StatusOK, resp.StatusCode)

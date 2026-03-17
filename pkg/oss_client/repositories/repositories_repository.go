@@ -15,7 +15,7 @@ import (
 )
 
 type RepositoriesRepository interface {
-	GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
+	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
@@ -80,45 +80,46 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 	return r.db.WithContext(ctx).Create(repository).Error
 }
 
-func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage <= 0 {
 		perPage = 20
 	}
-	offset := (page - 1) * perPage
-
-	db := r.db.WithContext(ctx)
-	db = db.Where("(active IS NULL OR active = ?)", true)
-
-	if organisation != nil && strings.TrimSpace(*organisation) != "" {
-		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
+	if p == nil {
+		p = &models.RepositoryFiltersParams{}
 	}
-	if publicCode != nil {
-		if *publicCode {
-			db = db.Where("public_code_url IS NOT NULL AND public_code_url <> ''")
-		} else {
-			db = db.Where("public_code_url IS NULL OR public_code_url = ''")
+	if p.LastActivityAfter != nil && strings.TrimSpace(*p.LastActivityAfter) != "" {
+		if _, err := time.Parse("2006-01-02", *p.LastActivityAfter); err != nil {
+			return nil, models.Pagination{}, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
 		}
 	}
 
-	var totalRecords int64
-	if err := db.Model(&models.Repository{}).Count(&totalRecords).Error; err != nil {
-		return nil, models.Pagination{}, err
-	}
-
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(db).Limit(perPage).Preload("Organisation").Offset(offset).Find(&repositories).Error; err != nil {
+	if err := applyRepositoryOrdering(
+		r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true),
+	).Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	filtered := make([]models.Repository, 0, len(repositories))
+	for _, repo := range repositories {
+		if repoMatchesFilters(repo, p, "") {
+			filtered = append(filtered, repo)
+		}
+	}
+
+	totalRecords := len(filtered)
+	totalPages := 0
+	if totalRecords > 0 {
+		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	}
 	pagination := models.Pagination{
 		CurrentPage:    page,
 		RecordsPerPage: perPage,
 		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
+		TotalRecords:   totalRecords,
 	}
 
 	if page < totalPages {
@@ -130,7 +131,17 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		pagination.Previous = &prev
 	}
 
-	return repositories, pagination, nil
+	offset := (page - 1) * perPage
+	if offset >= totalRecords {
+		return []models.Repository{}, pagination, nil
+	}
+
+	end := offset + perPage
+	if end > totalRecords {
+		end = totalRecords
+	}
+
+	return filtered[offset:end], pagination, nil
 }
 
 func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
@@ -349,6 +360,9 @@ func applyRepositoryOrdering(db *gorm.DB) *gorm.DB {
 }
 
 func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	if p == nil {
+		p = &models.RepositoryFiltersParams{}
+	}
 	var allRepos []models.Repository
 	if err := r.db.WithContext(ctx).
 		Where("(active IS NULL OR active = ?)", true).
@@ -493,6 +507,9 @@ func countByArrayField(repos []models.Repository, p *models.RepositoryFiltersPar
 }
 
 func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParams, exclude string) bool {
+	if p == nil {
+		return true
+	}
 	if exclude != "organisation" && p.Organisation != nil && strings.TrimSpace(*p.Organisation) != "" {
 		if repo.OrganisationID == nil || *repo.OrganisationID != strings.TrimSpace(*p.Organisation) {
 			return false

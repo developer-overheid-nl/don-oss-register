@@ -131,11 +131,35 @@ type RepositoryInput struct {
 	LastActivityAt   time.Time `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 type ListRepositorysParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
-	PublicCode   *bool   `query:"publiccode"`
-	BaseURL      string
+	Page               int      `query:"page" validate:"omitempty,min=1"`
+	PerPage            int      `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation       *string  `query:"organisation"`
+	PublicCode         *bool    `query:"publiccode"`
+	LastActivityAfter  *string  `query:"lastActivityAfter"`
+	SoftwareType       []string `query:"softwareType"`
+	DevelopmentStatus  []string `query:"developmentStatus"`
+	AvailableLanguages []string `query:"availableLanguages"`
+	MaintenanceType    []string `query:"maintenanceType"`
+	License            []string `query:"license"`
+	Platforms          []string `query:"platforms"`
+	BaseURL            string
+}
+
+func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
+	if p == nil {
+		return &RepositoryFiltersParams{}
+	}
+	return &RepositoryFiltersParams{
+		Organisation:       p.Organisation,
+		PublicCode:         p.PublicCode,
+		LastActivityAfter:  p.LastActivityAfter,
+		SoftwareType:       append([]string(nil), p.SoftwareType...),
+		DevelopmentStatus:  append([]string(nil), p.DevelopmentStatus...),
+		AvailableLanguages: append([]string(nil), p.AvailableLanguages...),
+		MaintenanceType:    append([]string(nil), p.MaintenanceType...),
+		License:            append([]string(nil), p.License...),
+		Platforms:          append([]string(nil), p.Platforms...),
+	}
 }
 
 type RepositoryParams struct {
