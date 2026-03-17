@@ -1,0 +1,3 @@
+kind: Added
+body: Sla publiccode.yml validatieresultaten op per repository inclusief tijdstip en hash-gebaseerde change-detectie (#39)
+time: 2026-03-17T00:00:00.000000+01:00
