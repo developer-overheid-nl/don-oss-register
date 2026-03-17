@@ -1,11 +1,14 @@
 package util
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/google/uuid"
@@ -34,12 +37,12 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 }
 
 func ToRepositoryDetail(repo *models.Repository) *models.RepositoryDetail {
-	detail := &models.RepositoryDetail{
-		RepositorySummary: ToRepositorySummary(repo),
-		PublicCode:        repo.PublicCode,
-		LongDescription:   repo.LongDescription,
+	return &models.RepositoryDetail{
+		RepositorySummary:    ToRepositorySummary(repo),
+		PublicCode:           repo.PublicCode,
+		PublicCodeValidation: repo.PublicCodeValidation,
+		LongDescription:      repo.LongDescription,
 	}
-	return detail
 }
 
 func ToGitOrganisatieSummary(gitOrg *models.GitOrganisatie) models.GitOrganisatieSummary {
@@ -84,83 +87,102 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		target.LongDescription = target.ShortDescription
 	}
 
-	publicCodeRaw := ""
 	if input.PublicCodeUrl != nil {
-		publicCodeRaw = strings.TrimSpace(*input.PublicCodeUrl)
-		target.PublicCodeUrl = publicCodeRaw
-		target.PublicCode = nil
+		newURL := strings.TrimSpace(*input.PublicCodeUrl)
+		target.PublicCodeUrl = newURL
 	}
 
-	if publicCodeRaw != "" {
-		content := publicCodeRaw
-		if isLikelyURL(publicCodeRaw) {
-			if resp, err := http.Get(publicCodeRaw); err == nil && resp != nil {
-				defer func() {
-					if err := resp.Body.Close(); err != nil {
-						_ = err
-					}
-				}()
-				if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-					if body, err := io.ReadAll(resp.Body); err == nil {
-						content = string(body)
-					}
-				}
+	if target.PublicCodeUrl != "" {
+		content := fetchPublicCodeContent(target.PublicCodeUrl)
+		if content != "" {
+			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
+			if hash == target.PublicCodeHash {
+				return target
 			}
-		}
 
-		_, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
-		if name != "" {
-			target.Name = name
-		}
-		if shortDesc != "" {
-			target.ShortDescription = shortDesc
-			target.LongDescription = shortDesc
-		}
-		if longDesc != "" {
-			target.LongDescription = longDesc
-		}
-		if publicCode != nil {
-			target.PublicCode = publicCode
+			_, name, shortDesc, longDesc, publicCode, validation := parsePublicCodeYAML(content)
+			target.PublicCodeHash = hash
+			target.PublicCodeValidation = validation
+			if publicCode != nil {
+				target.PublicCode = publicCode
+			}
+			if name != "" {
+				target.Name = name
+			}
+			if shortDesc != "" {
+				target.ShortDescription = shortDesc
+				target.LongDescription = shortDesc
+			}
+			if longDesc != "" {
+				target.LongDescription = longDesc
+			}
 		}
 	}
 
 	return target
 }
 
-func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string, details *models.PublicCode) {
+func fetchPublicCodeContent(urlOrContent string) string {
+	if !isLikelyURL(urlOrContent) {
+		return urlOrContent
+	}
+	resp, err := http.Get(urlOrContent)
+	if err != nil || resp == nil {
+		return ""
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return ""
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return string(body)
+}
+
+func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string, details *models.PublicCode, validation *models.PublicCodeValidation) {
 	parser, err := publiccode.NewParser(publiccode.ParserConfig{
 		DisableExternalChecks: true,
 	})
 	if err != nil {
 		log.Printf("publiccode parser initialization failed: %v", err)
-		return "", "", "", "", nil
+		return "", "", "", "", nil, &models.PublicCodeValidation{
+			Valid:       false,
+			ValidatedAt: time.Now(),
+			Errors:      []models.PublicCodeValidationItem{{Message: err.Error()}},
+		}
 	}
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
 	if parsed == nil {
+		msg := "empty parse result"
 		if parseErr != nil {
-			log.Printf("publiccode parse failed: %v", parseErr)
-		} else {
-			log.Printf("publiccode parse failed: empty parse result")
+			msg = parseErr.Error()
 		}
-		return "", "", "", "", nil
+		log.Printf("publiccode parse failed: %s", msg)
+		return "", "", "", "", nil, &models.PublicCodeValidation{
+			Valid:       false,
+			ValidatedAt: time.Now(),
+			Errors:      []models.PublicCodeValidationItem{{Message: msg}},
+		}
 	}
+
+	validation = buildValidation(parseErr)
+
 	if parseErr != nil {
-		// Only continue if error is ValidationResults (validation warnings/errors)
-		// Non-validation errors (e.g., YAML parse errors) are fatal
 		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
 			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
-			return "", "", "", "", nil
-		}
-		if hasValidationErrors(parseErr) {
-			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
+			return "", "", "", "", nil, validation
 		}
 	}
 
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
 		log.Printf("publiccode parse result is not version 0: %T", parsed)
-		return "", "", "", "", nil
+		return "", "", "", "", nil, validation
 	}
 	details = mapPublicCodeMandatoryFields(v0)
 
@@ -184,7 +206,36 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		log.Printf("publiccode description does not contain a long description for repository with url %q", url)
 	}
 
-	return url, name, shortDescription, longDescription, details
+	return url, name, shortDescription, longDescription, details, validation
+}
+
+func buildValidation(parseErr error) *models.PublicCodeValidation {
+	v := &models.PublicCodeValidation{Valid: true, ValidatedAt: time.Now()}
+	if parseErr == nil {
+		return v
+	}
+	results, ok := parseErr.(publiccode.ValidationResults)
+	if !ok {
+		v.Valid = false
+		v.Errors = []models.PublicCodeValidationItem{{Message: parseErr.Error()}}
+		return v
+	}
+	for _, item := range results {
+		switch e := item.(type) {
+		case publiccode.ValidationError:
+			v.Valid = false
+			v.Errors = append(v.Errors, models.PublicCodeValidationItem{
+				Field:   e.Key,
+				Message: e.Description,
+			})
+		case publiccode.ValidationWarning:
+			v.Warnings = append(v.Warnings, models.PublicCodeValidationItem{
+				Field:   e.Key,
+				Message: e.Description,
+			})
+		}
+	}
+	return v
 }
 
 func mapPublicCodeMandatoryFields(v0 publiccode.PublicCodeV0) *models.PublicCode {
@@ -463,25 +514,6 @@ func isEmptyPublicCode(data *models.PublicCode) bool {
 		len(data.FundedBy) == 0
 }
 
-func hasValidationErrors(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	results, ok := err.(publiccode.ValidationResults)
-	if !ok {
-		// Not a ValidationResults error, should be handled as fatal by caller
-		return false
-	}
-
-	for _, item := range results {
-		if _, isError := item.(publiccode.ValidationError); isError {
-			return true
-		}
-	}
-
-	return false
-}
 
 func asPublicCodeV0(pc publiccode.PublicCode) (publiccode.PublicCodeV0, bool) {
 	switch typed := pc.(type) {

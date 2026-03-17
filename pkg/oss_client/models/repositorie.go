@@ -90,26 +90,41 @@ type RepositorySummary struct {
 	LastActivityAt   time.Time            `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 
+type PublicCodeValidationItem struct {
+	Field   string `json:"field,omitempty"`
+	Message string `json:"message"`
+}
+
+type PublicCodeValidation struct {
+	Valid       bool                       `json:"valid"`
+	ValidatedAt time.Time                  `json:"validatedAt"`
+	Errors      []PublicCodeValidationItem `json:"errors,omitempty"`
+	Warnings    []PublicCodeValidationItem `json:"warnings,omitempty"`
+}
+
 type RepositoryDetail struct {
 	RepositorySummary
-	PublicCode      *PublicCode `json:"publicCode,omitempty"`
-	LongDescription string      `json:"longDescription,omitempty"`
+	PublicCode          *PublicCode          `json:"publicCode,omitempty"`
+	PublicCodeValidation *PublicCodeValidation `json:"publicCodeValidation,omitempty"`
+	LongDescription     string               `json:"longDescription,omitempty"`
 }
 
 type Repository struct {
-	Id               string        `json:"id" gorm:"column:id;primaryKey"`
-	Name             string        `json:"name" gorm:"column:name"`
-	ShortDescription string        `json:"shortDescription" gorm:"column:short_description"`
-	LongDescription  string        `json:"longDescription,omitempty" gorm:"column:long_description"`
-	Organisation     *Organisation `json:"-" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID   *string       `json:"-" gorm:"column:organisation_id"`
-	Url              string        `json:"url" gorm:"column:repository_url"`
-	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
-	PublicCode       *PublicCode   `json:"publicCode,omitempty" gorm:"column:public_code_data;serializer:json"`
-	CreatedAt        time.Time     `json:"createdAt" gorm:"column:created_at"`
-	LastCrawledAt    time.Time     `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
-	LastActivityAt   time.Time     `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
-	Active           bool          `json:"-" gorm:"column:active"`
+	Id                   string                `json:"id" gorm:"column:id;primaryKey"`
+	Name                 string                `json:"name" gorm:"column:name"`
+	ShortDescription     string                `json:"shortDescription" gorm:"column:short_description"`
+	LongDescription      string                `json:"longDescription,omitempty" gorm:"column:long_description"`
+	Organisation         *Organisation         `json:"-" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID       *string               `json:"-" gorm:"column:organisation_id"`
+	Url                  string                `json:"url" gorm:"column:repository_url"`
+	PublicCodeUrl        string                `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
+	PublicCode           *PublicCode           `json:"publicCode,omitempty" gorm:"column:public_code_data;serializer:json"`
+	PublicCodeHash       string                `json:"-" gorm:"column:public_code_hash"`
+	PublicCodeValidation *PublicCodeValidation `json:"-" gorm:"column:public_code_validation;serializer:json"`
+	CreatedAt            time.Time             `json:"createdAt" gorm:"column:created_at"`
+	LastCrawledAt        time.Time             `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
+	LastActivityAt       time.Time             `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
+	Active               bool                  `json:"-" gorm:"column:active"`
 }
 
 type ListRepositorysSearchParams struct {

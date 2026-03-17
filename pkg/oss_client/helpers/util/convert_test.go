@@ -321,6 +321,188 @@ localisation:
 `
 }
 
+func TestApplyRepositoryInputSetsValidationOnFirstParse(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`)
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	require.NotNil(t, repo.PublicCodeValidation)
+	assert.True(t, repo.PublicCodeValidation.Valid)
+	assert.Empty(t, repo.PublicCodeValidation.Errors)
+	assert.False(t, repo.PublicCodeValidation.ValidatedAt.IsZero())
+	assert.NotEmpty(t, repo.PublicCodeHash)
+}
+
+func TestApplyRepositoryInputSkipsParseWhenHashUnchanged(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`)
+
+	// First parse to get hash
+	first := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCode),
+	})
+	require.NotEmpty(t, first.PublicCodeHash)
+
+	originalValidatedAt := first.PublicCodeValidation.ValidatedAt
+
+	// Second call with same content: hash matches, should skip
+	second := util.ApplyRepositoryInput(first, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	assert.Equal(t, first.PublicCodeHash, second.PublicCodeHash)
+	assert.Equal(t, originalValidatedAt, second.PublicCodeValidation.ValidatedAt, "validatedAt should not change when content is unchanged")
+}
+
+func TestApplyRepositoryInputRevalidatesWhenPublicCodeChanges(t *testing.T) {
+	v1 := validPublicCodeYAML(`
+  nl:
+    shortDescription: Eerste versie beschrijving.
+    longDescription: Dit is de eerste versie van de beschrijving die voldoende lang is om te voldoen aan de minimale lengteeis van het publiccode formaat voor lange omschrijvingen.
+    features:
+      - Feature v1
+`)
+	v2 := validPublicCodeYAML(`
+  nl:
+    shortDescription: Tweede versie beschrijving.
+    longDescription: Dit is de tweede versie van de beschrijving die voldoende lang is om te voldoen aan de minimale lengteeis van het publiccode formaat voor lange omschrijvingen.
+    features:
+      - Feature v2
+`)
+
+	first := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(v1),
+	})
+	require.NotEmpty(t, first.PublicCodeHash)
+	assert.Equal(t, "Eerste versie beschrijving.", first.ShortDescription)
+
+	firstHash := first.PublicCodeHash
+
+	second := util.ApplyRepositoryInput(first, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(v2),
+	})
+
+	assert.NotEqual(t, firstHash, second.PublicCodeHash, "hash should change when content changes")
+	assert.Equal(t, "Tweede versie beschrijving.", second.ShortDescription)
+	require.NotNil(t, second.PublicCodeValidation)
+	assert.True(t, second.PublicCodeValidation.Valid)
+	assert.False(t, second.PublicCodeValidation.ValidatedAt.IsZero())
+}
+
+func TestApplyRepositoryInputSetsValidationErrorsForInvalidPublicCode(t *testing.T) {
+	// Missing required fields: no name, no legal, no maintenance
+	invalid := `publiccodeYmlVersion: "0.5.0"
+url: https://example.org/repo
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+  nl:
+    shortDescription: Korte beschrijving.
+    longDescription: Een lange beschrijving die voldoende tekst bevat om te voldoen aan de minimale vereisten van het publiccode validatieproces voor omschrijvingen.
+    features:
+      - Feature
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - nl
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		PublicCodeUrl: strPtr(invalid),
+	})
+
+	require.NotNil(t, repo.PublicCodeValidation)
+	assert.False(t, repo.PublicCodeValidation.Valid)
+	assert.NotEmpty(t, repo.PublicCodeValidation.Errors)
+	assert.False(t, repo.PublicCodeValidation.ValidatedAt.IsZero())
+}
+
+func TestApplyRepositoryInputSetsValidationWarningsForLegacyVersion(t *testing.T) {
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`, "0.2")
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	require.NotNil(t, repo.PublicCodeValidation)
+	assert.False(t, repo.PublicCodeValidation.ValidatedAt.IsZero())
+	assert.NotEmpty(t, repo.PublicCodeValidation.Warnings)
+}
+
+func TestApplyRepositoryInputRevalidatesViaHTTPWhenContentChanges(t *testing.T) {
+	v1 := validPublicCodeYAML(`
+  nl:
+    shortDescription: Eerste versie via HTTP.
+    longDescription: Dit is de eerste versie van de beschrijving die voldoende lang is om te voldoen aan de minimale lengteeis van het publiccode formaat voor lange omschrijvingen.
+    features:
+      - Feature v1
+`)
+	v2 := validPublicCodeYAML(`
+  nl:
+    shortDescription: Tweede versie via HTTP.
+    longDescription: Dit is de tweede versie van de beschrijving die voldoende lang is om te voldoen aan de minimale lengteeis van het publiccode formaat voor lange omschrijvingen.
+    features:
+      - Feature v2
+`)
+
+	served := v1
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(served))
+	}))
+	defer server.Close()
+
+	publicCodeURL := server.URL + "/publiccode.yml"
+
+	first := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCodeURL),
+	})
+	require.NotNil(t, first.PublicCodeValidation)
+	assert.Equal(t, "Eerste versie via HTTP.", first.ShortDescription)
+
+	firstHash := first.PublicCodeHash
+
+	// Simulate publiccode.yml being updated on the server
+	served = v2
+
+	second := util.ApplyRepositoryInput(first, &models.RepositoryInput{
+		Url:           strPtr("https://example.org/repo"),
+		PublicCodeUrl: strPtr(publicCodeURL),
+	})
+
+	assert.NotEqual(t, firstHash, second.PublicCodeHash)
+	assert.Equal(t, "Tweede versie via HTTP.", second.ShortDescription)
+	require.NotNil(t, second.PublicCodeValidation)
+	assert.True(t, second.PublicCodeValidation.Valid)
+}
+
 func strPtr(val string) *string {
 	return &val
 }
