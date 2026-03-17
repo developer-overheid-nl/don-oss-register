@@ -364,12 +364,14 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	})
 
 	if p.LastActivityAfter != nil && *p.LastActivityAfter != "" {
-		if date, err := time.Parse("2006-01-02", *p.LastActivityAfter); err == nil {
-			n := countRepos(allRepos, p, "lastActivityAfter", func(repo models.Repository) bool {
-				return !repo.LastActivityAt.Before(date)
-			})
-			result.LastActivityAfter = &n
+		date, err := time.Parse("2006-01-02", *p.LastActivityAfter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
 		}
+		n := countRepos(allRepos, p, "lastActivityAfter", func(repo models.Repository) bool {
+			return !repo.LastActivityAt.Before(date)
+		})
+		result.LastActivityAfter = &n
 	}
 
 	result.SoftwareType = countByField(allRepos, p, "softwareType", func(repo models.Repository) string {

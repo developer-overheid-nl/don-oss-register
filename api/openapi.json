@@ -555,7 +555,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "clientCredentials": ["repositories:read"]
+          }
+        ]
       }
     },
     "/repositories": {
@@ -2294,7 +2299,7 @@
           },
           "count": {
             "type": ["integer", "null"],
-            "description": "Number of repositories for the current value. Always present for toggle. Only present for date when a date is set. Not present for multi-select."
+            "description": "For toggle filters, the number of repositories that would match when the toggle is enabled (value 'true'), regardless of the current value. For date filters, the number of repositories matching the current date value; only present when a date is set. Not present for multi-select."
           },
           "options": {
             "type": "array",
