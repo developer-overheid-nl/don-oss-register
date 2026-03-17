@@ -83,6 +83,9 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 			fizz.ID("listRepositoryFilters"),
 			fizz.Summary("Filter opties ophalen"),
 			fizz.Description("Geeft alle beschikbare filteropties terug met counts. Counts zijn berekend op basis van de meegegeven actieve filters."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {},
+			}),
 			apiVersionHeader,
 		},
 		tonic.Handler(controller.ListRepositoryFilters, 200),
