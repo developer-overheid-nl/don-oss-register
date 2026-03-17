@@ -515,9 +515,17 @@ func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParam
 			return false
 		}
 	}
-	if exclude != "publiccode" && p.PublicCode != nil && *p.PublicCode {
-		if repo.PublicCodeUrl == "" {
-			return false
+	if exclude != "publiccode" && p.PublicCode != nil {
+		if *p.PublicCode {
+			// Require repositories that have a publiccode URL
+			if repo.PublicCodeUrl == "" {
+				return false
+			}
+		} else {
+			// Require repositories that do NOT have a publiccode URL
+			if repo.PublicCodeUrl != "" {
+				return false
+			}
 		}
 	}
 	if exclude != "lastActivityAfter" && p.LastActivityAfter != nil && *p.LastActivityAfter != "" {
