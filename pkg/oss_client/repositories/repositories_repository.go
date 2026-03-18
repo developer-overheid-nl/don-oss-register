@@ -517,13 +517,8 @@ func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParam
 	}
 	if exclude != "publiccode" && p.PublicCode != nil {
 		if *p.PublicCode {
-			// Require repositories that have a publiccode URL
+			// Toggle semantics: only true applies a filter.
 			if repo.PublicCodeUrl == "" {
-				return false
-			}
-		} else {
-			// Require repositories that do NOT have a publiccode URL
-			if repo.PublicCodeUrl != "" {
 				return false
 			}
 		}
