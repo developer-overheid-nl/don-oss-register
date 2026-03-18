@@ -33,6 +33,12 @@ type repositoriesRepository struct {
 	db *gorm.DB
 }
 
+type repositoryFilterMatcher struct {
+	params            *models.RepositoryFiltersParams
+	organisation      string
+	lastActivityAfter *time.Time
+}
+
 func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
 	return &repositoriesRepository{db: db}
 }
@@ -87,13 +93,9 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	if perPage <= 0 {
 		perPage = 20
 	}
-	if p == nil {
-		p = &models.RepositoryFiltersParams{}
-	}
-	if p.LastActivityAfter != nil && strings.TrimSpace(*p.LastActivityAfter) != "" {
-		if _, err := time.Parse("2006-01-02", *p.LastActivityAfter); err != nil {
-			return nil, models.Pagination{}, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
-		}
+	matcher, err := compileRepositoryFilters(p, true)
+	if err != nil {
+		return nil, models.Pagination{}, err
 	}
 
 	var repositories []models.Repository
@@ -105,7 +107,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 
 	filtered := make([]models.Repository, 0, len(repositories))
 	for _, repo := range repositories {
-		if repoMatchesFilters(repo, p, "") {
+		if repoMatchesCompiledFilters(repo, matcher, "") {
 			filtered = append(filtered, repo)
 		}
 	}
@@ -360,8 +362,9 @@ func applyRepositoryOrdering(db *gorm.DB) *gorm.DB {
 }
 
 func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
-	if p == nil {
-		p = &models.RepositoryFiltersParams{}
+	matcher, err := compileRepositoryFilters(p, true)
+	if err != nil {
+		return nil, err
 	}
 	var allRepos []models.Repository
 	if err := r.db.WithContext(ctx).
@@ -373,57 +376,53 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 
 	result := &models.RepositoryFilterCounts{}
 
-	result.PublicCode = countRepos(allRepos, p, "publiccode", func(repo models.Repository) bool {
+	result.PublicCode = countReposWithFilters(allRepos, matcher, "publiccode", func(repo models.Repository) bool {
 		return repo.PublicCodeUrl != ""
 	})
 
-	if p.LastActivityAfter != nil && *p.LastActivityAfter != "" {
-		date, err := time.Parse("2006-01-02", *p.LastActivityAfter)
-		if err != nil {
-			return nil, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
-		}
-		n := countRepos(allRepos, p, "lastActivityAfter", func(repo models.Repository) bool {
-			return !repo.LastActivityAt.Before(date)
+	if matcher.lastActivityAfter != nil {
+		n := countReposWithFilters(allRepos, matcher, "lastActivityAfter", func(repo models.Repository) bool {
+			return !repo.LastActivityAt.Before(*matcher.lastActivityAfter)
 		})
 		result.LastActivityAfter = &n
 	}
 
-	result.SoftwareType = countByField(allRepos, p, "softwareType", func(repo models.Repository) string {
+	result.SoftwareType = countByFieldWithFilters(allRepos, matcher, "softwareType", func(repo models.Repository) string {
 		if repo.PublicCode == nil {
 			return ""
 		}
 		return repo.PublicCode.SoftwareType
 	})
 
-	result.DevelopmentStatus = countByField(allRepos, p, "developmentStatus", func(repo models.Repository) string {
+	result.DevelopmentStatus = countByFieldWithFilters(allRepos, matcher, "developmentStatus", func(repo models.Repository) string {
 		if repo.PublicCode == nil {
 			return ""
 		}
 		return repo.PublicCode.DevelopmentStatus
 	})
 
-	result.MaintenanceType = countByField(allRepos, p, "maintenanceType", func(repo models.Repository) string {
+	result.MaintenanceType = countByFieldWithFilters(allRepos, matcher, "maintenanceType", func(repo models.Repository) string {
 		if repo.PublicCode == nil || repo.PublicCode.Maintenance == nil {
 			return ""
 		}
 		return repo.PublicCode.Maintenance.Type
 	})
 
-	result.License = countByField(allRepos, p, "license", func(repo models.Repository) string {
+	result.License = countByFieldWithFilters(allRepos, matcher, "license", func(repo models.Repository) string {
 		if repo.PublicCode == nil || repo.PublicCode.Legal == nil {
 			return ""
 		}
 		return repo.PublicCode.Legal.License
 	})
 
-	result.Platforms = countByArrayField(allRepos, p, "platforms", func(repo models.Repository) []string {
+	result.Platforms = countByArrayFieldWithFilters(allRepos, matcher, "platforms", func(repo models.Repository) []string {
 		if repo.PublicCode == nil {
 			return nil
 		}
 		return repo.PublicCode.Platforms
 	})
 
-	result.AvailableLanguages = countByArrayField(allRepos, p, "availableLanguages", func(repo models.Repository) []string {
+	result.AvailableLanguages = countByArrayFieldWithFilters(allRepos, matcher, "availableLanguages", func(repo models.Repository) []string {
 		if repo.PublicCode == nil || repo.PublicCode.Localisation == nil {
 			return nil
 		}
@@ -432,7 +431,7 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 
 	orgCounts := make(map[string]*models.OrgFilterCount)
 	for _, repo := range allRepos {
-		if !repoMatchesFilters(repo, p, "organisation") {
+		if !repoMatchesCompiledFilters(repo, matcher, "organisation") {
 			continue
 		}
 		if repo.OrganisationID == nil || *repo.OrganisationID == "" {
@@ -459,9 +458,14 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 }
 
 func countRepos(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, match func(models.Repository) bool) int {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countReposWithFilters(repos, matcher, exclude, match)
+}
+
+func countReposWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, match func(models.Repository) bool) int {
 	count := 0
 	for _, repo := range repos {
-		if repoMatchesFilters(repo, p, exclude) && match(repo) {
+		if repoMatchesCompiledFilters(repo, matcher, exclude) && match(repo) {
 			count++
 		}
 	}
@@ -469,9 +473,14 @@ func countRepos(repos []models.Repository, p *models.RepositoryFiltersParams, ex
 }
 
 func countByField(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, getValue func(models.Repository) string) []models.FilterCount {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countByFieldWithFilters(repos, matcher, exclude, getValue)
+}
+
+func countByFieldWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, getValue func(models.Repository) string) []models.FilterCount {
 	counts := make(map[string]int)
 	for _, repo := range repos {
-		if !repoMatchesFilters(repo, p, exclude) {
+		if !repoMatchesCompiledFilters(repo, matcher, exclude) {
 			continue
 		}
 		if val := getValue(repo); val != "" {
@@ -487,9 +496,14 @@ func countByField(repos []models.Repository, p *models.RepositoryFiltersParams, 
 }
 
 func countByArrayField(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, getValues func(models.Repository) []string) []models.FilterCount {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countByArrayFieldWithFilters(repos, matcher, exclude, getValues)
+}
+
+func countByArrayFieldWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, getValues func(models.Repository) []string) []models.FilterCount {
 	counts := make(map[string]int)
 	for _, repo := range repos {
-		if !repoMatchesFilters(repo, p, exclude) {
+		if !repoMatchesCompiledFilters(repo, matcher, exclude) {
 			continue
 		}
 		for _, val := range getValues(repo) {
@@ -507,11 +521,43 @@ func countByArrayField(repos []models.Repository, p *models.RepositoryFiltersPar
 }
 
 func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParams, exclude string) bool {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return repoMatchesCompiledFilters(repo, matcher, exclude)
+}
+
+func compileRepositoryFilters(p *models.RepositoryFiltersParams, validate bool) (*repositoryFilterMatcher, error) {
 	if p == nil {
+		p = &models.RepositoryFiltersParams{}
+	}
+
+	matcher := &repositoryFilterMatcher{params: p}
+	if p.Organisation != nil {
+		matcher.organisation = strings.TrimSpace(*p.Organisation)
+	}
+	if p.LastActivityAfter != nil {
+		trimmed := strings.TrimSpace(*p.LastActivityAfter)
+		if trimmed != "" {
+			date, err := time.Parse("2006-01-02", trimmed)
+			if err != nil {
+				if validate {
+					return nil, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
+				}
+			} else {
+				matcher.lastActivityAfter = &date
+			}
+		}
+	}
+
+	return matcher, nil
+}
+
+func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilterMatcher, exclude string) bool {
+	if matcher == nil || matcher.params == nil {
 		return true
 	}
-	if exclude != "organisation" && p.Organisation != nil && strings.TrimSpace(*p.Organisation) != "" {
-		if repo.OrganisationID == nil || *repo.OrganisationID != strings.TrimSpace(*p.Organisation) {
+	p := matcher.params
+	if exclude != "organisation" && matcher.organisation != "" {
+		if repo.OrganisationID == nil || *repo.OrganisationID != matcher.organisation {
 			return false
 		}
 	}
@@ -523,11 +569,9 @@ func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParam
 			}
 		}
 	}
-	if exclude != "lastActivityAfter" && p.LastActivityAfter != nil && *p.LastActivityAfter != "" {
-		if date, err := time.Parse("2006-01-02", *p.LastActivityAfter); err == nil {
-			if repo.LastActivityAt.Before(date) {
-				return false
-			}
+	if exclude != "lastActivityAfter" && matcher.lastActivityAfter != nil {
+		if repo.LastActivityAt.Before(*matcher.lastActivityAfter) {
+			return false
 		}
 	}
 	if exclude != "softwareType" && len(p.SoftwareType) > 0 {

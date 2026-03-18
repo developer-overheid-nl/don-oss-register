@@ -3,6 +3,7 @@ package repositories_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
@@ -142,6 +143,35 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
 	assert.Equal(t, "repo-2", results[0].Id)
+}
+
+func TestRepositoriesRepository_GetRepositoriesLastActivityAfterFilter(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
+	require.NoError(t, repo.SaveOrganisatie(org))
+
+	recent := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	old := time.Date(2023, 12, 31, 12, 0, 0, 0, time.UTC)
+	repositoriesToSave := []*models.Repository{
+		{Id: "repo-1", Name: "Repo One", OrganisationID: &org.Uri, LastActivityAt: recent, Active: true},
+		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org.Uri, LastActivityAt: old, Active: true},
+	}
+	for _, r := range repositoriesToSave {
+		require.NoError(t, repo.SaveRepository(ctx, r))
+	}
+
+	date := "2024-01-01"
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
+		Organisation:      &org.Uri,
+		LastActivityAfter: &date,
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, 1, pagination.TotalRecords)
+	assert.Equal(t, "repo-1", results[0].Id)
 }
 
 func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
