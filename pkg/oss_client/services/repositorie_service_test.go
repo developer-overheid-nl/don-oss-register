@@ -18,6 +18,7 @@ type stubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
+	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	saveOrgFunc         func(org *models.Organisation) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
@@ -42,6 +43,9 @@ func (s *stubRepo) GetRepositoryByID(ctx context.Context, id string) (*models.Re
 }
 
 func (s *stubRepo) SaveRepository(ctx context.Context, repository *models.Repository) error {
+	if s.saveRepositoryFunc != nil {
+		return s.saveRepositoryFunc(ctx, repository)
+	}
 	return nil
 }
 
@@ -355,4 +359,55 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 			assert.Nil(t, g.Count)
 		}
 	}
+}
+
+func TestCreateRepository_UsesPublicCodeURLAsRepositoryURL(t *testing.T) {
+	publicCode := `publiccodeYmlVersion: "0.5.0"
+name: Digitale Balie
+url: https://example.org/repo-from-publiccode
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team Digitale Balie
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - nl
+`
+
+	org := &models.Organisation{Uri: "https://example.org/organisations/test", Label: "Test Org"}
+	var saved *models.Repository
+	repo := &stubRepo{
+		findOrgByURIF: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			assert.Equal(t, org.Uri, uri)
+			return org, nil
+		},
+		saveRepositoryFunc: func(ctx context.Context, repository *models.Repository) error {
+			saved = repository
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	inputURL := "https://manual.example/repo"
+	created, err := svc.CreateRepository(context.Background(), models.RepositoryInput{
+		Url:             &inputURL,
+		OrganisationUri: &org.Uri,
+		PublicCodeUrl:   &publicCode,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, created)
+	require.NotNil(t, saved)
+	assert.Equal(t, "https://example.org/repo-from-publiccode", saved.Url)
+	assert.Equal(t, "https://example.org/repo-from-publiccode", created.Url)
 }

@@ -68,7 +68,7 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
 		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "https://example.org/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 	assert.Equal(t, "De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.", repo.LongDescription)
@@ -238,7 +238,7 @@ func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
 		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "https://example.org/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 }
@@ -288,7 +288,7 @@ func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
 	})
 
 	assert.Equal(t, publicCodeURL, repo.PublicCodeUrl)
-	assert.Equal(t, "https://manual.example/repo", repo.Url)
+	assert.Equal(t, "https://example.org/repo", repo.Url)
 	assert.Equal(t, "Digitale Balie", repo.Name)
 	assert.Equal(t, "Korte beschrijving van de Digitale Balie.", repo.ShortDescription)
 }
