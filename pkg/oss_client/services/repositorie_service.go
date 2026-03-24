@@ -280,7 +280,7 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	if err != nil {
 		return nil, err
 	}
-	return []models.FilterGroup{
+	groups := []models.FilterGroup{
 		buildPublicCodeGroup(p, counts),
 		buildLastActivityGroup(p, counts),
 		buildSoftwareTypeGroup(p, counts),
@@ -290,7 +290,13 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 		buildAvailableLanguagesGroup(p, counts),
 		buildLicenseGroup(p, counts),
 		buildOrganisationGroup(p, counts),
-	}, nil
+	}
+	for _, g := range groups {
+		if err := g.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return groups, nil
 }
 
 func bodyError(field, code, detail string) problem.ErrorDetail {

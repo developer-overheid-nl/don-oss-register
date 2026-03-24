@@ -10,6 +10,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -193,9 +194,25 @@ type FilterGroup struct {
 	Label       string         `json:"label"`
 	Description string         `json:"description"`
 	Type        string         `json:"type"`
-	Value       string         `json:"value,omitempty"`
+	Value       any            `json:"value,omitempty"`
 	Count       *int           `json:"count,omitempty"`
 	Options     []FilterOption `json:"options,omitempty"`
+}
+
+func (f FilterGroup) Validate() error {
+	switch f.Type {
+	case "toggle":
+		if _, ok := f.Value.(bool); !ok {
+			return fmt.Errorf("filter %q: toggle value must be bool, got %T", f.Key, f.Value)
+		}
+	case "date":
+		if f.Value != nil {
+			if _, ok := f.Value.(string); !ok {
+				return fmt.Errorf("filter %q: date value must be string, got %T", f.Key, f.Value)
+			}
+		}
+	}
+	return nil
 }
 
 type FilterCount struct {

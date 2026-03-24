@@ -297,7 +297,7 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	require.NotNil(t, publiccodeGroup.Count)
 	assert.Equal(t, n, *publiccodeGroup.Count)
 	assert.Equal(t, "toggle", publiccodeGroup.Type)
-	assert.Equal(t, "false", publiccodeGroup.Value)
+	assert.Equal(t, false, publiccodeGroup.Value)
 }
 
 func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
@@ -310,7 +310,7 @@ func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
 
 	for _, g := range groups {
 		if g.Key == "publiccode" {
-			assert.Equal(t, "true", g.Value)
+			assert.Equal(t, true, g.Value)
 		}
 	}
 }
@@ -351,7 +351,7 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 	for _, g := range groups {
 		if g.Key == "lastActivityAfter" {
 			assert.Equal(t, "date", g.Type)
-			assert.Equal(t, "", g.Value)
+			assert.Nil(t, g.Value)
 			assert.Nil(t, g.Count)
 		}
 	}

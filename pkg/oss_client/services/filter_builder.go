@@ -7,10 +7,7 @@ import (
 )
 
 func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
-	value := "false"
-	if p.PublicCode != nil && *p.PublicCode {
-		value = "true"
-	}
+	value := p.PublicCode != nil && *p.PublicCode
 	return models.FilterGroup{
 		Key:         "publiccode",
 		Label:       "Heeft publiccode.yaml",
@@ -22,7 +19,7 @@ func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.Repo
 }
 
 func buildLastActivityGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
-	value := ""
+	var value any
 	if p.LastActivityAfter != nil {
 		value = *p.LastActivityAfter
 	}
@@ -138,7 +135,7 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 		Key:         "organisation",
 		Label:       "Organisatie",
 		Description: "De overheidsorganisatie die de repository beheert.",
-		Type:        "multi-select",
+		Type:        "single-select",
 		Options:     options,
 	}
 }
