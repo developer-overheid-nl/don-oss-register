@@ -1,0 +1,3 @@
+kind: Fixed
+body: Bij repositories met publiccode.yml wordt de URL uit publiccode voortaan leidend boven de aangeleverde repo-URL.
+time: 2026-03-24T22:00:11.984633+01:00
