@@ -30,7 +30,7 @@ jobs:
             echo "Deploy keyword gevonden in commit message."
           else
             echo "deploy=false" >> $GITHUB_OUTPUT
-            echo "Geen deploy keyword gevonden, sla deploy over."
+            echo "Geen deploy keyword gevonden, sla deploy over"
           fi
 
   build-and-push:
