@@ -361,7 +361,7 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestCreateRepository_UsesPublicCodeURLAsRepositoryURL(t *testing.T) {
+func TestCreateRepository_PreservesManualURLWhenPublicCodeIsProvided(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
 url: https://example.org/repo-from-publiccode
@@ -373,6 +373,8 @@ description:
   nl:
     shortDescription: Korte beschrijving van de Digitale Balie.
     longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
 legal:
   license: EUPL-1.2
 maintenance:
@@ -408,6 +410,8 @@ localisation:
 	require.NoError(t, err)
 	require.NotNil(t, created)
 	require.NotNil(t, saved)
-	assert.Equal(t, "https://example.org/repo-from-publiccode", saved.Url)
-	assert.Equal(t, "https://example.org/repo-from-publiccode", created.Url)
+	require.NotNil(t, created.PublicCode)
+	assert.Equal(t, "https://manual.example/repo", saved.Url)
+	assert.Equal(t, "https://manual.example/repo", created.Url)
+	assert.Equal(t, "https://example.org/repo-from-publiccode", created.PublicCode.Url)
 }

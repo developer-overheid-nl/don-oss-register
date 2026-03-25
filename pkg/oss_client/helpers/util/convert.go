@@ -108,10 +108,7 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			}
 		}
 
-		parsedURL, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
-		if parsedURL != "" {
-			target.Url = parsedURL
-		}
+		_, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
 		if name != "" {
 			target.Name = name
 		}
