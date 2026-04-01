@@ -1,13 +1,9 @@
-# This repository adheres to the publiccode.yml standard by including this
-# metadata file that makes public software easily discoverable.
-# More info at https://github.com/publiccodeyml/publiccode.yml
-
 publiccodeYmlVersion: "0.5.0"
 
 name: API van het OSS register
 url: "https://github.com/developer-overheid-nl/don-oss-register"
+landingURL: "https://oss.developer.overheid.nl"
 softwareType: standalone/web
-releaseDate: "1970-01-01"
 platforms:
   - web
 
@@ -17,22 +13,27 @@ developmentStatus: beta
 
 description:
   nl:
-    # Mand!
-    shortDescription: API van het OSS register (oss.developer.overheid.nl)
-    longDescription: De API van het OSS-register maakt open source software van de overheid beter vindbaar en herbruikbaar. Via deze API kunnen organisaties, ontwikkelaars en dienstverleners actuele metadata over repositories ophalen en verwerken in eigen toepassingen.
+    shortDescription: >-
+      API van het OSS register (oss.developer.overheid.nl)
+    longDescription: |
+      De API van het OSS-register maakt open source software van de overheid beter
+      vindbaar en herbruikbaar. Via deze API kunnen organisaties, ontwikkelaars en
+      dienstverleners actuele metadata over repositories ophalen en verwerken in
+      eigen toepassingen.
     features:
       - Doorzoekbare catalogus van open source repositories
+
 legal:
   license: EUPL-1.2
-  mainCopyrightOwner: Stichting Geonovum
+  mainCopyrightOwner: Geonovum
 
 organisation:
-  name: Stichting Geonovum
+  name: Geonovum
   uri: https://www.geonovum.nl/
 
 intendedAudience:
   countries:
-    - nl
+    - NL
   scope:
     - government
 
@@ -45,6 +46,6 @@ maintenance:
   type: internal
 
   contacts:
-    - name: Dimitri van Hees
-      email: d.vanhees@geonovum.nl
+    - name: developer.overheid.nl
+      email: developer.overheid@geonovum.nl
       affiliation: Geonovum
