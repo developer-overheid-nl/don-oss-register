@@ -7,6 +7,7 @@ on:
       - main
 
 env:
+  SOURCE_REPO: ${{ github.event.repository.name }}
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   INFRA_REPO: ${{ vars.INFRA_REPO }}
   KUSTOMIZE_PATH: ${{ vars.KUSTOMIZE_PATH }}
@@ -38,77 +39,119 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-  create-infra-pr:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Parse infra repository
-        id: infra-repo
-        run: |
-          INFRA_REPO="${{ env.INFRA_REPO }}"
-
-          if [[ -z "$INFRA_REPO" || "$INFRA_REPO" != */* ]]; then
-            echo "INFRA_REPO moet de vorm owner/repo hebben, huidige waarde: '$INFRA_REPO'" >&2
-            exit 1
-          fi
-
-          echo "owner=${INFRA_REPO%%/*}" >> "$GITHUB_OUTPUT"
-          echo "repo=${INFRA_REPO#*/}" >> "$GITHUB_OUTPUT"
-
-      - name: Genereer app token (Release proces app)
-        id: app-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859
-        with:
-          app-id: ${{ secrets.RELEASE_PROCES_APP_ID }}
-          private-key: ${{ secrets.RELEASE_PROCES_APP_PRIVATE_KEY }}
-          owner: ${{ steps.infra-repo.outputs.owner }}
-          repositories: ${{ steps.infra-repo.outputs.repo }}
-
-      - name: Checkout don-infra
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        with:
-          repository: ${{ env.INFRA_REPO }}
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Maak release branch aan in don-infra
+      - name: Maak of update release branch in don-infra
         id: branch
         run: |
-          BRANCH="release/don-oss-register-${{ github.sha }}"
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          git checkout -b "$BRANCH"
+          BRANCH="release/${{ env.SOURCE_REPO }}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          git checkout -B "$BRANCH"
 
       - name: Update image tag in prod overlay
         run: |
           KUSTOMIZATION_FILE="${{ env.KUSTOMIZE_PATH }}${{ env.DEPLOY_ENV }}/kustomization.yaml"
 
-          yq e '(.images[] | select(.name == "${{ env.IMAGE_NAME }}")).newTag = "${{ github.sha }}"' \
+          yq e '(.images[] | select(.newName == "${{ env.IMAGE_NAME }}")).newTag = "${{ github.sha }}"' \
             -i "$KUSTOMIZATION_FILE"
 
       - name: Commit en push release branch
+        id: commit
         run: |
+          set -euo pipefail
+
           KUSTOMIZATION_FILE="${{ env.KUSTOMIZE_PATH }}${{ env.DEPLOY_ENV }}/kustomization.yaml"
 
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
           git add "$KUSTOMIZATION_FILE"
-          git commit -m "release: don-oss-register → ${{ github.sha }}
+
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "release: ${{ env.SOURCE_REPO }} → ${{ github.sha }}
 
           Commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-          git push origin "${{ steps.branch.outputs.branch }}"
+          git push origin "${{ steps.branch.outputs.branch }}" --force
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Maak PR aan in don-infra
+      - name: Maak of update PR in don-infra
+        id: pr
+        if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          gh pr create \
-            --repo "${{ env.INFRA_REPO }}" \
-            --base main \
-            --head "${{ steps.branch.outputs.branch }}" \
-            --title "Release: don-oss-register → ${GITHUB_SHA::7}" \
-            --body "## don-oss-register productie deploy
+          set -euo pipefail
+
+          TITLE="Release: ${{ env.SOURCE_REPO }} → ${GITHUB_SHA::7}"
+          BODY=$(cat <<EOF
+          ## ${{ env.SOURCE_REPO }} productie deploy
 
           **Image:** \`${{ env.IMAGE_NAME }}:${{ github.sha }}\`
           **Branch:** \`${{ github.ref_name }}\`
           **Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
 
-          Merge deze PR om de nieuwe versie naar productie te deployen."
+          Merge deze PR om de nieuwe versie naar productie te deployen.
+          EOF
+          )
+
+          PR_NUMBER="$(gh pr list \
+            --repo "${{ env.INFRA_REPO }}" \
+            --state open \
+            --head "${{ steps.branch.outputs.branch }}" \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr edit "$PR_NUMBER" \
+              --repo "${{ env.INFRA_REPO }}" \
+              --title "$TITLE" \
+              --body "$BODY"
+          else
+            PR_URL="$(gh pr create \
+              --repo "${{ env.INFRA_REPO }}" \
+              --base main \
+              --head "${{ steps.branch.outputs.branch }}" \
+              --title "$TITLE" \
+              --body "$BODY")"
+            PR_NUMBER="${PR_URL##*/}"
+          fi
+
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Sluit oudere PR's van deze repo
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t STALE_PRS < <(
+            gh pr list \
+              --repo "${{ env.INFRA_REPO }}" \
+              --state open \
+              --limit 100 \
+              --json number,title,headRefName \
+            | jq -r \
+                --arg branch "${{ steps.branch.outputs.branch }}" \
+                --arg prefix "${{ steps.branch.outputs.branch }}-" \
+                --arg title_prefix "Release: ${{ env.SOURCE_REPO }} → " \
+                --argjson current "${{ steps.pr.outputs.number }}" '
+                  .[]
+                  | select(.number != $current)
+                  | select(
+                      .headRefName == $branch
+                      or (.headRefName | startswith($prefix))
+                      or (.title | startswith($title_prefix))
+                    )
+                  | .number
+                '
+          )
+
+          for pr in "${STALE_PRS[@]}"; do
+            [[ -z "$pr" ]] && continue
+            gh pr close "$pr" \
+              --repo "${{ env.INFRA_REPO }}" \
+              --comment "Gesloten omdat deze release is vervangen door #${{ steps.pr.outputs.number }}."
+          done
