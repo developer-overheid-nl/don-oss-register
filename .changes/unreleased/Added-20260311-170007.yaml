@@ -1,3 +1,0 @@
-kind: Added
-body: Voeg endpoint voor repository-filteropties toe en laat `GET /repositories` dezelfde filterquery's ondersteunen voor de resultatenlijst (#28)
-time: 2026-03-11T17:00:07.054657+01:00
