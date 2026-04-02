@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"gorm.io/gorm"
 )
 
 type RepositoriesRepository interface {
-	GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error)
+	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
@@ -24,10 +26,17 @@ type RepositoriesRepository interface {
 	GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error
+	GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
 }
 
 type repositoriesRepository struct {
 	db *gorm.DB
+}
+
+type repositoryFilterMatcher struct {
+	params            *models.RepositoryFiltersParams
+	organisation      string
+	lastActivityAfter *time.Time
 }
 
 func NewRepositoriesRepository(db *gorm.DB) RepositoriesRepository {
@@ -77,45 +86,42 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 	return r.db.WithContext(ctx).Create(repository).Error
 }
 
-func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, organisation *string, publicCode *bool) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage <= 0 {
 		perPage = 20
 	}
-	offset := (page - 1) * perPage
-
-	db := r.db.WithContext(ctx)
-	db = db.Where("(active IS NULL OR active = ?)", true)
-
-	if organisation != nil && strings.TrimSpace(*organisation) != "" {
-		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-	}
-	if publicCode != nil {
-		if *publicCode {
-			db = db.Where("public_code_url IS NOT NULL AND public_code_url <> ''")
-		} else {
-			db = db.Where("public_code_url IS NULL OR public_code_url = ''")
-		}
-	}
-
-	var totalRecords int64
-	if err := db.Model(&models.Repository{}).Count(&totalRecords).Error; err != nil {
+	matcher, err := compileRepositoryFilters(p, true)
+	if err != nil {
 		return nil, models.Pagination{}, err
 	}
 
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(db).Limit(perPage).Preload("Organisation").Offset(offset).Find(&repositories).Error; err != nil {
+	if err := applyRepositoryOrdering(
+		r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true),
+	).Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	filtered := make([]models.Repository, 0, len(repositories))
+	for _, repo := range repositories {
+		if repoMatchesCompiledFilters(repo, matcher, "") {
+			filtered = append(filtered, repo)
+		}
+	}
+
+	totalRecords := len(filtered)
+	totalPages := 0
+	if totalRecords > 0 {
+		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	}
 	pagination := models.Pagination{
 		CurrentPage:    page,
 		RecordsPerPage: perPage,
 		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
+		TotalRecords:   totalRecords,
 	}
 
 	if page < totalPages {
@@ -127,7 +133,17 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		pagination.Previous = &prev
 	}
 
-	return repositories, pagination, nil
+	offset := (page - 1) * perPage
+	if offset >= totalRecords {
+		return []models.Repository{}, pagination, nil
+	}
+
+	end := offset + perPage
+	if end > totalRecords {
+		end = totalRecords
+	}
+
+	return filtered[offset:end], pagination, nil
 }
 
 func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
@@ -343,4 +359,287 @@ func applyRepositoryOrdering(db *gorm.DB) *gorm.DB {
 	return db.Order("(public_code_url IS NOT NULL AND public_code_url <> '') DESC").
 		Order("last_activity_at DESC").
 		Order("name")
+}
+
+func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	matcher, err := compileRepositoryFilters(p, true)
+	if err != nil {
+		return nil, err
+	}
+	var allRepos []models.Repository
+	if err := r.db.WithContext(ctx).
+		Where("(active IS NULL OR active = ?)", true).
+		Preload("Organisation").
+		Find(&allRepos).Error; err != nil {
+		return nil, err
+	}
+
+	result := &models.RepositoryFilterCounts{}
+
+	result.PublicCode = countReposWithFilters(allRepos, matcher, "publiccode", func(repo models.Repository) bool {
+		return repo.PublicCodeUrl != ""
+	})
+
+	if matcher.lastActivityAfter != nil {
+		n := countReposWithFilters(allRepos, matcher, "lastActivityAfter", func(repo models.Repository) bool {
+			return !repo.LastActivityAt.Before(*matcher.lastActivityAfter)
+		})
+		result.LastActivityAfter = &n
+	}
+
+	result.SoftwareType = countByFieldWithFilters(allRepos, matcher, "softwareType", func(repo models.Repository) string {
+		if repo.PublicCode == nil {
+			return ""
+		}
+		return repo.PublicCode.SoftwareType
+	})
+
+	result.DevelopmentStatus = countByFieldWithFilters(allRepos, matcher, "developmentStatus", func(repo models.Repository) string {
+		if repo.PublicCode == nil {
+			return ""
+		}
+		return repo.PublicCode.DevelopmentStatus
+	})
+
+	result.MaintenanceType = countByFieldWithFilters(allRepos, matcher, "maintenanceType", func(repo models.Repository) string {
+		if repo.PublicCode == nil || repo.PublicCode.Maintenance == nil {
+			return ""
+		}
+		return repo.PublicCode.Maintenance.Type
+	})
+
+	result.License = countByFieldWithFilters(allRepos, matcher, "license", func(repo models.Repository) string {
+		if repo.PublicCode == nil || repo.PublicCode.Legal == nil {
+			return ""
+		}
+		return repo.PublicCode.Legal.License
+	})
+
+	result.Platforms = countByArrayFieldWithFilters(allRepos, matcher, "platforms", func(repo models.Repository) []string {
+		if repo.PublicCode == nil {
+			return nil
+		}
+		return repo.PublicCode.Platforms
+	})
+
+	result.AvailableLanguages = countByArrayFieldWithFilters(allRepos, matcher, "availableLanguages", func(repo models.Repository) []string {
+		if repo.PublicCode == nil || repo.PublicCode.Localisation == nil {
+			return nil
+		}
+		return repo.PublicCode.Localisation.AvailableLanguages
+	})
+
+	orgCounts := make(map[string]*models.OrgFilterCount)
+	for _, repo := range allRepos {
+		if !repoMatchesCompiledFilters(repo, matcher, "organisation") {
+			continue
+		}
+		if repo.OrganisationID == nil || *repo.OrganisationID == "" {
+			continue
+		}
+		orgID := *repo.OrganisationID
+		if _, ok := orgCounts[orgID]; !ok {
+			label := orgID
+			if repo.Organisation != nil {
+				label = repo.Organisation.Label
+			}
+			orgCounts[orgID] = &models.OrgFilterCount{Value: orgID, Label: label}
+		}
+		orgCounts[orgID].Count++
+	}
+	for _, fc := range orgCounts {
+		result.Organisation = append(result.Organisation, *fc)
+	}
+	sort.Slice(result.Organisation, func(i, j int) bool {
+		return result.Organisation[i].Count > result.Organisation[j].Count
+	})
+
+	return result, nil
+}
+
+func countRepos(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, match func(models.Repository) bool) int {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countReposWithFilters(repos, matcher, exclude, match)
+}
+
+func countReposWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, match func(models.Repository) bool) int {
+	count := 0
+	for _, repo := range repos {
+		if repoMatchesCompiledFilters(repo, matcher, exclude) && match(repo) {
+			count++
+		}
+	}
+	return count
+}
+
+func countByField(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, getValue func(models.Repository) string) []models.FilterCount {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countByFieldWithFilters(repos, matcher, exclude, getValue)
+}
+
+func countByFieldWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, getValue func(models.Repository) string) []models.FilterCount {
+	counts := make(map[string]int)
+	for _, repo := range repos {
+		if !repoMatchesCompiledFilters(repo, matcher, exclude) {
+			continue
+		}
+		if val := getValue(repo); val != "" {
+			counts[val]++
+		}
+	}
+	result := make([]models.FilterCount, 0, len(counts))
+	for val, count := range counts {
+		result = append(result, models.FilterCount{Value: val, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
+	return result
+}
+
+func countByArrayField(repos []models.Repository, p *models.RepositoryFiltersParams, exclude string, getValues func(models.Repository) []string) []models.FilterCount {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return countByArrayFieldWithFilters(repos, matcher, exclude, getValues)
+}
+
+func countByArrayFieldWithFilters(repos []models.Repository, matcher *repositoryFilterMatcher, exclude string, getValues func(models.Repository) []string) []models.FilterCount {
+	counts := make(map[string]int)
+	for _, repo := range repos {
+		if !repoMatchesCompiledFilters(repo, matcher, exclude) {
+			continue
+		}
+		for _, val := range getValues(repo) {
+			if val != "" {
+				counts[val]++
+			}
+		}
+	}
+	result := make([]models.FilterCount, 0, len(counts))
+	for val, count := range counts {
+		result = append(result, models.FilterCount{Value: val, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
+	return result
+}
+
+func repoMatchesFilters(repo models.Repository, p *models.RepositoryFiltersParams, exclude string) bool {
+	matcher, _ := compileRepositoryFilters(p, false)
+	return repoMatchesCompiledFilters(repo, matcher, exclude)
+}
+
+func compileRepositoryFilters(p *models.RepositoryFiltersParams, validate bool) (*repositoryFilterMatcher, error) {
+	if p == nil {
+		p = &models.RepositoryFiltersParams{}
+	}
+
+	matcher := &repositoryFilterMatcher{params: p}
+	if p.Organisation != nil {
+		matcher.organisation = strings.TrimSpace(*p.Organisation)
+	}
+	if p.LastActivityAfter != nil {
+		trimmed := strings.TrimSpace(*p.LastActivityAfter)
+		if trimmed != "" {
+			date, err := time.Parse("2006-01-02", trimmed)
+			if err != nil {
+				if validate {
+					return nil, fmt.Errorf("invalid lastActivityAfter format, expected YYYY-MM-DD: %w", err)
+				}
+			} else {
+				matcher.lastActivityAfter = &date
+			}
+		}
+	}
+
+	return matcher, nil
+}
+
+func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilterMatcher, exclude string) bool {
+	if matcher == nil || matcher.params == nil {
+		return true
+	}
+	p := matcher.params
+	if exclude != "organisation" && matcher.organisation != "" {
+		if repo.OrganisationID == nil || *repo.OrganisationID != matcher.organisation {
+			return false
+		}
+	}
+	if exclude != "publiccode" && p.PublicCode != nil {
+		if *p.PublicCode {
+			// Toggle semantics: only true applies a filter.
+			if repo.PublicCodeUrl == "" {
+				return false
+			}
+		}
+	}
+	if exclude != "lastActivityAfter" && matcher.lastActivityAfter != nil {
+		if repo.LastActivityAt.Before(*matcher.lastActivityAfter) {
+			return false
+		}
+	}
+	if exclude != "softwareType" && len(p.SoftwareType) > 0 {
+		st := ""
+		if repo.PublicCode != nil {
+			st = repo.PublicCode.SoftwareType
+		}
+		if !containsStr(p.SoftwareType, st) {
+			return false
+		}
+	}
+	if exclude != "developmentStatus" && len(p.DevelopmentStatus) > 0 {
+		ds := ""
+		if repo.PublicCode != nil {
+			ds = repo.PublicCode.DevelopmentStatus
+		}
+		if !containsStr(p.DevelopmentStatus, ds) {
+			return false
+		}
+	}
+	if exclude != "maintenanceType" && len(p.MaintenanceType) > 0 {
+		mt := ""
+		if repo.PublicCode != nil && repo.PublicCode.Maintenance != nil {
+			mt = repo.PublicCode.Maintenance.Type
+		}
+		if !containsStr(p.MaintenanceType, mt) {
+			return false
+		}
+	}
+	if exclude != "license" && len(p.License) > 0 {
+		lic := ""
+		if repo.PublicCode != nil && repo.PublicCode.Legal != nil {
+			lic = repo.PublicCode.Legal.License
+		}
+		if !containsStr(p.License, lic) {
+			return false
+		}
+	}
+	if exclude != "platforms" && len(p.Platforms) > 0 {
+		var repoPlatforms []string
+		if repo.PublicCode != nil {
+			repoPlatforms = repo.PublicCode.Platforms
+		}
+		for _, platform := range p.Platforms {
+			if !containsStr(repoPlatforms, platform) {
+				return false
+			}
+		}
+	}
+	if exclude != "availableLanguages" && len(p.AvailableLanguages) > 0 {
+		var repoLangs []string
+		if repo.PublicCode != nil && repo.PublicCode.Localisation != nil {
+			repoLangs = repo.PublicCode.Localisation.AvailableLanguages
+		}
+		for _, lang := range p.AvailableLanguages {
+			if !containsStr(repoLangs, lang) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func containsStr(slice []string, val string) bool {
+	for _, s := range slice {
+		if s == val {
+			return true
+		}
+	}
+	return false
 }

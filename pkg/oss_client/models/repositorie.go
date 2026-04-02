@@ -10,6 +10,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -131,11 +132,35 @@ type RepositoryInput struct {
 	LastActivityAt   time.Time `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
 }
 type ListRepositorysParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
-	PublicCode   *bool   `query:"publiccode"`
-	BaseURL      string
+	Page               int      `query:"page" validate:"omitempty,min=1"`
+	PerPage            int      `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation       *string  `query:"organisation"`
+	PublicCode         *bool    `query:"publiccode"`
+	LastActivityAfter  *string  `query:"lastActivityAfter"`
+	SoftwareType       []string `query:"softwareType"`
+	DevelopmentStatus  []string `query:"developmentStatus"`
+	AvailableLanguages []string `query:"availableLanguages"`
+	MaintenanceType    []string `query:"maintenanceType"`
+	License            []string `query:"license"`
+	Platforms          []string `query:"platforms"`
+	BaseURL            string
+}
+
+func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
+	if p == nil {
+		return &RepositoryFiltersParams{}
+	}
+	return &RepositoryFiltersParams{
+		Organisation:       p.Organisation,
+		PublicCode:         p.PublicCode,
+		LastActivityAfter:  p.LastActivityAfter,
+		SoftwareType:       append([]string(nil), p.SoftwareType...),
+		DevelopmentStatus:  append([]string(nil), p.DevelopmentStatus...),
+		AvailableLanguages: append([]string(nil), p.AvailableLanguages...),
+		MaintenanceType:    append([]string(nil), p.MaintenanceType...),
+		License:            append([]string(nil), p.License...),
+		Platforms:          append([]string(nil), p.Platforms...),
+	}
 }
 
 type RepositoryParams struct {
@@ -154,4 +179,73 @@ type Pagination struct {
 	RecordsPerPage int
 	TotalPages     int
 	TotalRecords   int
+}
+
+type FilterOption struct {
+	Value       string  `json:"value"`
+	Label       string  `json:"label"`
+	Description *string `json:"description"`
+	Count       int     `json:"count"`
+	Selected    bool    `json:"selected"`
+}
+
+type FilterGroup struct {
+	Key         string         `json:"key"`
+	Label       string         `json:"label"`
+	Description string         `json:"description"`
+	Type        string         `json:"type"`
+	Value       any            `json:"value,omitempty"`
+	Count       *int           `json:"count,omitempty"`
+	Options     []FilterOption `json:"options,omitempty"`
+}
+
+func (f FilterGroup) Validate() error {
+	switch f.Type {
+	case "toggle":
+		if _, ok := f.Value.(bool); !ok {
+			return fmt.Errorf("filter %q: toggle value must be bool, got %T", f.Key, f.Value)
+		}
+	case "date":
+		if f.Value != nil {
+			if _, ok := f.Value.(string); !ok {
+				return fmt.Errorf("filter %q: date value must be string, got %T", f.Key, f.Value)
+			}
+		}
+	}
+	return nil
+}
+
+type FilterCount struct {
+	Value string
+	Count int
+}
+
+type OrgFilterCount struct {
+	Value string
+	Label string
+	Count int
+}
+
+type RepositoryFilterCounts struct {
+	PublicCode         int
+	LastActivityAfter  *int
+	SoftwareType       []FilterCount
+	DevelopmentStatus  []FilterCount
+	MaintenanceType    []FilterCount
+	License            []FilterCount
+	Platforms          []FilterCount
+	AvailableLanguages []FilterCount
+	Organisation       []OrgFilterCount
+}
+
+type RepositoryFiltersParams struct {
+	Organisation       *string  `query:"organisation"`
+	PublicCode         *bool    `query:"publiccode"`
+	LastActivityAfter  *string  `query:"lastActivityAfter"`
+	SoftwareType       []string `query:"softwareType"`
+	DevelopmentStatus  []string `query:"developmentStatus"`
+	AvailableLanguages []string `query:"availableLanguages"`
+	MaintenanceType    []string `query:"maintenanceType"`
+	License            []string `query:"license"`
+	Platforms          []string `query:"platforms"`
 }

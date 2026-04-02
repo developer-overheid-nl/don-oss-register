@@ -1,4 +1,4 @@
-FROM golang:latest
+FROM golang:1.25.8
 
 RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* 

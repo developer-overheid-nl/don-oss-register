@@ -118,6 +118,11 @@ func (c *OSSController) UpdateRepository(ctx *gin.Context, req *models.UpdateRep
 	return updated, nil
 }
 
+// ListRepositoryFilters handles GET /repositories/filters
+func (c *OSSController) ListRepositoryFilters(ctx *gin.Context, p *models.RepositoryFiltersParams) ([]models.FilterGroup, error) {
+	return c.Service.GetRepositoryFilters(ctx.Request.Context(), p)
+}
+
 func normalizePagination(page, perPage int) (int, int) {
 	if page < 1 {
 		page = 1

@@ -1,6 +1,6 @@
 # API registratie
 
-API van het API register (oss.developer.overheid.nl)
+API van het OSS register (oss.developer.overheid.nl)
 
 ## Overview
 

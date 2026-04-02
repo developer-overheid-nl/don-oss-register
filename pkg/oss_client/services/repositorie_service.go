@@ -28,7 +28,11 @@ func NewRepositoryService(repo repositories.RepositoriesRepository) *RepositoryS
 }
 
 func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, models.Pagination, error) {
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.Organisation, p.PublicCode)
+	if p == nil {
+		p = &models.ListRepositorysParams{}
+	}
+
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.RepositoryFilters())
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
@@ -269,6 +273,30 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 		return nil, err
 	}
 	return org, nil
+}
+
+func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.RepositoryFiltersParams) ([]models.FilterGroup, error) {
+	counts, err := s.repo.GetRepositoryFilterCounts(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	groups := []models.FilterGroup{
+		buildPublicCodeGroup(p, counts),
+		buildLastActivityGroup(p, counts),
+		buildSoftwareTypeGroup(p, counts),
+		buildDevelopmentStatusGroup(p, counts),
+		buildMaintenanceTypeGroup(p, counts),
+		buildPlatformsGroup(p, counts),
+		buildAvailableLanguagesGroup(p, counts),
+		buildLicenseGroup(p, counts),
+		buildOrganisationGroup(p, counts),
+	}
+	for _, g := range groups {
+		if err := g.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return groups, nil
 }
 
 func bodyError(field, code, detail string) problem.ErrorDetail {

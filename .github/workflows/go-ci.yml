@@ -9,8 +9,7 @@ on:
       - 'Dockerfile'
       - '.github/workflows/go-ci.yml'
   push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -62,7 +61,7 @@ jobs:
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294
         with:
           context: .
-          push: ${{ github.event_name == 'push' }}
+          push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
           tags: |
             ghcr.io/developer-overheid-nl/don-oss-register:latest
             ghcr.io/developer-overheid-nl/don-oss-register:${{ github.sha }}

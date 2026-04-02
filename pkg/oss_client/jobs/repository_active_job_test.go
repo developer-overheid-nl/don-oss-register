@@ -12,7 +12,7 @@ import (
 )
 
 type stubRepositoriesRepo struct {
-	all  []models.Repository
+	all   []models.Repository
 	saved []*models.Repository
 }
 
@@ -25,7 +25,7 @@ func (s *stubRepositoriesRepo) SaveRepository(_ context.Context, r *models.Repos
 	return nil
 }
 
-func (s *stubRepositoriesRepo) GetRepositorys(_ context.Context, _, _ int, _ *string, _ *bool) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepositoriesRepo) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 
@@ -59,6 +59,10 @@ func (s *stubRepositoriesRepo) FindGitOrganisationByURL(_ context.Context, _ str
 
 func (s *stubRepositoriesRepo) SaveGitOrganisatie(_ context.Context, _ *models.GitOrganisatie) error {
 	return nil
+}
+
+func (s *stubRepositoriesRepo) GetRepositoryFilterCounts(_ context.Context, _ *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	return &models.RepositoryFilterCounts{}, nil
 }
 
 func TestNewRepositoryActiveJob_DefaultStaleAfter(t *testing.T) {
