@@ -129,6 +129,18 @@ localisation:
 	assert.Equal(t, "Deze regionale Nederlandse beschrijving bevat voldoende tekst om aan de minimale lengte te voldoen en beschrijft helder wat de Digitale Balie voor gemeenten en inwoners betekent.", repo.LongDescription)
 }
 
+func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
+	inputURL := "https://github.com/Signalen/frontend"
+	isFork := true
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:    &inputURL,
+		IsFork: &isFork,
+	})
+
+	assert.Equal(t, "https://github.com/Signalen/frontend", repo.Url)
+	assert.True(t, repo.IsFork)
+}
+
 func TestApplyRepositoryInputSelectsDescriptionUsingAvailableLanguages(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Service Guichet

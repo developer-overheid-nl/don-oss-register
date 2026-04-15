@@ -6,7 +6,7 @@ set -euo pipefail
 # Combineert de eerdere import_missing_tooi functionaliteit: entries zonder tooiUrl
 # worden via een bekende mapping alsnog aan een organisatie gekoppeld.
 
-BASE_URL=${BASE_URL:-https://localhost:1337/v1}
+BASE_URL=${BASE_URL:-http://localhost:1337/v1}
 PUBLISHERS_FILE=${PUBLISHERS_FILE:-publishers.json}
 
 if ! command -v jq >/dev/null 2>&1; then

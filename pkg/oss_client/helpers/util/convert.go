@@ -23,6 +23,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 	return models.RepositorySummary{
 		Id:               repo.Id,
 		Url:              repo.Url,
+		IsFork:           repo.IsFork,
 		Name:             repo.Name,
 		ShortDescription: repo.ShortDescription,
 		PublicCodeUrl:    repo.PublicCodeUrl,
@@ -75,6 +76,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	}
 	if input.PublicCodeUrl != nil {
 		target.PublicCodeUrl = strings.TrimSpace(*input.PublicCodeUrl)
+	}
+	if input.IsFork != nil {
+		target.IsFork = *input.IsFork
 	}
 	if input.Name != nil {
 		target.Name = strings.TrimSpace(*input.Name)
