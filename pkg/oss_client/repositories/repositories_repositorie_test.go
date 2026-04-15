@@ -210,6 +210,27 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 	assert.Equal(t, 3, pagination.TotalRecords)
 }
 
+func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	fork := &models.Repository{
+		Id:     "repo-fork",
+		Name:   "Signalen frontend fork",
+		Url:    "https://github.com/Signalen/frontend",
+		IsFork: true,
+		Active: true,
+	}
+	require.NoError(t, repo.SaveRepository(ctx, fork))
+
+	all, err := repo.AllRepositorys(ctx)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	assert.Equal(t, "https://github.com/Signalen/frontend", all[0].Url)
+	assert.True(t, all[0].IsFork)
+}
+
 func TestRepositoriesRepository_FindOrganisationByURI(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)

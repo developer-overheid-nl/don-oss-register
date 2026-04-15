@@ -838,6 +838,11 @@
           "url": {
             "$ref": "#/components/schemas/RepositoryUrl"
           },
+          "isFork": {
+            "type": "boolean",
+            "description": "Fork status supplied by the crawler based on the code hosting provider.",
+            "readOnly": true
+          },
           "organisation": {
             "$ref": "#/components/schemas/OrganisationSummary"
           },
@@ -875,6 +880,10 @@
           },
           "publicCodeUrl": {
             "$ref": "#/components/schemas/PublicCodeUrl"
+          },
+          "isFork": {
+            "type": "boolean",
+            "description": "Fork status supplied by the crawler based on the code hosting provider."
           },
           "shortDescription": {
             "$ref": "#/components/schemas/RepositoryShortDescription"

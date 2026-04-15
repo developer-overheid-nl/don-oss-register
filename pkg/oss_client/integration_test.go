@@ -107,6 +107,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		LongDescription:  "Integratietest repository",
 		OrganisationID:   &org.Uri,
 		Url:              "https://example.org/repos/repo-1",
+		IsFork:           true,
 		PublicCodeUrl:    "https://publiccode.net/repo-1",
 		LastActivityAt:   time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC),
 		Active:           true,
@@ -123,6 +124,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Len(t, body, 1)
 		require.Equal(t, "repo-1", body[0].Id)
 		require.Equal(t, repoModel.Url, body[0].Url)
+		require.True(t, body[0].IsFork)
 		require.NotNil(t, body[0].Organisation)
 		require.Equal(t, repoModel.LastActivityAt, body[0].LastActivityAt)
 	})
@@ -134,6 +136,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 
 		body := decodeBody[models.RepositoryDetail](t, resp)
 		require.Equal(t, "repo-1", body.Id)
+		require.True(t, body.IsFork)
 		require.NotNil(t, body.Organisation)
 		require.Equal(t, repoModel.LastActivityAt, body.LastActivityAt)
 	})
