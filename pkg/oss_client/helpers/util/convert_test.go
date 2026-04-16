@@ -141,6 +141,41 @@ func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
 	assert.True(t, repo.IsFork)
 }
 
+func TestApplyRepositoryInputStoresBasedOnURLsFromPublicCode(t *testing.T) {
+	inputURL := "https://github.com/Sudwest-Fryslan/OpenZaakBrug"
+	publicCode := `publiccodeYmlVersion: "0.5.0"
+name: OpenZaakBrug
+url: https://github.com/Sudwest-Fryslan/OpenZaakBrug
+isBasedOn: https://github.com/OpenCatalogi/OpenZaak
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+  nl:
+    shortDescription: Brug voor OpenZaak integraties.
+    longDescription: Deze variant van OpenZaak bevat lokale aanpassingen voor de gemeente en legt expliciet vast op welke upstream repository de codebasis gebaseerd is voor beheer en classificatie in het register.
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team OpenZaakBrug
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - nl
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
+		PublicCodeUrl: &publicCode,
+	})
+
+	assert.Equal(t, []string{"https://github.com/OpenCatalogi/OpenZaak"}, repo.ForkBasedOnURLs)
+	assert.Equal(t, models.RepositoryForkTypeVariantFork, util.DetectRepositoryForkType(repo))
+}
+
 func TestApplyRepositoryInputSelectsDescriptionUsingAvailableLanguages(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Service Guichet

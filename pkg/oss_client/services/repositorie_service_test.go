@@ -416,6 +416,6 @@ localisation:
 	assert.Equal(t, "https://github.com/Signalen/frontend", saved.Url)
 	assert.True(t, saved.IsFork)
 	assert.Equal(t, "https://github.com/Signalen/frontend", created.Url)
-	assert.True(t, created.IsFork)
+	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
 	assert.Equal(t, "https://github.com/Amsterdam/signals-frontend", created.PublicCode.Url)
 }

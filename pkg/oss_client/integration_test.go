@@ -124,7 +124,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Len(t, body, 1)
 		require.Equal(t, "repo-1", body[0].Id)
 		require.Equal(t, repoModel.Url, body[0].Url)
-		require.True(t, body[0].IsFork)
+		require.Equal(t, models.RepositoryForkTypeGitFork, body[0].ForkType)
 		require.NotNil(t, body[0].Organisation)
 		require.Equal(t, repoModel.LastActivityAt, body[0].LastActivityAt)
 	})
@@ -136,7 +136,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 
 		body := decodeBody[models.RepositoryDetail](t, resp)
 		require.Equal(t, "repo-1", body.Id)
-		require.True(t, body.IsFork)
+		require.Equal(t, models.RepositoryForkTypeGitFork, body.ForkType)
 		require.NotNil(t, body.Organisation)
 		require.Equal(t, repoModel.LastActivityAt, body.LastActivityAt)
 	})
