@@ -1,3 +1,3 @@
 kind: Added
-body: Voeg `isFork` toe aan repository-invoer en -responses zodat forkstatussen vanuit de crawler worden opgeslagen en via de API beschikbaar zijn (#60).
+body: Voeg forkclassificatie toe aan repository-responses met `forkType`, inclusief afleiding van `TECHNICAL_FORK`, `VARIANT_FORK`, `GIT_FORK` en `URL_MISTAKE` op basis van `isFork`, publiccode `url` en `isBasedOn` (#60).
 time: 2026-04-15T13:34:14.548677+02:00

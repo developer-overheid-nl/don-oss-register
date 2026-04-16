@@ -838,10 +838,8 @@
           "url": {
             "$ref": "#/components/schemas/RepositoryUrl"
           },
-          "isFork": {
-            "type": "boolean",
-            "description": "Fork status supplied by the crawler based on the code hosting provider.",
-            "readOnly": true
+          "forkType": {
+            "$ref": "#/components/schemas/RepositoryForkType"
           },
           "organisation": {
             "$ref": "#/components/schemas/OrganisationSummary"
@@ -866,6 +864,17 @@
             "readOnly": true
           }
         }
+      },
+      "RepositoryForkType": {
+        "type": "string",
+        "description": "Derived fork classification based on the git fork flag, publiccode.yml url, and isBasedOn metadata.",
+        "enum": [
+          "TECHNICAL_FORK",
+          "VARIANT_FORK",
+          "GIT_FORK",
+          "URL_MISTAKE"
+        ],
+        "readOnly": true
       },
       "RepositoryInput": {
         "title": "Repository input",
