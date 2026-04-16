@@ -129,6 +129,53 @@ localisation:
 	assert.Equal(t, "Deze regionale Nederlandse beschrijving bevat voldoende tekst om aan de minimale lengte te voldoen en beschrijft helder wat de Digitale Balie voor gemeenten en inwoners betekent.", repo.LongDescription)
 }
 
+func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
+	inputURL := "https://git.example.org/custom/frontend"
+	isFork := true
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:    &inputURL,
+		IsFork: &isFork,
+	})
+
+	assert.Equal(t, "https://git.example.org/custom/frontend", repo.Url)
+	assert.True(t, repo.IsFork)
+}
+
+func TestApplyRepositoryInputStoresBasedOnURLsFromPublicCode(t *testing.T) {
+	inputURL := "https://git.example.org/variant/openzaak-brug"
+	publicCode := `publiccodeYmlVersion: "0.5.0"
+name: OpenZaakBrug
+url: https://git.example.org/variant/openzaak-brug
+isBasedOn: https://git.example.org/upstream/openzaak
+softwareType: configurationFiles
+developmentStatus: stable
+platforms:
+  - web
+description:
+  nl:
+    shortDescription: Brug voor OpenZaak integraties.
+    longDescription: Deze variant van OpenZaak bevat lokale aanpassingen voor de gemeente en legt expliciet vast op welke upstream repository de codebasis gebaseerd is voor beheer en classificatie in het register.
+legal:
+  license: EUPL-1.2
+maintenance:
+  type: internal
+  contacts:
+    - name: Team OpenZaakBrug
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - nl
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &inputURL,
+		PublicCodeUrl: &publicCode,
+	})
+
+	assert.Equal(t, []string{"https://git.example.org/upstream/openzaak"}, repo.ForkBasedOnURLs)
+	assert.Equal(t, models.RepositoryForkTypeVariantFork, util.DetectRepositoryForkType(repo))
+}
+
 func TestApplyRepositoryInputSelectsDescriptionUsingAvailableLanguages(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Service Guichet

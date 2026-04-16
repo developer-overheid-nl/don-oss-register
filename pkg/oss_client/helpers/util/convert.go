@@ -23,6 +23,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 	return models.RepositorySummary{
 		Id:               repo.Id,
 		Url:              repo.Url,
+		ForkType:         DetectRepositoryForkType(repo),
 		Name:             repo.Name,
 		ShortDescription: repo.ShortDescription,
 		PublicCodeUrl:    repo.PublicCodeUrl,
@@ -76,6 +77,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	if input.PublicCodeUrl != nil {
 		target.PublicCodeUrl = strings.TrimSpace(*input.PublicCodeUrl)
 	}
+	if input.IsFork != nil {
+		target.IsFork = *input.IsFork
+	}
 	if input.Name != nil {
 		target.Name = strings.TrimSpace(*input.Name)
 	}
@@ -89,6 +93,7 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		publicCodeRaw = strings.TrimSpace(*input.PublicCodeUrl)
 		target.PublicCodeUrl = publicCodeRaw
 		target.PublicCode = nil
+		target.ForkBasedOnURLs = nil
 	}
 
 	if publicCodeRaw != "" {
@@ -108,32 +113,42 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			}
 		}
 
-		_, name, shortDesc, longDesc, publicCode := parsePublicCodeYAML(content)
-		if name != "" {
-			target.Name = name
+		parsedPublicCode := parsePublicCodeYAML(content)
+		if parsedPublicCode.Name != "" {
+			target.Name = parsedPublicCode.Name
 		}
-		if shortDesc != "" {
-			target.ShortDescription = shortDesc
-			target.LongDescription = shortDesc
+		if parsedPublicCode.ShortDescription != "" {
+			target.ShortDescription = parsedPublicCode.ShortDescription
+			target.LongDescription = parsedPublicCode.ShortDescription
 		}
-		if longDesc != "" {
-			target.LongDescription = longDesc
+		if parsedPublicCode.LongDescription != "" {
+			target.LongDescription = parsedPublicCode.LongDescription
 		}
-		if publicCode != nil {
-			target.PublicCode = publicCode
+		if parsedPublicCode.PublicCode != nil {
+			target.PublicCode = parsedPublicCode.PublicCode
 		}
+		target.ForkBasedOnURLs = append([]string(nil), parsedPublicCode.BasedOnURLs...)
 	}
 
 	return target
 }
 
-func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescription string, details *models.PublicCode) {
+type parsedPublicCodeYAML struct {
+	URL              string
+	Name             string
+	ShortDescription string
+	LongDescription  string
+	PublicCode       *models.PublicCode
+	BasedOnURLs      []string
+}
+
+func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 	parser, err := publiccode.NewParser(publiccode.ParserConfig{
 		DisableExternalChecks: true,
 	})
 	if err != nil {
 		log.Printf("publiccode parser initialization failed: %v", err)
-		return "", "", "", "", nil
+		return parsedPublicCodeYAML{}
 	}
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
@@ -143,14 +158,14 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 		} else {
 			log.Printf("publiccode parse failed: empty parse result")
 		}
-		return "", "", "", "", nil
+		return parsedPublicCodeYAML{}
 	}
 	if parseErr != nil {
 		// Only continue if error is ValidationResults (validation warnings/errors)
 		// Non-validation errors (e.g., YAML parse errors) are fatal
 		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
 			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
-			return "", "", "", "", nil
+			return parsedPublicCodeYAML{}
 		}
 		if hasValidationErrors(parseErr) {
 			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
@@ -160,31 +175,34 @@ func parsePublicCodeYAML(raw string) (url, name, shortDescription, longDescripti
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
 		log.Printf("publiccode parse result is not version 0: %T", parsed)
-		return "", "", "", "", nil
+		return parsedPublicCodeYAML{}
 	}
-	details = mapPublicCodeMandatoryFields(v0)
+	result := parsedPublicCodeYAML{
+		PublicCode:  mapPublicCodeMandatoryFields(v0),
+		BasedOnURLs: mapBasedOnURLs(v0.IsBasedOn),
+	}
 
 	if v0.URL != nil {
-		url = strings.TrimSpace(v0.URL.String())
+		result.URL = strings.TrimSpace(v0.URL.String())
 	}
 
-	name = strings.TrimSpace(v0.Name)
+	result.Name = strings.TrimSpace(v0.Name)
 
 	desc := selectDescription(v0.Description, v0.Localisation.AvailableLanguages)
-	if name == "" && desc.LocalisedName != nil {
-		name = strings.TrimSpace(*desc.LocalisedName)
+	if result.Name == "" && desc.LocalisedName != nil {
+		result.Name = strings.TrimSpace(*desc.LocalisedName)
 	}
 
-	shortDescription = strings.TrimSpace(desc.ShortDescription)
-	longDescription = strings.TrimSpace(desc.LongDescription)
-	if shortDescription == "" {
-		log.Printf("publiccode description does not contain a short description for repository with url %q", url)
+	result.ShortDescription = strings.TrimSpace(desc.ShortDescription)
+	result.LongDescription = strings.TrimSpace(desc.LongDescription)
+	if result.ShortDescription == "" {
+		log.Printf("publiccode description does not contain a short description for repository with url %q", result.URL)
 	}
-	if longDescription == "" {
-		log.Printf("publiccode description does not contain a long description for repository with url %q", url)
+	if result.LongDescription == "" {
+		log.Printf("publiccode description does not contain a long description for repository with url %q", result.URL)
 	}
 
-	return url, name, shortDescription, longDescription, details
+	return result
 }
 
 func mapPublicCodeMandatoryFields(v0 publiccode.PublicCodeV0) *models.PublicCode {
@@ -406,6 +424,32 @@ func mapMandatoryFundedBy(input *[]publiccode.OrganisationV0) []models.PublicCod
 			continue
 		}
 		result = append(result, models.PublicCodeOrganisationReference{Name: name})
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func mapBasedOnURLs(input publiccode.UrlOrUrlArray) []string {
+	if len(input) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(input))
+	for _, item := range input {
+		if item == nil {
+			continue
+		}
+
+		value := strings.TrimSpace(item.String())
+		if value == "" {
+			continue
+		}
+
+		result = append(result, value)
 	}
 
 	if len(result) == 0 {

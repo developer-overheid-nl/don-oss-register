@@ -364,7 +364,7 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 func TestCreateRepository_PreservesManualURLWhenPublicCodeIsProvided(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
-url: https://example.org/repo-from-publiccode
+url: https://git.example.org/upstream/digitale-balie
 softwareType: configurationFiles
 developmentStatus: stable
 platforms:
@@ -401,17 +401,21 @@ localisation:
 	}
 	svc := services.NewRepositoryService(repo)
 
-	inputURL := "https://manual.example/repo"
+	inputURL := "https://git.example.org/custom/digitale-balie"
+	isFork := true
 	created, err := svc.CreateRepository(context.Background(), models.RepositoryInput{
 		Url:             &inputURL,
 		OrganisationUri: &org.Uri,
 		PublicCodeUrl:   &publicCode,
+		IsFork:          &isFork,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, created)
 	require.NotNil(t, saved)
 	require.NotNil(t, created.PublicCode)
-	assert.Equal(t, "https://manual.example/repo", saved.Url)
-	assert.Equal(t, "https://manual.example/repo", created.Url)
-	assert.Equal(t, "https://example.org/repo-from-publiccode", created.PublicCode.Url)
+	assert.Equal(t, "https://git.example.org/custom/digitale-balie", saved.Url)
+	assert.True(t, saved.IsFork)
+	assert.Equal(t, "https://git.example.org/custom/digitale-balie", created.Url)
+	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
+	assert.Equal(t, "https://git.example.org/upstream/digitale-balie", created.PublicCode.Url)
 }
