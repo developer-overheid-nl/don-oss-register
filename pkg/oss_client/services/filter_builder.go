@@ -10,8 +10,8 @@ func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.Repo
 	value := p.PublicCode != nil && *p.PublicCode
 	return models.FilterGroup{
 		Key:         "publiccode",
-		Label:       "Heeft publiccode.yaml",
-		Description: "Toon alleen repositories met een publiccode.yaml bestand.",
+		Label:       "Heeft publiccode.yml",
+		Description: "Toon alleen repositories met een publiccode.yml bestand.",
 		Type:        "toggle",
 		Value:       value,
 		Count:       &counts.PublicCode,
@@ -37,7 +37,7 @@ func buildSoftwareTypeGroup(p *models.RepositoryFiltersParams, counts *models.Re
 	return models.FilterGroup{
 		Key:         "softwareType",
 		Label:       "Software type",
-		Description: "Het type software zoals gedefinieerd in publiccode.yaml.",
+		Description: "Het type software zoals gedefinieerd in publiccode.yml.",
 		Type:        "multi-select",
 		Options:     buildMultiSelectOptions(counts.SoftwareType, selectedSet(p.SoftwareType), models.SoftwareTypeLabels),
 	}

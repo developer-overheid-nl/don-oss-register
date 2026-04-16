@@ -477,7 +477,7 @@
         "name": "publiccode",
         "in": "query",
         "required": false,
-        "description": "Filter on publiccode.yaml presence. true: only repositories with a publiccode.yaml URL. Omit or set false for all repositories.",
+        "description": "Filter on publiccode.yml presence. true: only repositories with a publiccode.yml URL. Omit or set false for all repositories.",
         "schema": {
           "type": "boolean"
         }
@@ -757,15 +757,15 @@
       },
       "PublicCodeUrl": {
         "type": "string",
-        "description": "URL of publiccode.yaml in the repository."
+        "description": "URL of publiccode.yml in the repository."
       },
       "RepositoryShortDescription": {
         "type": "string",
-        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yaml is available."
+        "description": "Description of the repository from the git hosting (e.g. the repository description). Used as a fallback when no publiccode.yml is available."
       },
       "RepositoryName": {
         "type": "string",
-        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yaml is available."
+        "description": "Name of the repository from the git hosting. Used as a fallback when no publiccode.yml is available."
       },
       "CreatedAt": {
         "type": "string",
@@ -927,7 +927,7 @@
               },
               "longDescription": {
                 "type": "string",
-                "description": "Long description of the repository, typically from publiccode.yaml."
+                "description": "Long description of the repository, typically from publiccode.yml."
               }
             }
           }
