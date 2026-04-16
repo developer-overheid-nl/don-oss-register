@@ -130,23 +130,23 @@ localisation:
 }
 
 func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
-	inputURL := "https://github.com/Signalen/frontend"
+	inputURL := "https://git.example.org/custom/frontend"
 	isFork := true
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
 		Url:    &inputURL,
 		IsFork: &isFork,
 	})
 
-	assert.Equal(t, "https://github.com/Signalen/frontend", repo.Url)
+	assert.Equal(t, "https://git.example.org/custom/frontend", repo.Url)
 	assert.True(t, repo.IsFork)
 }
 
 func TestApplyRepositoryInputStoresBasedOnURLsFromPublicCode(t *testing.T) {
-	inputURL := "https://github.com/Sudwest-Fryslan/OpenZaakBrug"
+	inputURL := "https://git.example.org/variant/openzaak-brug"
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: OpenZaakBrug
-url: https://github.com/Sudwest-Fryslan/OpenZaakBrug
-isBasedOn: https://github.com/OpenCatalogi/OpenZaak
+url: https://git.example.org/variant/openzaak-brug
+isBasedOn: https://git.example.org/upstream/openzaak
 softwareType: configurationFiles
 developmentStatus: stable
 platforms:
@@ -172,7 +172,7 @@ localisation:
 		PublicCodeUrl: &publicCode,
 	})
 
-	assert.Equal(t, []string{"https://github.com/OpenCatalogi/OpenZaak"}, repo.ForkBasedOnURLs)
+	assert.Equal(t, []string{"https://git.example.org/upstream/openzaak"}, repo.ForkBasedOnURLs)
 	assert.Equal(t, models.RepositoryForkTypeVariantFork, util.DetectRepositoryForkType(repo))
 }
 

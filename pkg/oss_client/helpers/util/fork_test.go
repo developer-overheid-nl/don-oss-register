@@ -15,25 +15,25 @@ func TestDetectRepositoryForkType(t *testing.T) {
 	}{
 		"variant fork when based on another repository": {
 			repo: models.Repository{
-				Url:             "https://github.com/Sudwest-Fryslan/OpenZaakBrug",
-				PublicCode:      &models.PublicCode{Url: "https://github.com/Sudwest-Fryslan/OpenZaakBrug"},
-				ForkBasedOnURLs: []string{"https://github.com/OpenCatalogi/OpenZaak"},
+				Url:             "https://git.example.org/variant/openzaak-brug",
+				PublicCode:      &models.PublicCode{Url: "https://git.example.org/variant/openzaak-brug"},
+				ForkBasedOnURLs: []string{"https://git.example.org/upstream/openzaak"},
 			},
 			expected: models.RepositoryForkTypeVariantFork,
 		},
 		"url mistake when based on itself": {
 			repo: models.Repository{
-				Url:             "https://github.com/Haarlem/zds-stuf-to-zgw-api-translator",
-				PublicCode:      &models.PublicCode{Url: "https://github.com/Haarlem/zds-stuf-to-zgw-api-translator"},
-				ForkBasedOnURLs: []string{"https://github.com/Haarlem/zds-stuf-to-zgw-api-translator"},
+				Url:             "https://git.example.org/team/zds-translator",
+				PublicCode:      &models.PublicCode{Url: "https://git.example.org/team/zds-translator"},
+				ForkBasedOnURLs: []string{"https://git.example.org/team/zds-translator"},
 			},
 			expected: models.RepositoryForkTypeURLMistake,
 		},
 		"technical fork for git fork with upstream publiccode url": {
 			repo: models.Repository{
-				Url:        "https://github.com/mainlycode/don-infra",
+				Url:        "https://git.example.org/fork/don-infra",
 				IsFork:     true,
-				PublicCode: &models.PublicCode{Url: "https://github.com/digilab-public/don-infra"},
+				PublicCode: &models.PublicCode{Url: "https://git.example.org/upstream/don-infra"},
 			},
 			expected: models.RepositoryForkTypeTechnicalFork,
 		},
@@ -46,16 +46,16 @@ func TestDetectRepositoryForkType(t *testing.T) {
 		},
 		"git fork without publiccode": {
 			repo: models.Repository{
-				Url:    "https://github.com/example/git-fork",
+				Url:    "https://git.example.org/fork/git-fork",
 				IsFork: true,
 			},
 			expected: models.RepositoryForkTypeGitFork,
 		},
 		"git hosting branch urls are normalized": {
 			repo: models.Repository{
-				Url:        "https://github.com/mainlycode/don-infra/tree/digikluster",
+				Url:        "https://git.example.org/fork/don-infra/tree/digikluster",
 				IsFork:     true,
-				PublicCode: &models.PublicCode{Url: "https://github.com/mainlycode/don-infra"},
+				PublicCode: &models.PublicCode{Url: "https://git.example.org/fork/don-infra"},
 			},
 			expected: models.RepositoryForkTypeGitFork,
 		},
