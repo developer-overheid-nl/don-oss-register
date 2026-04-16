@@ -218,7 +218,7 @@ func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {
 	fork := &models.Repository{
 		Id:     "repo-fork",
 		Name:   "Signalen frontend fork",
-		Url:    "https://github.com/Signalen/frontend",
+		Url:    "https://git.example.org/custom/frontend",
 		IsFork: true,
 		Active: true,
 	}
@@ -227,7 +227,7 @@ func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {
 	all, err := repo.AllRepositorys(ctx)
 	require.NoError(t, err)
 	require.Len(t, all, 1)
-	assert.Equal(t, "https://github.com/Signalen/frontend", all[0].Url)
+	assert.Equal(t, "https://git.example.org/custom/frontend", all[0].Url)
 	assert.True(t, all[0].IsFork)
 }
 
