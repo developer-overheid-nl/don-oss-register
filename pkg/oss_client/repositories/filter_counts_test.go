@@ -50,7 +50,7 @@ func TestRepoMatchesFilters_NoFilters(t *testing.T) {
 }
 
 func TestRepoMatchesFilters_PublicCode_Match(t *testing.T) {
-	repo := makeRepo(withPublicCodeUrl("https://example.org/publiccode.yaml"))
+	repo := makeRepo(withPublicCodeUrl("https://example.org/publiccode.yml"))
 	p := &models.RepositoryFiltersParams{PublicCode: boolPtr(true)}
 	assert.True(t, repoMatchesFilters(repo, p, ""))
 }
@@ -147,7 +147,7 @@ func TestRepoMatchesFilters_MaintenanceType_Match(t *testing.T) {
 
 func TestRepoMatchesFilters_MultipleFilters_AllApply(t *testing.T) {
 	repo := makeRepo(
-		withPublicCodeUrl("https://example.org/publiccode.yaml"),
+		withPublicCodeUrl("https://example.org/publiccode.yml"),
 		withPublicCode(&models.PublicCode{
 			SoftwareType: "library",
 			Platforms:    []string{"web"},
@@ -232,9 +232,9 @@ func TestCountByArrayField_CountsEachValue(t *testing.T) {
 
 func TestCountRepos_Toggle(t *testing.T) {
 	repos := []models.Repository{
-		makeRepo(withPublicCodeUrl("https://example.org/publiccode.yaml")),
+		makeRepo(withPublicCodeUrl("https://example.org/publiccode.yml")),
 		makeRepo(),
-		makeRepo(withPublicCodeUrl("https://other.org/publiccode.yaml")),
+		makeRepo(withPublicCodeUrl("https://other.org/publiccode.yml")),
 	}
 	p := &models.RepositoryFiltersParams{}
 	count := countRepos(repos, p, "publiccode", func(r models.Repository) bool {
