@@ -35,13 +35,13 @@ func Connect(connStr string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if err := db.AutoMigrate(
-		&models.Repository{},
-		&models.Organisation{},
-		&models.GitOrganisatie{},
-	); err != nil {
-		return nil, fmt.Errorf("migration failed: %w", err)
-	}
+	// if err := db.AutoMigrate(
+	// 	&models.Repository{},
+	// 	&models.Organisation{},
+	// 	&models.GitOrganisatie{},
+	// ); err != nil {
+	// 	return nil, fmt.Errorf("migration failed: %w", err)
+	// }
 
 	return db, nil
 }
