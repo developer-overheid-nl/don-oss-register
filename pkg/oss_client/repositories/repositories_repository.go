@@ -278,7 +278,7 @@ func (r *repositoriesRepository) SaveOrganisatie(organisation *models.Organisati
 
 func (r *repositoriesRepository) AllRepositorys(ctx context.Context) ([]models.Repository, error) {
 	var repositories []models.Repository
-	if err := r.db.WithContext(ctx).Find(&repositories).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, err
 	}
 	return repositories, nil
