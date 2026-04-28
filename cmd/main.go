@@ -145,7 +145,6 @@ func main() {
 	repo := repositories.NewRepositoriesRepository(db)
 	repositoriesService := services.NewRepositoryService(repo)
 	controller := handler.NewOSSController(repositoriesService)
-	jobs.NewRepositoryActiveJob(repo).Start(context.Background())
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.gpp-woo.nl", Label: "GPP-Woo"}); err != nil {
 		fmt.Printf("[GPP-Woo-import] create org warning: %v\n", err)
 	}
@@ -161,6 +160,10 @@ func main() {
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://developer.overheid.nl/", Label: "Developer overheid"}); err != nil {
 		fmt.Printf("[Developer-overheid-import] create org warning: %v\n", err)
 	}
+	if err := repositoriesService.PublishAllRepositoriesToTypesense(context.Background()); err != nil {
+		log.Fatalf("[typesense-sync] bulk publish failed: %v", err)
+	}
+	jobs.NewRepositoryActiveJob(repo).Start(context.Background())
 
 	// Start server
 	router := api.NewRouter(version, controller)

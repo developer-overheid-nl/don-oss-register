@@ -2,16 +2,20 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
+	typesense "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services/typesense"
 	"github.com/google/uuid"
 )
 
@@ -174,6 +178,9 @@ func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody mo
 		return nil, err
 	}
 
+	repoCopy := *repo
+	go s.publishToTypesense(repoCopy)
+
 	return util.ToRepositoryDetail(repo), nil
 }
 
@@ -228,6 +235,9 @@ func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, req
 		return nil, err
 	}
 
+	updatedCopy := *updated
+	go s.publishToTypesense(updatedCopy)
+
 	return util.ToRepositoryDetail(updated), nil
 }
 
@@ -273,6 +283,53 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 		return nil, err
 	}
 	return org, nil
+}
+
+func (s *RepositoryService) publishToTypesense(repository models.Repository) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := typesense.PublishRepository(ctx, &repository); err != nil {
+		if errors.Is(err, typesense.ErrDisabled) {
+			return
+		}
+		log.Printf("[typesense] indexing failed for repository=%s: %v", repository.Id, err)
+	}
+}
+
+// PublishAllRepositoriesToTypesense pushes every active stored repository to Typesense.
+func (s *RepositoryService) PublishAllRepositoriesToTypesense(ctx context.Context) error {
+	if !typesense.Enabled() {
+		log.Printf("[typesense] indexing disabled; skip bulk publish")
+		return nil
+	}
+
+	repos, err := s.repo.AllRepositorys(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, repository := range repos {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if !repository.Active {
+			continue
+		}
+
+		repoCopy := repository
+		itemCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err := typesense.PublishRepository(itemCtx, &repoCopy)
+		cancel()
+		if err != nil {
+			if errors.Is(err, typesense.ErrDisabled) {
+				log.Printf("[typesense] indexing disabled tijdens bulk run; stop")
+				return nil
+			}
+			log.Printf("[typesense] bulk indexing failed for repository=%s: %v", repoCopy.Id, err)
+		}
+	}
+	return nil
 }
 
 func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.RepositoryFiltersParams) ([]models.FilterGroup, error) {

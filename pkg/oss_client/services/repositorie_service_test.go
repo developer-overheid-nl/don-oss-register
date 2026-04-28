@@ -3,9 +3,11 @@ package services_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
@@ -19,6 +21,7 @@ type stubRepo struct {
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
+	allRepositoriesFunc func(ctx context.Context) ([]models.Repository, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
@@ -64,6 +67,9 @@ func (s *stubRepo) SaveOrganisatie(org *models.Organisation) error {
 }
 
 func (s *stubRepo) AllRepositorys(ctx context.Context) ([]models.Repository, error) {
+	if s.allRepositoriesFunc != nil {
+		return s.allRepositoriesFunc(ctx)
+	}
 	return nil, nil
 }
 
@@ -418,4 +424,53 @@ localisation:
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", created.Url)
 	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
 	assert.Equal(t, "https://git.example.org/upstream/digitale-balie", created.PublicCode.Url)
+}
+
+func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(ctx context.Context) ([]models.Repository, error) {
+			t.Fatalf("AllRepositorys should not be called when Typesense is disabled")
+			return nil, nil
+		},
+	}
+
+	service := services.NewRepositoryService(repo)
+	err := service.PublishAllRepositoriesToTypesense(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
+	var calls int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	t.Setenv("TYPESENSE_ENDPOINT", server.URL)
+	t.Setenv("TYPESENSE_API_KEY", "secret")
+	t.Setenv("TYPESENSE_COLLECTION", "oss-register")
+	t.Setenv("ENABLE_TYPESENSE", "true")
+
+	prevClient := httpclient.HTTPClient
+	httpclient.HTTPClient = server.Client()
+	t.Cleanup(func() { httpclient.HTTPClient = prevClient })
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(ctx context.Context) ([]models.Repository, error) {
+			return []models.Repository{
+				{Id: "repo-1", Name: "Active repo", Active: true},
+				{Id: "repo-2", Name: "Inactive repo", Active: false},
+				{Id: "repo-3", Name: "Also active", Active: true},
+			}, nil
+		},
+	}
+
+	service := services.NewRepositoryService(repo)
+	err := service.PublishAllRepositoriesToTypesense(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 2, calls)
 }
