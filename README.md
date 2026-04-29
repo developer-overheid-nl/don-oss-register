@@ -53,6 +53,49 @@ Navigeer naar `http://localhost:5050`, voeg een nieuwe server toe en gebruik de 
 - Password: `don`
 - Database: `don_v1`
 
+## Data synchroniseren tussen omgevingen
+
+Met `scripts/sync_organisations.sh` kun je organisaties en git-organisaties van
+een bronomgeving naar een doelomgeving pompen. Dit is handig om bijvoorbeeld
+data uit productie of acceptatie over te zetten naar een testomgeving.
+
+Het script leest uit de bron:
+
+- `GET /organisations`
+- `GET /git-organisations`
+
+en schrijft naar het doel:
+
+- `POST /organisations`
+- `POST /git-organisations`
+
+Gebruik basis-URL's inclusief `/oss-register/v1`.
+
+```bash
+SOURCE_BASE_URL="https://api.developer.overheid.nl/oss-register/v1" \
+TARGET_BASE_URL="https://api.don.projects.digilab.network/oss-register/v1" \
+SOURCE_API_KEY="..." \
+TARGET_BEARER_TOKEN="..." \
+./scripts/sync_organisations.sh
+```
+
+Voor de bron kun je `SOURCE_API_KEY` of `SOURCE_BEARER_TOKEN` gebruiken. Voor
+het doel is `TARGET_BEARER_TOKEN` verplicht. Het script volgt paginering via de
+`Link` header en schrijft records die niet verwerkt konden worden naar
+`sync-organisations-errors.json`.
+
+Handige opties:
+
+- `PER_PAGE=100`: aantal records per pagina.
+- `SLEEP_SECONDS=0`: pauze tussen POST requests.
+- `OUT=sync-organisations-errors.json`: pad voor het foutenbestand.
+- `SKIP_ORGANISATIONS=1`: alleen git-organisaties synchroniseren.
+- `SKIP_GIT_ORGANISATIONS=1`: alleen organisaties synchroniseren.
+
+Git-organisaties verwijzen naar een bestaande organisatie via
+`organisation.uri`. Synchroniseer organisaties dus eerst, tenzij die al in de
+doelomgeving bestaan.
+
 ## Deployen
 
 De deployment van deze site verloopt via GitHub Actions en een aparte infra
