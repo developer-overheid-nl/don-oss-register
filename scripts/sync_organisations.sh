@@ -6,8 +6,9 @@ set -euo pipefail
 SOURCE_BASE_URL="${SOURCE_BASE_URL:-https://api.developer.overheid.nl/oss-register/v1}"
 TARGET_BASE_URL="${TARGET_BASE_URL:-https://api.don.projects.digilab.network/oss-register/v1}"
 
-SOURCE_API_KEY=""
-TARGET_BEARER_TOKEN=""
+SOURCE_API_KEY="${SOURCE_API_KEY:-}"
+SOURCE_BEARER_TOKEN="${SOURCE_BEARER_TOKEN:-}"
+TARGET_BEARER_TOKEN="${TARGET_BEARER_TOKEN:-${BEARER_TOKEN:-}}"
 
 PER_PAGE="${PER_PAGE:-100}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-0}"
@@ -28,8 +29,8 @@ declare -a TARGET_AUTH_ARGS=()
 usage() {
   cat <<'EOF'
 Usage:
-  SOURCE_BASE_URL="https://source.example.nl/v1" \
-  TARGET_BASE_URL="https://target.example.nl/v1" \
+  SOURCE_BASE_URL="https://source.example.nl/oss-register/v1" \
+  TARGET_BASE_URL="https://target.example.nl/oss-register/v1" \
   SOURCE_API_KEY="..." \
   TARGET_BEARER_TOKEN="..." \
   ./scripts/sync_organisations.sh
@@ -38,7 +39,7 @@ Of met positional args:
   ./scripts/sync_organisations.sh <source_base_url> <target_base_url>
 
 Belangrijk:
-  - Gebruik basis-URL's inclusief /v1.
+  - Gebruik basis-URL's inclusief /oss-register/v1.
   - Voor de bron kun je SOURCE_API_KEY of SOURCE_BEARER_TOKEN gebruiken.
   - Voor het doel is TARGET_BEARER_TOKEN of BEARER_TOKEN verplicht.
 EOF
