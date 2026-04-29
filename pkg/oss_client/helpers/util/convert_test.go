@@ -31,6 +31,94 @@ func TestApplyRepositoryInputSetsTimestamps(t *testing.T) {
 	assert.Equal(t, lastActivity, repo.LastActivityAt)
 }
 
+func TestRepositoryConversionsIncludeOrganisationAndForkType(t *testing.T) {
+	created := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+	lastCrawled := time.Date(2024, 1, 2, 10, 0, 0, 0, time.UTC)
+	lastActivity := time.Date(2024, 1, 3, 10, 0, 0, 0, time.UTC)
+	repo := &models.Repository{
+		Id:               "repo-1",
+		Url:              "https://github.com/example/fork",
+		Name:             "Repo",
+		ShortDescription: "Short",
+		LongDescription:  "Long",
+		PublicCodeUrl:    "https://example.org/publiccode.yml",
+		CreatedAt:        created,
+		LastCrawledAt:    lastCrawled,
+		LastActivityAt:   lastActivity,
+		IsFork:           true,
+		Organisation:     &models.Organisation{Uri: "https://example.org/org", Label: "Example"},
+		PublicCode:       &models.PublicCode{Name: "Repo"},
+	}
+
+	summary := util.ToRepositorySummary(repo)
+	assert.Equal(t, "repo-1", summary.Id)
+	assert.Equal(t, "Repo", summary.Name)
+	assert.Equal(t, "Short", summary.ShortDescription)
+	assert.Equal(t, "https://example.org/publiccode.yml", summary.PublicCodeUrl)
+	assert.Equal(t, created, summary.CreatedAt)
+	assert.Equal(t, lastCrawled, summary.LastCrawledAt)
+	assert.Equal(t, lastActivity, summary.LastActivityAt)
+	require.NotNil(t, summary.Organisation)
+	assert.Equal(t, "Example", summary.Organisation.Label)
+	assert.Equal(t, models.RepositoryForkTypeGitFork, summary.ForkType)
+
+	detail := util.ToRepositoryDetail(repo)
+	assert.Equal(t, summary, detail.RepositorySummary)
+	assert.Equal(t, "Long", detail.LongDescription)
+	assert.Equal(t, repo.PublicCode, detail.PublicCode)
+}
+
+func TestToGitOrganisatieSummary(t *testing.T) {
+	org := &models.Organisation{Uri: "https://example.org/org", Label: "Example"}
+	summary := util.ToGitOrganisatieSummary(&models.GitOrganisatie{
+		Id:           "git-1",
+		Url:          "https://github.com/example",
+		Organisation: org,
+	})
+
+	assert.Equal(t, "git-1", summary.Id)
+	assert.Equal(t, "https://github.com/example", summary.Url)
+	assert.Equal(t, org, summary.Organisation)
+}
+
+func TestSetPaginationHeadersBuildsHTTPSLinkHeader(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://api.example.org/v1/repositories?q=test&page=1", nil)
+	req.Header.Set("Forwarded-Proto", "https")
+	previous := 1
+	next := 3
+	headers := http.Header{}
+
+	util.SetPaginationHeaders(req, headers.Set, models.Pagination{
+		Previous:       &previous,
+		Next:           &next,
+		CurrentPage:    2,
+		RecordsPerPage: 25,
+		TotalPages:     4,
+		TotalRecords:   88,
+	})
+
+	assert.Equal(t, "88", headers.Get("Total-Count"))
+	assert.Equal(t, "4", headers.Get("Total-Pages"))
+	assert.Equal(t, "25", headers.Get("Per-Page"))
+	assert.Equal(t, "2", headers.Get("Current-Page"))
+	link := headers.Get("Link")
+	assert.Contains(t, link, `<https://api.example.org/v1/repositories?page=1&perPage=25&q=test>; rel="first"`)
+	assert.Contains(t, link, `rel="prev"`)
+	assert.Contains(t, link, `rel="self"`)
+	assert.Contains(t, link, `rel="next"`)
+	assert.Contains(t, link, `<https://api.example.org/v1/repositories?page=4&perPage=25&q=test>; rel="last"`)
+}
+
+func TestSetPaginationHeadersOmitsLinksWhenThereAreNoPages(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://api.example.org/v1/repositories", nil)
+	headers := http.Header{}
+
+	util.SetPaginationHeaders(req, headers.Set, models.Pagination{})
+
+	assert.Equal(t, "0", headers.Get("Total-Count"))
+	assert.Empty(t, headers.Get("Link"))
+}
+
 func TestApplyRepositoryInputKeepsExistingTimestampsWhenZero(t *testing.T) {
 	created := time.Date(2023, 6, 1, 12, 0, 0, 0, time.UTC)
 	lastCrawled := time.Date(2023, 7, 1, 12, 0, 0, 0, time.UTC)
