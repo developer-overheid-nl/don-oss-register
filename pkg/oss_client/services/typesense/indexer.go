@@ -357,7 +357,9 @@ func buildTags(cfg config, repository *models.Repository) []string {
 		out = appendUnique(out, tag, seen)
 	}
 
-	out = appendUnique(out, fmt.Sprintf("repository-id:%s", repository.Id), seen)
+	if repositoryID := strings.TrimSpace(repository.Id); repositoryID != "" {
+		out = appendUnique(out, fmt.Sprintf("repository-id:%s", repositoryID), seen)
+	}
 
 	if repository.Organisation != nil {
 		out = appendUnique(out, repository.Organisation.Label, seen)
