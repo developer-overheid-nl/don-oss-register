@@ -138,10 +138,10 @@ func TestPublishRepository_SendsDocument(t *testing.T) {
 	if got := doc["hierarchy.lvl1"]; got != "Ministerie van Test" {
 		t.Fatalf("unexpected lvl1: %v", got)
 	}
-	if got := doc["hierarchy.lvl2"]; got != "standalone/web" {
+	if got := doc["hierarchy.lvl2"]; got != "Web applicatie (standalone/web)" {
 		t.Fatalf("unexpected lvl2: %v", got)
 	}
-	if got := doc["hierarchy.lvl3"]; got != "stable" {
+	if got := doc["hierarchy.lvl3"]; got != "Stabiel (stable)" {
 		t.Fatalf("unexpected lvl3: %v", got)
 	}
 	if got := doc["hierarchy.lvl4"]; got != "EUPL-1.2" {
@@ -155,10 +155,13 @@ func TestPublishRepository_SendsDocument(t *testing.T) {
 	}
 
 	content, ok := doc["content"].(string)
-	if !ok || !strings.Contains(content, "Repository: https://github.com/example/my-repo") {
+	if !ok || !strings.Contains(content, "Naam: Mijn Repository") {
+		t.Fatalf("content missing name: %v", doc["content"])
+	}
+	if !strings.Contains(content, "Repository URL: https://github.com/example/my-repo") {
 		t.Fatalf("content missing repository url: %v", doc["content"])
 	}
-	if !strings.Contains(content, "Publiccode: https://github.com/example/my-repo/blob/main/publiccode.yml") {
+	if !strings.Contains(content, "Publiccode URL: https://github.com/example/my-repo/blob/main/publiccode.yml") {
 		t.Fatalf("content missing publiccode url: %v", content)
 	}
 	if !strings.Contains(content, "Organisatie: Ministerie van Test") {
@@ -166,6 +169,15 @@ func TestPublishRepository_SendsDocument(t *testing.T) {
 	}
 	if !strings.Contains(content, "Licentie: EUPL-1.2") {
 		t.Fatalf("content missing license: %v", content)
+	}
+	if !strings.Contains(content, "Softwaretype: Web applicatie (standalone/web)") {
+		t.Fatalf("content missing readable software type: %v", content)
+	}
+	if !strings.Contains(content, "Ontwikkelstatus: Stabiel (stable)") {
+		t.Fatalf("content missing readable development status: %v", content)
+	}
+	if !strings.Contains(content, "Onderhoud: Intern (internal)") {
+		t.Fatalf("content missing readable maintenance type: %v", content)
 	}
 	if !strings.Contains(content, "Features: Zoeken, Metadata") {
 		t.Fatalf("content missing features: %v", content)
@@ -203,5 +215,89 @@ func TestPublishRepository_SendsDocument(t *testing.T) {
 		if gotTags[i] != want {
 			t.Fatalf("unexpected tag at position %d: want %q got %q", i, want, gotTags[i])
 		}
+	}
+}
+
+func TestPublishRepository_UsesReadableFallbackForRepositoryWithoutPublicCode(t *testing.T) {
+	var capturedBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				t.Errorf("failed to close request body: %v", err)
+			}
+		}()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read request body: %v", err)
+		}
+		capturedBody = body
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	t.Setenv("TYPESENSE_ENDPOINT", server.URL)
+	t.Setenv("TYPESENSE_API_KEY", "secret")
+	t.Setenv("TYPESENSE_COLLECTION", "oss-register")
+	t.Setenv("TYPESENSE_DETAIL_BASE_URL", "https://oss.developer.overheid.nl/repositories")
+
+	prevClient := httpclient.HTTPClient
+	httpclient.HTTPClient = server.Client()
+	t.Cleanup(func() {
+		httpclient.HTTPClient = prevClient
+	})
+
+	repository := &models.Repository{
+		Id:               "6114c7cb-7b60-4905-8946-31e1878d74b7",
+		Name:             "sdmxdata",
+		Url:              "https://github.com/statistiekcbs/sdmxdata.git",
+		ShortDescription: "R package based on SDMX REST v2.1",
+		IsFork:           true,
+		Organisation: &models.Organisation{
+			Label: "Centraal Bureau voor de Statistiek",
+			Uri:   "https://identifier.overheid.nl/tooi/id/zbo/zb000193",
+		},
+	}
+
+	if err := typesense.PublishRepository(context.Background(), repository); err != nil {
+		t.Fatalf("PublishRepository returned error: %v", err)
+	}
+
+	var doc map[string]any
+	if err := json.Unmarshal(capturedBody, &doc); err != nil {
+		t.Fatalf("failed to parse payload: %v", err)
+	}
+
+	if got := doc["hierarchy.lvl0"]; got != "sdmxdata" {
+		t.Fatalf("unexpected lvl0: %v", got)
+	}
+	if got := doc["hierarchy.lvl1"]; got != "Centraal Bureau voor de Statistiek" {
+		t.Fatalf("unexpected lvl1: %v", got)
+	}
+	if got := doc["hierarchy.lvl2"]; got != "Repository" {
+		t.Fatalf("unexpected lvl2 fallback: %v", got)
+	}
+	if got := doc["hierarchy.lvl3"]; got != "Git fork" {
+		t.Fatalf("unexpected lvl3 fallback: %v", got)
+	}
+
+	content, ok := doc["content"].(string)
+	if !ok {
+		t.Fatalf("content missing or wrong type: %T", doc["content"])
+	}
+	if strings.Contains(content, "ForkType: GIT_FORK") {
+		t.Fatalf("content still contains raw fork type: %v", content)
+	}
+	if !strings.Contains(content, "Naam: sdmxdata") {
+		t.Fatalf("content missing name: %v", content)
+	}
+	if !strings.Contains(content, "Beschrijving: R package based on SDMX REST v2.1") {
+		t.Fatalf("content missing description: %v", content)
+	}
+	if !strings.Contains(content, "Repository URL: https://github.com/statistiekcbs/sdmxdata.git") {
+		t.Fatalf("content missing repository url: %v", content)
+	}
+	if !strings.Contains(content, "Repositorytype: Git fork") {
+		t.Fatalf("content missing readable fork type: %v", content)
 	}
 }

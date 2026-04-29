@@ -194,10 +194,10 @@ func buildDocument(cfg config, repository *models.Repository) map[string]any {
 	}
 	if repository.PublicCode != nil {
 		if softwareType := strings.TrimSpace(repository.PublicCode.SoftwareType); softwareType != "" {
-			doc["hierarchy.lvl2"] = softwareType
+			doc["hierarchy.lvl2"] = labelWithCode(softwareType, models.SoftwareTypeLabels)
 		}
 		if developmentStatus := strings.TrimSpace(repository.PublicCode.DevelopmentStatus); developmentStatus != "" {
-			doc["hierarchy.lvl3"] = developmentStatus
+			doc["hierarchy.lvl3"] = labelWithCode(developmentStatus, models.DevelopmentStatusLabels)
 		}
 		if repository.PublicCode.Legal != nil {
 			if license := strings.TrimSpace(repository.PublicCode.Legal.License); license != "" {
@@ -207,8 +207,9 @@ func buildDocument(cfg config, repository *models.Repository) map[string]any {
 	}
 
 	if _, ok := doc["hierarchy.lvl2"]; !ok {
-		if repoURL := strings.TrimSpace(repository.Url); repoURL != "" {
-			doc["hierarchy.lvl2"] = repoURL
+		doc["hierarchy.lvl2"] = "Repository"
+		if forkType := util.DetectRepositoryForkType(repository); forkType != "" {
+			doc["hierarchy.lvl3"] = forkTypeLabel(forkType)
 		}
 	}
 
@@ -253,17 +254,20 @@ func repositoryOrganisationLabel(repository *models.Repository) string {
 func buildContent(repository *models.Repository) string {
 	parts := make([]string, 0)
 
+	if title := repositoryTitle(repository); title != "" {
+		parts = append(parts, fmt.Sprintf("Naam: %s", title))
+	}
 	if shortDesc := strings.TrimSpace(repository.ShortDescription); shortDesc != "" {
-		parts = append(parts, shortDesc)
+		parts = append(parts, fmt.Sprintf("Beschrijving: %s", shortDesc))
 	}
 	if longDesc := strings.TrimSpace(repository.LongDescription); longDesc != "" && longDesc != strings.TrimSpace(repository.ShortDescription) {
 		parts = append(parts, longDesc)
 	}
 	if repoURL := strings.TrimSpace(repository.Url); repoURL != "" {
-		parts = append(parts, fmt.Sprintf("Repository: %s", repoURL))
+		parts = append(parts, fmt.Sprintf("Repository URL: %s", repoURL))
 	}
 	if publicCodeURL := strings.TrimSpace(repository.PublicCodeUrl); publicCodeURL != "" {
-		parts = append(parts, fmt.Sprintf("Publiccode: %s", publicCodeURL))
+		parts = append(parts, fmt.Sprintf("Publiccode URL: %s", publicCodeURL))
 	}
 	if org := repositoryOrganisationLabel(repository); org != "" {
 		parts = append(parts, fmt.Sprintf("Organisatie: %s", org))
@@ -271,7 +275,7 @@ func buildContent(repository *models.Repository) string {
 
 	forkType := util.DetectRepositoryForkType(repository)
 	if forkType != "" {
-		parts = append(parts, fmt.Sprintf("ForkType: %s", forkType))
+		parts = append(parts, fmt.Sprintf("Repositorytype: %s", forkTypeLabel(forkType)))
 	}
 
 	pc := repository.PublicCode
@@ -283,10 +287,10 @@ func buildContent(repository *models.Repository) string {
 	}
 
 	if softwareType := strings.TrimSpace(pc.SoftwareType); softwareType != "" {
-		parts = append(parts, fmt.Sprintf("Softwaretype: %s", softwareType))
+		parts = append(parts, fmt.Sprintf("Softwaretype: %s", labelWithCode(softwareType, models.SoftwareTypeLabels)))
 	}
 	if developmentStatus := strings.TrimSpace(pc.DevelopmentStatus); developmentStatus != "" {
-		parts = append(parts, fmt.Sprintf("Ontwikkelstatus: %s", developmentStatus))
+		parts = append(parts, fmt.Sprintf("Ontwikkelstatus: %s", labelWithCode(developmentStatus, models.DevelopmentStatusLabels)))
 	}
 	if pc.Legal != nil {
 		if license := strings.TrimSpace(pc.Legal.License); license != "" {
@@ -301,7 +305,7 @@ func buildContent(repository *models.Repository) string {
 	}
 	if pc.Maintenance != nil {
 		if maintenanceType := strings.TrimSpace(pc.Maintenance.Type); maintenanceType != "" {
-			parts = append(parts, fmt.Sprintf("Onderhoud: %s", maintenanceType))
+			parts = append(parts, fmt.Sprintf("Onderhoud: %s", labelWithCode(maintenanceType, models.MaintenanceTypeLabels)))
 		}
 		if len(pc.Maintenance.Contacts) > 0 {
 			contacts := make([]string, 0, len(pc.Maintenance.Contacts))
@@ -407,4 +411,30 @@ func appendUnique(tags []string, value string, seen map[string]struct{}) []strin
 	}
 	seen[value] = struct{}{}
 	return append(tags, value)
+}
+
+func labelWithCode(value string, labels map[string][2]string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if meta, ok := labels[value]; ok {
+		return fmt.Sprintf("%s (%s)", meta[0], value)
+	}
+	return value
+}
+
+func forkTypeLabel(forkType models.RepositoryForkType) string {
+	switch forkType {
+	case models.RepositoryForkTypeTechnicalFork:
+		return "Technische fork"
+	case models.RepositoryForkTypeVariantFork:
+		return "Variant fork"
+	case models.RepositoryForkTypeGitFork:
+		return "Git fork"
+	case models.RepositoryForkTypeURLMistake:
+		return "URL komt niet overeen met publiccode.yml"
+	default:
+		return string(forkType)
+	}
 }
