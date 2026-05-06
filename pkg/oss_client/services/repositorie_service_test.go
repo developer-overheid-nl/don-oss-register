@@ -3,9 +3,11 @@ package services_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
@@ -19,6 +21,7 @@ type stubRepo struct {
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
+	allRepositoriesFunc func(ctx context.Context) ([]models.Repository, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
@@ -64,6 +67,9 @@ func (s *stubRepo) SaveOrganisatie(org *models.Organisation) error {
 }
 
 func (s *stubRepo) AllRepositorys(ctx context.Context) ([]models.Repository, error) {
+	if s.allRepositoriesFunc != nil {
+		return s.allRepositoriesFunc(ctx)
+	}
 	return nil, nil
 }
 
@@ -215,12 +221,133 @@ func TestRetrieveRepository_NotFoundPassesThrough(t *testing.T) {
 	assert.Nil(t, detail)
 }
 
+func TestListGitOrganisations_ReturnsSummaries(t *testing.T) {
+	orgURI := "https://example.org/org"
+	repo := &stubRepo{
+		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+			require.Equal(t, 2, page)
+			require.Equal(t, 5, perPage)
+			require.Equal(t, &orgURI, organisation)
+			return []models.GitOrganisatie{
+				{Id: "git-1", Url: "https://github.com/example", Organisation: &models.Organisation{Uri: orgURI, Label: "Example"}},
+			}, models.Pagination{CurrentPage: 2, RecordsPerPage: 5, TotalRecords: 1}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	results, pagination, err := svc.ListGitOrganisations(context.Background(), &models.ListGitOrganisationsParams{
+		Page:         2,
+		PerPage:      5,
+		Organisation: &orgURI,
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "git-1", results[0].Id)
+	assert.Equal(t, "https://github.com/example", results[0].Url)
+	assert.Equal(t, 2, pagination.CurrentPage)
+}
+
+func TestCreateGitOrganisatie_ValidatesInput(t *testing.T) {
+	svc := services.NewRepositoryService(&stubRepo{})
+
+	_, err := svc.CreateGitOrganisatie(context.Background(), models.GitOrganisationInput{
+		Url:             "notaurl",
+		OrganisationUri: "https://example.org/org",
+	})
+	require.Error(t, err)
+
+	_, err = svc.CreateGitOrganisatie(context.Background(), models.GitOrganisationInput{
+		Url:             "https://github.com/example",
+		OrganisationUri: "notaurl",
+	})
+	require.Error(t, err)
+}
+
+func TestCreateGitOrganisatie_ReturnsExistingByURL(t *testing.T) {
+	org := &models.Organisation{Uri: "https://example.org/org", Label: "Example"}
+	existing := &models.GitOrganisatie{Id: "git-existing", Url: "https://github.com/example", OrganisationID: &org.Uri}
+	repo := &stubRepo{
+		findOrgByURIF: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			return org, nil
+		},
+		findGitOrgByURLFunc: func(ctx context.Context, url string) (*models.GitOrganisatie, error) {
+			return existing, nil
+		},
+		saveGitOrgFunc: func(ctx context.Context, gitOrg *models.GitOrganisatie) error {
+			t.Fatalf("SaveGitOrganisatie should not be called for an existing URL")
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	got, err := svc.CreateGitOrganisatie(context.Background(), models.GitOrganisationInput{
+		Url:             "https://github.com/example",
+		OrganisationUri: org.Uri,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, existing, got)
+}
+
+func TestCreateGitOrganisatie_SavesNewOrganisation(t *testing.T) {
+	org := &models.Organisation{Uri: "https://example.org/org", Label: "Example"}
+	var saved *models.GitOrganisatie
+	repo := &stubRepo{
+		findOrgByURIF: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			return org, nil
+		},
+		findGitOrgByURLFunc: func(ctx context.Context, url string) (*models.GitOrganisatie, error) {
+			return nil, nil
+		},
+		saveGitOrgFunc: func(ctx context.Context, gitOrg *models.GitOrganisatie) error {
+			saved = gitOrg
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	got, err := svc.CreateGitOrganisatie(context.Background(), models.GitOrganisationInput{
+		Url:             "https://github.com/example",
+		OrganisationUri: org.Uri,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, saved)
+	assert.Equal(t, saved, got)
+	assert.NotEmpty(t, got.Id)
+	assert.Equal(t, "https://github.com/example", got.Url)
+	assert.Equal(t, &org.Uri, got.OrganisationID)
+}
+
 func TestSearchRepositories_ReturnsEmptyOnBlankQuery(t *testing.T) {
 	repo := &stubRepo{}
 	svc := services.NewRepositoryService(repo)
 
 	_, _, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{Query: "   "})
 	require.Error(t, err)
+}
+
+func TestSearchRepositories_ReturnsSummaries(t *testing.T) {
+	orgURI := "https://example.org/org"
+	repo := &stubRepo{
+		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+			require.Equal(t, 3, page)
+			require.Equal(t, 7, perPage)
+			require.Equal(t, &orgURI, organisation)
+			require.Equal(t, "account", query)
+			return []models.Repository{{Id: "repo-1", Name: "Account API"}}, models.Pagination{CurrentPage: 3, RecordsPerPage: 7, TotalRecords: 1}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	results, pagination, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{
+		Page:         3,
+		PerPage:      7,
+		Organisation: &orgURI,
+		Query:        " account ",
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "repo-1", results[0].Id)
+	assert.Equal(t, 3, pagination.CurrentPage)
 }
 
 func TestCreateOrganisation_ValidatesInput(t *testing.T) {
@@ -242,6 +369,25 @@ func TestCreateOrganisation_ValidatesInput(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestCreateOrganisation_ConflictWhenExistingOrganisationFound(t *testing.T) {
+	existing := &models.Organisation{Uri: "https://example.org", Label: "Existing"}
+	repo := &stubRepo{
+		findOrgByURIF: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			return existing, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	_, err := svc.CreateOrganisation(context.Background(), &models.Organisation{
+		Uri:   "https://example.org",
+		Label: "Example",
+	})
+	require.Error(t, err)
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusConflict, apiErr.Status)
+}
+
 func TestCreateOrganisation_Saves(t *testing.T) {
 	var saved *models.Organisation
 	repo := &stubRepo{
@@ -256,6 +402,93 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	created, err := svc.CreateOrganisation(context.Background(), org)
 	require.NoError(t, err)
 	assert.Equal(t, saved, created)
+}
+
+func TestListOrganisations_ReturnsSummaries(t *testing.T) {
+	repo := &stubRepo{
+		getOrgFunc: func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error) {
+			require.Equal(t, 1, page)
+			require.Equal(t, 100, perPage)
+			return []models.Organisation{{Uri: "https://example.org", Label: "Example"}}, models.Pagination{TotalRecords: 1}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	results, pagination, err := svc.ListOrganisations(context.Background(), &models.ListOrganisationsParams{Page: 1, PerPage: 100})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "https://example.org", results[0].Uri)
+	assert.Equal(t, "Example", results[0].Label)
+	assert.Equal(t, 1, pagination.TotalRecords)
+}
+
+func TestUpdateRepository_ValidatesAndUpdatesExistingRepository(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+	org := &models.Organisation{Uri: "https://example.org/new-org", Label: "New Org"}
+	existing := &models.Repository{Id: "repo-1", Name: "Old", Url: "https://example.org/old", Active: false}
+	var saved *models.Repository
+	repo := &stubRepo{
+		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
+			assert.Equal(t, "repo-1", id)
+			return existing, nil
+		},
+		findOrgByURIF: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			assert.Equal(t, org.Uri, uri)
+			return org, nil
+		},
+		saveRepositoryFunc: func(ctx context.Context, repository *models.Repository) error {
+			saved = repository
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	newURL := "https://example.org/new"
+	newName := "New"
+	detail, err := svc.UpdateRepository(context.Background(), "repo-1", models.RepositoryInput{
+		Url:             &newURL,
+		OrganisationUri: &org.Uri,
+		Name:            &newName,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, detail)
+	require.NotNil(t, saved)
+	assert.Equal(t, "repo-1", saved.Id)
+	assert.Equal(t, "New", saved.Name)
+	assert.Equal(t, "https://example.org/new", saved.Url)
+	assert.Equal(t, &org.Uri, saved.OrganisationID)
+	assert.True(t, saved.Active)
+	assert.Equal(t, "New", detail.Name)
+}
+
+func TestUpdateRepository_NotFoundAndInvalidInput(t *testing.T) {
+	svc := services.NewRepositoryService(&stubRepo{})
+
+	_, err := svc.UpdateRepository(context.Background(), "", models.RepositoryInput{})
+	require.Error(t, err)
+
+	repo := &stubRepo{
+		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
+			return nil, nil
+		},
+	}
+	svc = services.NewRepositoryService(repo)
+	urlValue := "https://example.org/repo"
+	_, err = svc.UpdateRepository(context.Background(), "missing", models.RepositoryInput{Url: &urlValue})
+	require.Error(t, err)
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusNotFound, apiErr.Status)
+
+	repo = &stubRepo{
+		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
+			return &models.Repository{Id: id}, nil
+		},
+	}
+	svc = services.NewRepositoryService(repo)
+	badURL := "notaurl"
+	_, err = svc.UpdateRepository(context.Background(), "repo-1", models.RepositoryInput{Url: &badURL})
+	require.Error(t, err)
 }
 
 func TestGetRepositoryFilters_ReturnsAllGroups(t *testing.T) {
@@ -418,4 +651,53 @@ localisation:
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", created.Url)
 	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
 	assert.Equal(t, "https://git.example.org/upstream/digitale-balie", created.PublicCode.Url)
+}
+
+func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(ctx context.Context) ([]models.Repository, error) {
+			t.Fatalf("AllRepositorys should not be called when Typesense is disabled")
+			return nil, nil
+		},
+	}
+
+	service := services.NewRepositoryService(repo)
+	err := service.PublishAllRepositoriesToTypesense(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
+	var calls int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	t.Setenv("TYPESENSE_ENDPOINT", server.URL)
+	t.Setenv("TYPESENSE_API_KEY", "secret")
+	t.Setenv("TYPESENSE_COLLECTION", "oss-register")
+	t.Setenv("ENABLE_TYPESENSE", "true")
+
+	prevClient := httpclient.HTTPClient
+	httpclient.HTTPClient = server.Client()
+	t.Cleanup(func() { httpclient.HTTPClient = prevClient })
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(ctx context.Context) ([]models.Repository, error) {
+			return []models.Repository{
+				{Id: "repo-1", Name: "Active repo", Active: true},
+				{Id: "repo-2", Name: "Inactive repo", Active: false},
+				{Id: "repo-3", Name: "Also active", Active: true},
+			}, nil
+		},
+	}
+
+	service := services.NewRepositoryService(repo)
+	err := service.PublishAllRepositoriesToTypesense(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 2, calls)
 }

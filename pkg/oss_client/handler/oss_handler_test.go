@@ -18,11 +18,14 @@ type serviceStubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
+	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
+	findOrgFunc         func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
+	filterCountsFunc    func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
 }
 
 func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
@@ -47,6 +50,9 @@ func (s *serviceStubRepo) GetRepositoryByID(ctx context.Context, id string) (*mo
 }
 
 func (s *serviceStubRepo) SaveRepository(ctx context.Context, repository *models.Repository) error {
+	if s.saveRepositoryFunc != nil {
+		return s.saveRepositoryFunc(ctx, repository)
+	}
 	return nil
 }
 
@@ -76,6 +82,9 @@ func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage
 }
 
 func (s *serviceStubRepo) FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error) {
+	if s.findOrgFunc != nil {
+		return s.findOrgFunc(ctx, uri)
+	}
 	return nil, nil
 }
 
@@ -94,6 +103,9 @@ func (s *serviceStubRepo) SaveGitOrganisatie(ctx context.Context, gitOrg *models
 }
 
 func (s *serviceStubRepo) GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+	if s.filterCountsFunc != nil {
+		return s.filterCountsFunc(ctx, p)
+	}
 	return &models.RepositoryFilterCounts{}, nil
 }
 
@@ -199,4 +211,140 @@ func TestCreateOrganisation_DelegatesToService(t *testing.T) {
 	resp, err := ctrl.CreateOrganisation(ctx, org)
 	require.NoError(t, err)
 	assert.Equal(t, "Example", resp.Label)
+}
+
+func TestCreateRepository_DelegatesToService(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+	gin.SetMode(gin.TestMode)
+	org := &models.Organisation{Uri: "https://example.org/org", Label: "Example"}
+	var saved *models.Repository
+	repo := &serviceStubRepo{
+		findOrgFunc: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			return org, nil
+		},
+		saveRepositoryFunc: func(ctx context.Context, repository *models.Repository) error {
+			saved = repository
+			return nil
+		},
+	}
+	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/repositories", nil)
+
+	url := "https://example.org/repo"
+	name := "Repo"
+	resp, err := ctrl.CreateRepository(ctx, &models.RepositoryInput{
+		Url:             &url,
+		OrganisationUri: &org.Uri,
+		Name:            &name,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, saved)
+	assert.Equal(t, "Repo", resp.Name)
+	assert.Equal(t, &org.Uri, saved.OrganisationID)
+}
+
+func TestListGitOrganisations_SetsHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &serviceStubRepo{
+		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+			return []models.GitOrganisatie{{Id: "git-1", Url: "https://github.com/example"}}, models.Pagination{
+				TotalRecords:   1,
+				TotalPages:     1,
+				CurrentPage:    1,
+				RecordsPerPage: 20,
+			}, nil
+		},
+	}
+	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/git-organisations", nil)
+
+	results, err := ctrl.ListGitOrganisations(ctx, &models.ListGitOrganisationsParams{})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "1", w.Header().Get("Total-Count"))
+}
+
+func TestCreateGitOrganisation_DelegatesToService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	org := &models.Organisation{Uri: "https://example.org/org", Label: "Example"}
+	repo := &serviceStubRepo{
+		findOrgFunc: func(ctx context.Context, uri string) (*models.Organisation, error) {
+			return org, nil
+		},
+		saveGitOrgFunc: func(ctx context.Context, gitOrg *models.GitOrganisatie) error {
+			return nil
+		},
+	}
+	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/git-organisations", nil)
+
+	resp, err := ctrl.CreateGitOrganisation(ctx, &models.GitOrganisationInput{
+		Url:             "https://github.com/example",
+		OrganisationUri: org.Uri,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "https://github.com/example", resp.Url)
+	assert.Equal(t, &org.Uri, resp.OrganisationID)
+}
+
+func TestUpdateRepository_DelegatesToService(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+	gin.SetMode(gin.TestMode)
+	existing := &models.Repository{Id: "repo-1", Url: "https://example.org/old", Name: "Old", Active: true}
+	var saved *models.Repository
+	repo := &serviceStubRepo{
+		retrieveFunc: func(ctx context.Context, id string) (*models.Repository, error) {
+			return existing, nil
+		},
+		saveRepositoryFunc: func(ctx context.Context, repository *models.Repository) error {
+			saved = repository
+			return nil
+		},
+	}
+	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPut, "/v1/repositories/repo-1", nil)
+
+	url := "https://example.org/new"
+	name := "New"
+	resp, err := ctrl.UpdateRepository(ctx, &models.UpdateRepositoryRequest{
+		RepositoryParams: models.RepositoryParams{Id: "repo-1"},
+		RepositoryInput:  models.RepositoryInput{Url: &url, Name: &name},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, saved)
+	assert.Equal(t, "repo-1", saved.Id)
+	assert.Equal(t, "New", resp.Name)
+}
+
+func TestListRepositoryFilters_DelegatesToService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &serviceStubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{PublicCode: 3}, nil
+		},
+	}
+	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/repositories/filters", nil)
+
+	groups, err := ctrl.ListRepositoryFilters(ctx, &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+	require.NotEmpty(t, groups)
+	assert.Equal(t, "publiccode", groups[0].Key)
+	require.NotNil(t, groups[0].Count)
+	assert.Equal(t, 3, *groups[0].Count)
 }
