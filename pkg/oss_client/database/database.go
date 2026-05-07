@@ -34,6 +34,9 @@ func Connect(connStr string) (*gorm.DB, error) {
 	if err := migrateRepositoryTimestampColumns(db); err != nil {
 		return nil, err
 	}
+	if err := migrateRepositorySchemaColumns(db); err != nil {
+		return nil, err
+	}
 
 	// if err := db.AutoMigrate(
 	// 	&models.Repository{},
@@ -44,6 +47,34 @@ func Connect(connStr string) (*gorm.DB, error) {
 	// }
 
 	return db, nil
+}
+
+// migrateRepositorySchemaColumns adds repository columns introduced after the
+// initial production schema was created.
+func migrateRepositorySchemaColumns(db *gorm.DB) error {
+	m := db.Migrator()
+	if !m.HasTable(&models.Repository{}) {
+		return nil
+	}
+
+	if !m.HasColumn(&models.Repository{}, "is_fork") {
+		if err := m.AddColumn(&models.Repository{}, "IsFork"); err != nil {
+			return fmt.Errorf("failed to add column is_fork: %w", err)
+		}
+	}
+	if err := db.Model(&models.Repository{}).
+		Where("is_fork IS NULL").
+		Update("is_fork", false).Error; err != nil {
+		return fmt.Errorf("failed to backfill column is_fork: %w", err)
+	}
+
+	if !m.HasColumn(&models.Repository{}, "fork_based_on_urls") {
+		if err := m.AddColumn(&models.Repository{}, "ForkBasedOnURLs"); err != nil {
+			return fmt.Errorf("failed to add column fork_based_on_urls: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // migrateRepositoryTimestampColumns renames legacy timestamp columns.
