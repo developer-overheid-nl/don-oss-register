@@ -106,7 +106,7 @@ type Repository struct {
 	Organisation     *Organisation `json:"-" gorm:"foreignKey:OrganisationID;references:Uri"`
 	OrganisationID   *string       `json:"-" gorm:"column:organisation_id"`
 	Url              string        `json:"url" gorm:"column:repository_url"`
-	IsFork           bool          `json:"-" gorm:"column:is_fork"`
+	IsFork           bool          `json:"-" gorm:"column:is_fork;default:false"`
 	ForkBasedOnURLs  []string      `json:"-" gorm:"column:fork_based_on_urls;serializer:json"`
 	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
 	PublicCode       *PublicCode   `json:"publicCode,omitempty" gorm:"column:public_code_data;serializer:json"`
