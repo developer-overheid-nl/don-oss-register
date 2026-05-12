@@ -19,7 +19,6 @@ import (
 type stubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
-	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	allRepositoriesFunc func(ctx context.Context) ([]models.Repository, error)
 	saveOrgFunc         func(org *models.Organisation) error
@@ -50,13 +49,6 @@ func (s *stubRepo) SaveRepository(ctx context.Context, repository *models.Reposi
 		return s.saveRepositoryFunc(ctx, repository)
 	}
 	return nil
-}
-
-func (s *stubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
-	if s.searchFunc != nil {
-		return s.searchFunc(ctx, page, perPage, organisation, query)
-	}
-	return []models.Repository{}, models.Pagination{}, nil
 }
 
 func (s *stubRepo) SaveOrganisatie(org *models.Organisation) error {
@@ -146,9 +138,11 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	orgURI := "org-1"
 	date := "2024-01-01"
 	publicCode := true
+	query := "forms"
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, &orgURI, p.Organisation)
+			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
 			require.Equal(t, &date, p.LastActivityAfter)
 			require.Equal(t, []string{"library"}, p.SoftwareType)
@@ -164,6 +158,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 
 	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
 		Organisation:       &orgURI,
+		Query:              query,
 		PublicCode:         &publicCode,
 		LastActivityAfter:  &date,
 		SoftwareType:       []string{"library"},
@@ -315,39 +310,6 @@ func TestCreateGitOrganisatie_SavesNewOrganisation(t *testing.T) {
 	assert.NotEmpty(t, got.Id)
 	assert.Equal(t, "https://github.com/example", got.Url)
 	assert.Equal(t, &org.Uri, got.OrganisationID)
-}
-
-func TestSearchRepositories_ReturnsEmptyOnBlankQuery(t *testing.T) {
-	repo := &stubRepo{}
-	svc := services.NewRepositoryService(repo)
-
-	_, _, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{Query: "   "})
-	require.Error(t, err)
-}
-
-func TestSearchRepositories_ReturnsSummaries(t *testing.T) {
-	orgURI := "https://example.org/org"
-	repo := &stubRepo{
-		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
-			require.Equal(t, 3, page)
-			require.Equal(t, 7, perPage)
-			require.Equal(t, &orgURI, organisation)
-			require.Equal(t, "account", query)
-			return []models.Repository{{Id: "repo-1", Name: "Account API"}}, models.Pagination{CurrentPage: 3, RecordsPerPage: 7, TotalRecords: 1}, nil
-		},
-	}
-	svc := services.NewRepositoryService(repo)
-
-	results, pagination, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{
-		Page:         3,
-		PerPage:      7,
-		Organisation: &orgURI,
-		Query:        " account ",
-	})
-	require.NoError(t, err)
-	require.Len(t, results, 1)
-	assert.Equal(t, "repo-1", results[0].Id)
-	assert.Equal(t, 3, pagination.CurrentPage)
 }
 
 func TestCreateOrganisation_ValidatesInput(t *testing.T) {

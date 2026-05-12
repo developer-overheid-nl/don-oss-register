@@ -178,6 +178,58 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.Equal(t, "repo-2", results[0].Id)
 }
 
+func TestRepositoriesRepository_GetRepositoriesCombinesQueryAndFilters(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
+	require.NoError(t, repo.SaveOrganisatie(org))
+
+	publicCodeOnly := true
+	repositoriesToSave := []*models.Repository{
+		{
+			Id:               "repo-1",
+			Name:             "Open Forms",
+			ShortDescription: "Digital form handling",
+			OrganisationID:   &org.Uri,
+			PublicCodeUrl:    "https://publiccode.net/repo-1",
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+		{
+			Id:               "repo-2",
+			Name:             "Open Forms Docs",
+			ShortDescription: "Documentation for form handling",
+			OrganisationID:   &org.Uri,
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+		{
+			Id:               "repo-3",
+			Name:             "Catalogus",
+			ShortDescription: "Digital catalogue",
+			OrganisationID:   &org.Uri,
+			PublicCodeUrl:    "https://publiccode.net/repo-3",
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+	}
+	for _, r := range repositoriesToSave {
+		require.NoError(t, repo.SaveRepository(ctx, r))
+	}
+
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
+		Query:        "forms",
+		PublicCode:   &publicCodeOnly,
+		SoftwareType: []string{"library"},
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "repo-1", results[0].Id)
+	assert.Equal(t, 1, pagination.TotalRecords)
+}
+
 func TestRepositoriesRepository_GetRepositoriesPaginatesFilteredResults(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
@@ -244,83 +296,6 @@ func TestRepositoriesRepository_GetRepositoriesInvalidLastActivityAfter(t *testi
 	_, _, err := repo.GetRepositorys(context.Background(), 1, 10, &models.RepositoryFiltersParams{LastActivityAfter: &date})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid lastActivityAfter format")
-}
-
-func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
-	db := setupDB(t)
-	repo := repositories.NewRepositoriesRepository(db)
-	ctx := context.Background()
-
-	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
-	require.NoError(t, repo.SaveOrganisatie(org))
-
-	save := func(id, name, shortDesc, longDesc string, active bool) {
-		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
-			Id:               id,
-			Name:             name,
-			ShortDescription: shortDesc,
-			LongDescription:  longDesc,
-			OrganisationID:   &org.Uri,
-			Active:           active,
-		}))
-	}
-	save("repo-1", "Account API", "", "", true)
-	save("repo-2", "User Portal", "", "", true)
-	save("repo-3", "Account API Legacy", "", "", false)
-	save("repo-4", "Account API v2", "", "", true)
-	save("repo-5", "Payments", "Account payment service", "Account billing integration", true)
-	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "repo-4").Error)
-
-	results, pagination, err := repo.SearchRepositorys(ctx, 1, 10, nil, "account")
-	require.NoError(t, err)
-	require.Len(t, results, 3)
-	ids := make([]string, len(results))
-	for i, repo := range results {
-		ids[i] = repo.Id
-	}
-	assert.ElementsMatch(t, []string{"repo-1", "repo-4", "repo-5"}, ids)
-	assert.Equal(t, 3, pagination.TotalRecords)
-}
-
-func TestRepositoriesRepository_SearchRepositoriesBlankQueryReturnsEmptyPage(t *testing.T) {
-	db := setupDB(t)
-	repo := repositories.NewRepositoriesRepository(db)
-
-	results, pagination, err := repo.SearchRepositorys(context.Background(), 0, 0, nil, "   ")
-	require.NoError(t, err)
-	assert.Empty(t, results)
-	assert.Equal(t, 1, pagination.CurrentPage)
-	assert.Equal(t, 20, pagination.RecordsPerPage)
-}
-
-func TestRepositoriesRepository_SearchRepositoriesOrganisationFilterAndPagination(t *testing.T) {
-	db := setupDB(t)
-	repo := repositories.NewRepositoriesRepository(db)
-	ctx := context.Background()
-
-	org1 := &models.Organisation{Uri: "org-1", Label: "Org 1"}
-	org2 := &models.Organisation{Uri: "org-2", Label: "Org 2"}
-	require.NoError(t, repo.SaveOrganisatie(org1))
-	require.NoError(t, repo.SaveOrganisatie(org2))
-
-	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{Id: "repo-1", Name: "Account Alpha", OrganisationID: &org1.Uri, Active: true}))
-	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{Id: "repo-2", Name: "Account Beta", OrganisationID: &org1.Uri, Active: true}))
-	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{Id: "repo-3", Name: "Account Other", OrganisationID: &org2.Uri, Active: true}))
-
-	results, pagination, err := repo.SearchRepositorys(ctx, 1, 1, &org1.Uri, "account")
-	require.NoError(t, err)
-	require.Len(t, results, 1)
-	assert.Equal(t, 2, pagination.TotalRecords)
-	assert.Equal(t, 2, pagination.TotalPages)
-	require.NotNil(t, pagination.Next)
-	assert.Equal(t, 2, *pagination.Next)
-	assert.Nil(t, pagination.Previous)
-
-	results, pagination, err = repo.SearchRepositorys(ctx, 2, 1, &org1.Uri, "account")
-	require.NoError(t, err)
-	require.Len(t, results, 1)
-	require.NotNil(t, pagination.Previous)
-	assert.Equal(t, 1, *pagination.Previous)
 }
 
 func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {

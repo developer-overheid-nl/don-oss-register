@@ -142,7 +142,7 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	})
 
 	t.Run("search repositories", func(t *testing.T) {
-		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/_search?q=Integration")
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?q=Integration")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
@@ -171,15 +171,15 @@ func TestRepositoriesEndpoints(t *testing.T) {
 			Url:            "https://example.org/repos/repo-3",
 			PublicCodeUrl:  "https://publiccode.net/repo-3",
 			PublicCode: &models.PublicCode{
-				SoftwareType:      "standalone/mobile",
-				DevelopmentStatus: "beta",
+				SoftwareType:      "library",
+				DevelopmentStatus: "stable",
 			},
 			Active: true,
 		}
 		require.NoError(t, env.repo.SaveRepository(ctx, repoWithPublicCode))
 		require.NoError(t, env.repo.SaveRepository(ctx, repoWithoutMatch))
 
-		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?softwareType=library&developmentStatus=stable")
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?q=Library&softwareType=library&developmentStatus=stable")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 

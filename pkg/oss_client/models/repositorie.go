@@ -18,6 +18,7 @@ type PublicCode struct {
 	PubliccodeYmlVersion string                            `json:"publiccodeYmlVersion,omitempty"`
 	Name                 string                            `json:"name,omitempty"`
 	Url                  string                            `json:"url,omitempty"`
+	LandingUrl           string                            `json:"landingURL,omitempty"`
 	Platforms            []string                          `json:"platforms,omitempty"`
 	DevelopmentStatus    string                            `json:"developmentStatus,omitempty"`
 	SoftwareType         string                            `json:"softwareType,omitempty"`
@@ -116,14 +117,6 @@ type Repository struct {
 	Active           bool          `json:"-" gorm:"column:active"`
 }
 
-type ListRepositorysSearchParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
-	Query        string  `query:"q" binding:"required"`
-	BaseURL      string
-}
-
 type RepositoryInput struct {
 	Url              *string   `json:"url" binding:"required,url"`
 	OrganisationUri  *string   `json:"organisationUri" binding:"required,url"`
@@ -139,6 +132,7 @@ type ListRepositorysParams struct {
 	Page               int      `query:"page" validate:"omitempty,min=1"`
 	PerPage            int      `query:"perPage" validate:"omitempty,min=1,max=100"`
 	Organisation       *string  `query:"organisation"`
+	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`
@@ -156,6 +150,7 @@ func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
 	}
 	return &RepositoryFiltersParams{
 		Organisation:       p.Organisation,
+		Query:              p.Query,
 		PublicCode:         p.PublicCode,
 		LastActivityAfter:  p.LastActivityAfter,
 		SoftwareType:       append([]string(nil), p.SoftwareType...),
@@ -244,6 +239,7 @@ type RepositoryFilterCounts struct {
 
 type RepositoryFiltersParams struct {
 	Organisation       *string  `query:"organisation"`
+	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`

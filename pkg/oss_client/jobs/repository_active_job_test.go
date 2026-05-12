@@ -33,10 +33,6 @@ func (s *stubRepositoriesRepo) GetRepositoryByID(_ context.Context, _ string) (*
 	return nil, nil
 }
 
-func (s *stubRepositoriesRepo) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {
-	return nil, models.Pagination{}, nil
-}
-
 func (s *stubRepositoriesRepo) SaveOrganisatie(_ *models.Organisation) error {
 	return nil
 }
