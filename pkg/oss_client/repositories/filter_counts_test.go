@@ -42,6 +42,14 @@ func withOrg(uri string) func(*models.Repository) {
 	return func(r *models.Repository) { r.OrganisationID = &uri }
 }
 
+func withName(name string) func(*models.Repository) {
+	return func(r *models.Repository) { r.Name = name }
+}
+
+func withShortDescription(description string) func(*models.Repository) {
+	return func(r *models.Repository) { r.ShortDescription = description }
+}
+
 // repoMatchesFilters
 
 func TestRepoMatchesFilters_NoFilters(t *testing.T) {
@@ -76,6 +84,36 @@ func TestRepoMatchesFilters_Organisation_Match(t *testing.T) {
 func TestRepoMatchesFilters_Organisation_NoMatch(t *testing.T) {
 	repo := makeRepo(withOrg("https://other.org"))
 	p := &models.RepositoryFiltersParams{Organisation: ptr("https://example.org")}
+	assert.False(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Query_MatchesRepositoryText(t *testing.T) {
+	repo := makeRepo(withName("Open Forms"), withShortDescription("Digital form handling"))
+	p := &models.RepositoryFiltersParams{Query: "forms"}
+	assert.True(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Query_NoMatch(t *testing.T) {
+	repo := makeRepo(withName("Open Forms"), withShortDescription("Digital form handling"))
+	p := &models.RepositoryFiltersParams{Query: "catalogus"}
+	assert.False(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Query_MatchesPublicCodeURL(t *testing.T) {
+	repo := makeRepo(withPublicCode(&models.PublicCode{Url: "https://git.example.org/open-forms"}))
+	p := &models.RepositoryFiltersParams{Query: "open-forms"}
+	assert.True(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Query_MatchesPublicCodeLandingURL(t *testing.T) {
+	repo := makeRepo(withPublicCode(&models.PublicCode{LandingUrl: "https://forms.example.org"}))
+	p := &models.RepositoryFiltersParams{Query: "forms.example.org"}
+	assert.True(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Query_DoesNotMatchRepositoryURLWithoutPublicCode(t *testing.T) {
+	repo := makeRepo(func(r *models.Repository) { r.Url = "https://git.example.org/open-forms" })
+	p := &models.RepositoryFiltersParams{Query: "open-forms"}
 	assert.False(t, repoMatchesFilters(repo, p, ""))
 }
 
@@ -202,6 +240,24 @@ func TestCountByField_RespectsOtherFilters(t *testing.T) {
 
 	assert.Len(t, result, 1)
 	assert.Equal(t, "library", result[0].Value)
+}
+
+func TestCountByField_RespectsQueryFilter(t *testing.T) {
+	repos := []models.Repository{
+		makeRepo(withName("Open Forms"), withPublicCode(&models.PublicCode{SoftwareType: "library"})),
+		makeRepo(withName("Catalogus"), withPublicCode(&models.PublicCode{SoftwareType: "addon"})),
+	}
+	p := &models.RepositoryFiltersParams{Query: "forms"}
+	result := countByField(repos, p, "softwareType", func(r models.Repository) string {
+		if r.PublicCode == nil {
+			return ""
+		}
+		return r.PublicCode.SoftwareType
+	})
+
+	assert.Len(t, result, 1)
+	assert.Equal(t, "library", result[0].Value)
+	assert.Equal(t, 1, result[0].Count)
 }
 
 // countByArrayField

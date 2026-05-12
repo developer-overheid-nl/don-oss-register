@@ -38,10 +38,6 @@ func (s *activeJobRepoStub) GetRepositoryByID(_ context.Context, _ string) (*mod
 	return nil, nil
 }
 
-func (s *activeJobRepoStub) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {
-	return nil, models.Pagination{}, nil
-}
-
 func (s *activeJobRepoStub) SaveOrganisatie(_ *models.Organisation) error {
 	return nil
 }

@@ -16,7 +16,6 @@ import (
 
 type serviceStubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
-	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
@@ -33,13 +32,6 @@ func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int,
 		return s.listFunc(ctx, page, perPage, p)
 	}
 	return nil, models.Pagination{}, nil
-}
-
-func (s *serviceStubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
-	if s.searchFunc != nil {
-		return s.searchFunc(ctx, page, perPage, organisation, query)
-	}
-	return []models.Repository{}, models.Pagination{}, nil
 }
 
 func (s *serviceStubRepo) GetRepositoryByID(ctx context.Context, id string) (*models.Repository, error) {
@@ -146,26 +138,6 @@ func TestRetrieveRepository_NotFound(t *testing.T) {
 	resp, err := ctrl.RetrieveRepository(ctx, &models.RepositoryParams{Id: "missing"})
 	assert.Nil(t, resp)
 	assert.Error(t, err)
-}
-
-func TestSearchRepositorys_UsesService(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	repo := &serviceStubRepo{
-		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
-			return []models.Repository{{Id: "repo-2", Organisation: &models.Organisation{Uri: "org-1"}}}, models.Pagination{TotalRecords: 1}, nil
-		},
-	}
-	ctrl := handler.NewOSSController(services.NewRepositoryService(repo))
-
-	w := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(w)
-	req := httptest.NewRequest(http.MethodGet, "/v1/repositories/_search?q=repo", nil)
-	ctx.Request = req
-
-	results, err := ctrl.SearchRepositorys(ctx, &models.ListRepositorysSearchParams{Query: "repo"})
-	require.NoError(t, err)
-	require.Len(t, results, 1)
-	assert.Equal(t, "repo-2", results[0].Id)
 }
 
 func TestListOrganisations_SetsHeader(t *testing.T) {

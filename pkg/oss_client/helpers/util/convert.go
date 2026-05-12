@@ -225,6 +225,9 @@ func mapPublicCodeMandatoryFields(v0 publiccode.PublicCodeV0) *models.PublicCode
 	if v0.URL != nil {
 		result.Url = strings.TrimSpace(v0.URL.String())
 	}
+	if v0.LandingURL != nil {
+		result.LandingUrl = strings.TrimSpace(v0.LandingURL.String())
+	}
 
 	if license := strings.TrimSpace(v0.Legal.License); license != "" {
 		result.Legal = &models.PublicCodeLegal{

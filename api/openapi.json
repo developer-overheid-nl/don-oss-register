@@ -129,6 +129,7 @@
         "description": "Returns all available filter options with counts per option. Counts are computed using faceted search: each filter group ignores its own active filter but applies all others, so counts always reflect realistic results.",
         "operationId": "listRepositoryFilters",
         "parameters": [
+          { "$ref": "#/components/parameters/SearchFilter" },
           { "$ref": "#/components/parameters/OrganisationFilter" },
           { "$ref": "#/components/parameters/PublicCodeFilter" },
           { "$ref": "#/components/parameters/LastActivityAfterFilter" },
@@ -174,6 +175,7 @@
         "parameters": [
           { "$ref": "#/components/parameters/Page" },
           { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/SearchFilter" },
           { "$ref": "#/components/parameters/OrganisationFilter" },
           { "$ref": "#/components/parameters/PublicCodeFilter" },
           { "$ref": "#/components/parameters/LastActivityAfterFilter" },
@@ -398,44 +400,6 @@
           "400": { "$ref": "#/components/responses/BadRequest" }
         }
       }
-    },
-    "/repositories/_search": {
-      "get": {
-        "tags": ["Public endpoints", "Repositories"],
-        "summary": "Search repositories",
-        "description": "Returns a list of OSS repositories included in the register.",
-        "operationId": "searchRepositories",
-        "parameters": [
-          { "$ref": "#/components/parameters/Page" },
-          { "$ref": "#/components/parameters/PerPage" },
-          { "$ref": "#/components/parameters/OrganisationFilter" },
-          { "$ref": "#/components/parameters/SearchQuery" }
-        ],
-        "responses": {
-          "200": {
-            "headers": {
-              "API-Version": { "$ref": "#/components/headers/APIVersion" },
-              "Link": { "$ref": "#/components/headers/Link" },
-              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
-              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
-              "Per-Page": { "$ref": "#/components/headers/PerPage" },
-              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
-            },
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RepositorySummary"
-                  }
-                }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" }
-        }
-      }
     }
   },
   "components": {
@@ -586,11 +550,11 @@
           "type": "string"
         }
       },
-      "SearchQuery": {
+      "SearchFilter": {
         "name": "q",
         "in": "query",
-        "required": true,
-        "description": "Search term.",
+        "required": false,
+        "description": "Search term to combine with repository filters. Matches repository name, short description, long description, publiccode.yml url and publiccode.yml landingURL.",
         "schema": {
           "type": "string"
         }
@@ -1033,6 +997,11 @@
             "type": "string",
             "format": "uri",
             "description": "Repository or project URL from publiccode.yml."
+          },
+          "landingURL": {
+            "type": "string",
+            "format": "uri",
+            "description": "Landing page URL from publiccode.yml."
           },
           "platforms": {
             "type": "array",
