@@ -178,6 +178,58 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.Equal(t, "repo-2", results[0].Id)
 }
 
+func TestRepositoriesRepository_GetRepositoriesCombinesQueryAndFilters(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
+	require.NoError(t, repo.SaveOrganisatie(org))
+
+	publicCodeOnly := true
+	repositoriesToSave := []*models.Repository{
+		{
+			Id:               "repo-1",
+			Name:             "Open Forms",
+			ShortDescription: "Digital form handling",
+			OrganisationID:   &org.Uri,
+			PublicCodeUrl:    "https://publiccode.net/repo-1",
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+		{
+			Id:               "repo-2",
+			Name:             "Open Forms Docs",
+			ShortDescription: "Documentation for form handling",
+			OrganisationID:   &org.Uri,
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+		{
+			Id:               "repo-3",
+			Name:             "Catalogus",
+			ShortDescription: "Digital catalogue",
+			OrganisationID:   &org.Uri,
+			PublicCodeUrl:    "https://publiccode.net/repo-3",
+			PublicCode:       &models.PublicCode{SoftwareType: "library"},
+			Active:           true,
+		},
+	}
+	for _, r := range repositoriesToSave {
+		require.NoError(t, repo.SaveRepository(ctx, r))
+	}
+
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
+		Query:        "forms",
+		PublicCode:   &publicCodeOnly,
+		SoftwareType: []string{"library"},
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "repo-1", results[0].Id)
+	assert.Equal(t, 1, pagination.TotalRecords)
+}
+
 func TestRepositoriesRepository_GetRepositoriesPaginatesFilteredResults(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
@@ -246,13 +298,10 @@ func TestRepositoriesRepository_GetRepositoriesInvalidLastActivityAfter(t *testi
 	assert.Contains(t, err.Error(), "invalid lastActivityAfter format")
 }
 
-func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
+func TestRepositoriesRepository_SearchRepositoriesByText(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
 	ctx := context.Background()
-
-	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
-	require.NoError(t, repo.SaveOrganisatie(org))
 
 	save := func(id, name, shortDesc, longDesc string, active bool) {
 		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
@@ -260,7 +309,6 @@ func TestRepositoriesRepository_SearchRepositories(t *testing.T) {
 			Name:             name,
 			ShortDescription: shortDesc,
 			LongDescription:  longDesc,
-			OrganisationID:   &org.Uri,
 			Active:           active,
 		}))
 	}

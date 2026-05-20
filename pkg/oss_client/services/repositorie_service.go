@@ -119,6 +119,9 @@ func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (
 }
 
 func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, models.Pagination, error) {
+	if p == nil {
+		p = &models.ListRepositorysSearchParams{}
+	}
 	trimmed := strings.TrimSpace(p.Query)
 	if trimmed == "" {
 		return nil, models.Pagination{}, problem.NewBadRequest("Invalid input",

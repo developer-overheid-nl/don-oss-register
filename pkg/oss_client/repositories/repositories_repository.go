@@ -36,6 +36,7 @@ type repositoriesRepository struct {
 type repositoryFilterMatcher struct {
 	params            *models.RepositoryFiltersParams
 	organisation      string
+	query             string
 	lastActivityAfter *time.Time
 }
 
@@ -216,33 +217,22 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 		}, nil
 	}
 
-	base := r.db.WithContext(ctx)
-	base = base.Where("(active IS NULL OR active = ?)", true)
-	if organisation != nil && strings.TrimSpace(*organisation) != "" {
-		base = base.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-	}
-	var pattern string
-	if trimmed != "" {
-		pattern = fmt.Sprintf("%%%s%%", strings.ToLower(trimmed))
-		base = base.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
+	pattern := fmt.Sprintf("%%%s%%", strings.ToLower(trimmed))
+	applySearchFilters := func(db *gorm.DB) *gorm.DB {
+		db = db.Where("(active IS NULL OR active = ?)", true)
+		if organisation != nil && strings.TrimSpace(*organisation) != "" {
+			db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
+		}
+		return db.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
 	}
 
 	var totalRecords int64
-	if err := base.Model(&models.Repository{}).Count(&totalRecords).Error; err != nil {
+	if err := applySearchFilters(r.db.WithContext(ctx).Model(&models.Repository{})).Count(&totalRecords).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
-	queryDB := r.db.WithContext(ctx)
-	queryDB = queryDB.Where("(active IS NULL OR active = ?)", true)
-	if organisation != nil && strings.TrimSpace(*organisation) != "" {
-		queryDB = queryDB.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-	}
-	if pattern != "" {
-		queryDB = queryDB.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
-	}
-
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(queryDB).
+	if err := applyRepositoryOrdering(applySearchFilters(r.db.WithContext(ctx))).
 		Preload("Organisation").
 		Offset((page - 1) * perPage).
 		Limit(perPage).
@@ -534,6 +524,7 @@ func compileRepositoryFilters(p *models.RepositoryFiltersParams, validate bool) 
 	if p.Organisation != nil {
 		matcher.organisation = strings.TrimSpace(*p.Organisation)
 	}
+	matcher.query = strings.ToLower(strings.TrimSpace(p.Query))
 	if p.LastActivityAfter != nil {
 		trimmed := strings.TrimSpace(*p.LastActivityAfter)
 		if trimmed != "" {
@@ -560,6 +551,9 @@ func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilte
 		if repo.OrganisationID == nil || *repo.OrganisationID != matcher.organisation {
 			return false
 		}
+	}
+	if matcher.query != "" && !repoMatchesQuery(repo, matcher.query) {
+		return false
 	}
 	if exclude != "publiccode" && p.PublicCode != nil {
 		if *p.PublicCode {
@@ -633,6 +627,22 @@ func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilte
 		}
 	}
 	return true
+}
+
+func repoMatchesQuery(repo models.Repository, query string) bool {
+	if query == "" {
+		return true
+	}
+	if strings.Contains(strings.ToLower(repo.Name), query) ||
+		strings.Contains(strings.ToLower(repo.ShortDescription), query) ||
+		strings.Contains(strings.ToLower(repo.LongDescription), query) {
+		return true
+	}
+	if repo.PublicCode == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(repo.PublicCode.Url), query) ||
+		strings.Contains(strings.ToLower(repo.PublicCode.LandingUrl), query)
 }
 
 func containsStr(slice []string, val string) bool {

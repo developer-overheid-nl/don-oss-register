@@ -16,8 +16,8 @@ import (
 
 type serviceStubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
-	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
+	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
@@ -35,18 +35,18 @@ func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int,
 	return nil, models.Pagination{}, nil
 }
 
-func (s *serviceStubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
-	if s.searchFunc != nil {
-		return s.searchFunc(ctx, page, perPage, organisation, query)
-	}
-	return []models.Repository{}, models.Pagination{}, nil
-}
-
 func (s *serviceStubRepo) GetRepositoryByID(ctx context.Context, id string) (*models.Repository, error) {
 	if s.retrieveFunc != nil {
 		return s.retrieveFunc(ctx, id)
 	}
 	return nil, nil
+}
+
+func (s *serviceStubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+	if s.searchFunc != nil {
+		return s.searchFunc(ctx, page, perPage, organisation, query)
+	}
+	return []models.Repository{}, models.Pagination{}, nil
 }
 
 func (s *serviceStubRepo) SaveRepository(ctx context.Context, repository *models.Repository) error {
@@ -152,6 +152,10 @@ func TestSearchRepositorys_UsesService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
 		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+			assert.Equal(t, 1, page)
+			assert.Equal(t, 20, perPage)
+			assert.Nil(t, organisation)
+			assert.Equal(t, "repo", query)
 			return []models.Repository{{Id: "repo-2", Organisation: &models.Organisation{Uri: "org-1"}}}, models.Pagination{TotalRecords: 1}, nil
 		},
 	}

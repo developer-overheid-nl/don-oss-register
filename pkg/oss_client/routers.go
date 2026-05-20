@@ -52,24 +52,11 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")
 
-	root.GET("/repositories/_search",
-		[]fizz.OperationOption{
-			fizz.ID("searchRepositories"),
-			fizz.Summary("Search repositories"),
-			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen."),
-			fizz.Security(&openapi.SecurityRequirement{
-				"clientCredentials": {},
-			}),
-			apiVersionHeader,
-		},
-		tonic.Handler(controller.SearchRepositorys, 200),
-	)
-
 	root.GET("/repositories",
 		[]fizz.OperationOption{
 			fizz.ID("listRepositories"),
 			fizz.Summary("List repositories"),
-			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Ondersteunt dezelfde filterquery's als het filterendpoint."),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Ondersteunt dezelfde filterquery's als het filterendpoint en combineert deze met de optionele zoekterm q."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),
@@ -78,11 +65,25 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		tonic.Handler(controller.ListRepositorys, 200),
 	)
 
+	root.GET("/repositories/_search",
+		[]fizz.OperationOption{
+			fizz.ID("searchRepositories"),
+			fizz.Summary("Search repositories"),
+			fizz.Description("Deprecated. Gebruik GET /repositories met de q query parameter en filters."),
+			fizz.Deprecated(true),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.SearchRepositorys, 200),
+	)
+
 	root.GET("/repositories/filters",
 		[]fizz.OperationOption{
 			fizz.ID("listRepositoryFilters"),
 			fizz.Summary("Filter opties ophalen"),
-			fizz.Description("Geeft alle beschikbare filteropties terug met counts. Counts zijn berekend op basis van de meegegeven actieve filters."),
+			fizz.Description("Geeft alle beschikbare filteropties terug met counts. Counts zijn berekend op basis van de meegegeven actieve filters en de optionele zoekterm q."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),

@@ -164,6 +164,7 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
 	assert.Equal(t, "0.5.0", repo.PublicCode.PubliccodeYmlVersion)
 	assert.Equal(t, "Digitale Balie", repo.PublicCode.Name)
 	assert.Equal(t, "https://example.org/repo", repo.PublicCode.Url)
+	assert.Equal(t, "https://service.example.org/digitale-balie", repo.PublicCode.LandingUrl)
 	assert.Equal(t, []string{"web"}, repo.PublicCode.Platforms)
 	assert.Equal(t, "stable", repo.PublicCode.DevelopmentStatus)
 	assert.Equal(t, "configurationFiles", repo.PublicCode.SoftwareType)
@@ -187,6 +188,7 @@ func TestApplyRepositoryInputParsesRegionalLocaleDescription(t *testing.T) {
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
 url: https://example.org/repo
+landingURL: https://service.example.org/digitale-balie
 softwareType: configurationFiles
 developmentStatus: stable
 platforms:
@@ -437,6 +439,7 @@ func validPublicCodeYAML(descriptionBlock string, version ...string) string {
 	return `publiccodeYmlVersion: "` + parsedVersion + `"
 name: Digitale Balie
 url: https://example.org/repo
+landingURL: https://service.example.org/digitale-balie
 softwareType: configurationFiles
 developmentStatus: stable
 platforms:
