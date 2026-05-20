@@ -31,6 +31,18 @@ func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListReposito
 	return repos, nil
 }
 
+// SearchRepositorys handles GET /repositories/_search
+func (c *OSSController) SearchRepositorys(ctx *gin.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, error) {
+	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
+	p.BaseURL = ctx.FullPath()
+	results, pagination, err := c.Service.SearchRepositorys(ctx.Request.Context(), p)
+	if err != nil {
+		return nil, err
+	}
+	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
+	return results, nil
+}
+
 // RetrieveRepository handles GET /Repositorys/:id
 func (c *OSSController) RetrieveRepository(ctx *gin.Context, params *models.RepositoryParams) (*models.RepositoryDetail, error) {
 	Repository, err := c.Service.RetrieveRepository(ctx.Request.Context(), params.Id)

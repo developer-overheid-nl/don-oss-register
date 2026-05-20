@@ -118,6 +118,27 @@ func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (
 	return detail, nil
 }
 
+func (s *RepositoryService) SearchRepositorys(ctx context.Context, p *models.ListRepositorysSearchParams) ([]models.RepositorySummary, models.Pagination, error) {
+	if p == nil {
+		p = &models.ListRepositorysSearchParams{}
+	}
+	trimmed := strings.TrimSpace(p.Query)
+	if trimmed == "" {
+		return nil, models.Pagination{}, problem.NewBadRequest("Invalid input",
+			queryError("q", "required", "q is required"),
+		)
+	}
+	repositories, pagination, err := s.repo.SearchRepositorys(ctx, p.Page, p.PerPage, p.Organisation, trimmed)
+	if err != nil {
+		return nil, models.Pagination{}, err
+	}
+	results := make([]models.RepositorySummary, len(repositories))
+	for i := range repositories {
+		results[i] = util.ToRepositorySummary(&repositories[i])
+	}
+	return results, pagination, nil
+}
+
 func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody models.RepositoryInput) (*models.RepositoryDetail, error) {
 	repo := util.ApplyRepositoryInput(nil, &requestBody)
 	repo.Active = true
@@ -350,6 +371,15 @@ func bodyError(field, code, detail string) problem.ErrorDetail {
 func pathError(field, code, detail string) problem.ErrorDetail {
 	return problem.ErrorDetail{
 		In:       "path",
+		Location: fmt.Sprintf("#/%s", field),
+		Code:     code,
+		Detail:   detail,
+	}
+}
+
+func queryError(field, code, detail string) problem.ErrorDetail {
+	return problem.ErrorDetail{
+		In:       "query",
 		Location: fmt.Sprintf("#/%s", field),
 		Code:     code,
 		Detail:   detail,

@@ -28,6 +28,9 @@ func (s *stubRepositoriesRepo) SaveRepository(_ context.Context, r *models.Repos
 func (s *stubRepositoriesRepo) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
+func (s *stubRepositoriesRepo) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {
+	return nil, models.Pagination{}, nil
+}
 
 func (s *stubRepositoriesRepo) GetRepositoryByID(_ context.Context, _ string) (*models.Repository, error) {
 	return nil, nil

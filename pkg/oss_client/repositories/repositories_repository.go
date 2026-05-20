@@ -18,6 +18,7 @@ type RepositoriesRepository interface {
 	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
+	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	SaveOrganisatie(organisation *models.Organisation) error
 	AllRepositorys(ctx context.Context) ([]models.Repository, error)
 	GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
@@ -199,6 +200,66 @@ func (r *repositoriesRepository) GetRepositoryByID(ctx context.Context, id strin
 		return nil, err
 	}
 	return &api, nil
+}
+
+func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+	trimmed := strings.TrimSpace(query)
+	if page < 1 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = 20
+	}
+	if trimmed == "" {
+		return []models.Repository{}, models.Pagination{
+			CurrentPage:    page,
+			RecordsPerPage: perPage,
+		}, nil
+	}
+
+	pattern := fmt.Sprintf("%%%s%%", strings.ToLower(trimmed))
+	applySearchFilters := func(db *gorm.DB) *gorm.DB {
+		db = db.Where("(active IS NULL OR active = ?)", true)
+		if organisation != nil && strings.TrimSpace(*organisation) != "" {
+			db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
+		}
+		return db.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
+	}
+
+	var totalRecords int64
+	if err := applySearchFilters(r.db.WithContext(ctx).Model(&models.Repository{})).Count(&totalRecords).Error; err != nil {
+		return nil, models.Pagination{}, err
+	}
+
+	var repositories []models.Repository
+	if err := applyRepositoryOrdering(applySearchFilters(r.db.WithContext(ctx))).
+		Preload("Organisation").
+		Offset((page - 1) * perPage).
+		Limit(perPage).
+		Find(&repositories).Error; err != nil {
+		return nil, models.Pagination{}, err
+	}
+
+	totalPages := 0
+	if totalRecords > 0 {
+		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
+	}
+	pagination := models.Pagination{
+		CurrentPage:    page,
+		RecordsPerPage: perPage,
+		TotalPages:     totalPages,
+		TotalRecords:   int(totalRecords),
+	}
+	if page < totalPages {
+		next := page + 1
+		pagination.Next = &next
+	}
+	if page > 1 && totalPages > 0 {
+		prev := page - 1
+		pagination.Previous = &prev
+	}
+
+	return repositories, pagination, nil
 }
 
 func (r *repositoriesRepository) SaveOrganisatie(organisation *models.Organisation) error {
