@@ -1,6 +1,7 @@
 package services
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -88,6 +89,7 @@ func buildAvailableLanguagesGroup(p *models.RepositoryFiltersParams, counts *mod
 			Selected: selected[fc.Value],
 		})
 	}
+	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "availableLanguages",
 		Label:       "Beschikbare talen",
@@ -108,6 +110,7 @@ func buildLicenseGroup(p *models.RepositoryFiltersParams, counts *models.Reposit
 			Selected: selected[fc.Value],
 		})
 	}
+	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "license",
 		Label:       "Licentie",
@@ -131,6 +134,7 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 			Selected: activeOrg == fc.Value,
 		})
 	}
+	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "organisation",
 		Label:       "Organisatie",
@@ -158,6 +162,7 @@ func buildMultiSelectOptions(counts []models.FilterCount, selected map[string]bo
 			Selected:    selected[fc.Value],
 		})
 	}
+	sortFilterOptions(options)
 	return options
 }
 
@@ -167,4 +172,15 @@ func selectedSet(values []string) map[string]bool {
 		m[v] = true
 	}
 	return m
+}
+
+func sortFilterOptions(options []models.FilterOption) {
+	sort.Slice(options, func(i, j int) bool {
+		left := strings.ToLower(options[i].Label)
+		right := strings.ToLower(options[j].Label)
+		if left == right {
+			return options[i].Value < options[j].Value
+		}
+		return left < right
+	})
 }
