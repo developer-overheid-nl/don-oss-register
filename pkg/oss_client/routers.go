@@ -65,6 +65,20 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		tonic.Handler(controller.ListRepositorys, 200),
 	)
 
+	root.GET("/repositories/_search",
+		[]fizz.OperationOption{
+			fizz.ID("searchRepositories"),
+			fizz.Summary("Search repositories"),
+			fizz.Description("Deprecated. Gebruik GET /repositories met de q query parameter en filters."),
+			fizz.Deprecated(true),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.SearchRepositorys, 200),
+	)
+
 	root.GET("/repositories/filters",
 		[]fizz.OperationOption{
 			fizz.ID("listRepositoryFilters"),

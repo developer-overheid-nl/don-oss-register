@@ -1,3 +1,3 @@
 kind: Changed
-body: Removed the repository _search endpoint and added q search support to repository list and filter endpoints
+body: Added q search support to repository list and filter endpoints while keeping the deprecated repository _search endpoint available
 time: 2026-05-12T11:33:38.676284+02:00

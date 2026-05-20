@@ -249,6 +249,58 @@
         ]
       }
     },
+    "/repositories/_search": {
+      "get": {
+        "tags": ["Public endpoints", "Repositories"],
+        "summary": "Search repositories",
+        "description": "Deprecated. Use GET /repositories with the q query parameter and filters instead.",
+        "deprecated": true,
+        "operationId": "searchRepositories",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/OrganisationFilter" },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "headers": {
+              "API-Version": { "$ref": "#/components/headers/APIVersion" },
+              "Link": { "$ref": "#/components/headers/Link" },
+              "Total-Count": { "$ref": "#/components/headers/TotalCount" },
+              "Current-Page": { "$ref": "#/components/headers/CurrentPage" },
+              "Per-Page": { "$ref": "#/components/headers/PerPage" },
+              "Total-Pages": { "$ref": "#/components/headers/TotalPages" }
+            },
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RepositorySummary"
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "security": [
+          {
+            "clientCredentials": ["repositories:read"]
+          }
+        ]
+      }
+    },
     "/repositories/{id}": {
       "parameters": [
         { "$ref": "#/components/parameters/ResourceId" }

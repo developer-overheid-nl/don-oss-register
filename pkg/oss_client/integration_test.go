@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -151,6 +152,16 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Equal(t, "repo-1", body[0].Id)
 	})
 
+	t.Run("legacy search path remains available", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/_search?q=Integration")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
+
+		body := decodeBody[[]models.RepositorySummary](t, resp)
+		require.Len(t, body, 1)
+		require.Equal(t, "repo-1", body[0].Id)
+	})
+
 	t.Run("list repositories supports filter endpoint query params", func(t *testing.T) {
 		repoWithPublicCode := &models.Repository{
 			Id:             "repo-2",
@@ -196,6 +207,23 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		body := decodeBody[[]models.OrganisationSummary](t, resp)
 		require.Len(t, body, 1)
 		require.Equal(t, org.Uri, body[0].Uri)
+	})
+
+	t.Run("openapi marks legacy search path deprecated", func(t *testing.T) {
+		data, err := os.ReadFile("../../api/openapi.json")
+		require.NoError(t, err)
+
+		var spec map[string]any
+		require.NoError(t, json.Unmarshal(data, &spec))
+		paths := spec["paths"].(map[string]any)
+		searchPath := paths["/repositories/_search"].(map[string]any)
+		searchGet := searchPath["get"].(map[string]any)
+		require.Equal(t, true, searchGet["deprecated"])
+		require.Equal(t, "searchRepositories", searchGet["operationId"])
+		params := searchGet["parameters"].([]any)
+		qParam := params[len(params)-1].(map[string]any)
+		require.Equal(t, "q", qParam["name"])
+		require.Equal(t, true, qParam["required"])
 	})
 
 	t.Run("create organisation validation", func(t *testing.T) {
