@@ -179,10 +179,10 @@ func TestCountByField_CountsCorrectly(t *testing.T) {
 	})
 
 	assert.Len(t, result, 2)
-	assert.Equal(t, "library", result[0].Value)
-	assert.Equal(t, 2, result[0].Count)
-	assert.Equal(t, "addon", result[1].Value)
-	assert.Equal(t, 1, result[1].Count)
+	assert.Equal(t, "addon", result[0].Value)
+	assert.Equal(t, 1, result[0].Count)
+	assert.Equal(t, "library", result[1].Value)
+	assert.Equal(t, 2, result[1].Count)
 }
 
 func TestCountByField_RespectsOtherFilters(t *testing.T) {

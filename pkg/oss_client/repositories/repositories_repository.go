@@ -451,7 +451,12 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 		result.Organisation = append(result.Organisation, *fc)
 	}
 	sort.Slice(result.Organisation, func(i, j int) bool {
-		return result.Organisation[i].Count > result.Organisation[j].Count
+		left := strings.ToLower(result.Organisation[i].Label)
+		right := strings.ToLower(result.Organisation[j].Label)
+		if left == right {
+			return result.Organisation[i].Value < result.Organisation[j].Value
+		}
+		return left < right
 	})
 
 	return result, nil
@@ -491,7 +496,9 @@ func countByFieldWithFilters(repos []models.Repository, matcher *repositoryFilte
 	for val, count := range counts {
 		result = append(result, models.FilterCount{Value: val, Count: count})
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
+	sort.Slice(result, func(i, j int) bool {
+		return strings.ToLower(result[i].Value) < strings.ToLower(result[j].Value)
+	})
 	return result
 }
 
@@ -516,7 +523,9 @@ func countByArrayFieldWithFilters(repos []models.Repository, matcher *repository
 	for val, count := range counts {
 		result = append(result, models.FilterCount{Value: val, Count: count})
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
+	sort.Slice(result, func(i, j int) bool {
+		return strings.ToLower(result[i].Value) < strings.ToLower(result[j].Value)
+	})
 	return result
 }
 

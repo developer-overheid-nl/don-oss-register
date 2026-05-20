@@ -339,8 +339,39 @@ func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {
 	for _, g := range groups {
 		if g.Key == "softwareType" {
 			require.Len(t, g.Options, 2)
-			assert.True(t, g.Options[0].Selected)
-			assert.False(t, g.Options[1].Selected)
+			assert.Equal(t, "addon", g.Options[0].Value)
+			assert.False(t, g.Options[0].Selected)
+			assert.Equal(t, "library", g.Options[1].Value)
+			assert.True(t, g.Options[1].Selected)
+		}
+	}
+}
+
+func TestGetRepositoryFilters_OptionsSortedAlphabeticallyByLabel(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{
+				SoftwareType: []models.FilterCount{
+					{Value: "library", Count: 10},
+					{Value: "standalone/backend", Count: 20},
+					{Value: "addon", Count: 5},
+				},
+			}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "softwareType" {
+			require.Len(t, g.Options, 3)
+			assert.Equal(t, []string{"Addon / Plugin", "Backend / API", "Library"}, []string{
+				g.Options[0].Label,
+				g.Options[1].Label,
+				g.Options[2].Label,
+			})
 		}
 	}
 }
