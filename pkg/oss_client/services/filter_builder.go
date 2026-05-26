@@ -8,7 +8,10 @@ import (
 )
 
 func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
-	value := p == nil || p.PublicCode == nil || *p.PublicCode
+	var value any
+	if p != nil && p.PublicCode != nil {
+		value = *p.PublicCode
+	}
 	return models.FilterGroup{
 		Key:         "publiccode",
 		Label:       "Heeft publiccode.yml",
