@@ -541,7 +541,7 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	require.NotNil(t, publiccodeGroup.Count)
 	assert.Equal(t, n, *publiccodeGroup.Count)
 	assert.Equal(t, "toggle", publiccodeGroup.Type)
-	assert.Equal(t, false, publiccodeGroup.Value)
+	assert.Equal(t, true, publiccodeGroup.Value)
 }
 
 func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
@@ -557,6 +557,21 @@ func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
 			assert.Equal(t, true, g.Value)
 		}
 	}
+}
+
+func TestGetRepositoryFilters_PublicCodeFalseReturnsOnlyPublicCodeAndOrganisation(t *testing.T) {
+	repo := &stubRepo{}
+	svc := services.NewRepositoryService(repo)
+	falseVal := false
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &falseVal})
+	require.NoError(t, err)
+
+	keys := make([]string, len(groups))
+	for i, g := range groups {
+		keys[i] = g.Key
+	}
+	assert.Equal(t, []string{"publiccode", "organisation"}, keys)
 }
 
 func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {
@@ -583,6 +598,58 @@ func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {
 			assert.False(t, g.Options[0].Selected)
 			assert.Equal(t, "library", g.Options[1].Value)
 			assert.True(t, g.Options[1].Selected)
+		}
+	}
+}
+
+func TestGetRepositoryFilters_MultiSelectKeepsSelectedOptionWithoutCount(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+	p := &models.RepositoryFiltersParams{
+		Query:        "bla",
+		SoftwareType: []string{"configurationFiles"},
+	}
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), p)
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "softwareType" {
+			require.Len(t, g.Options, 1)
+			assert.Equal(t, "configurationFiles", g.Options[0].Value)
+			assert.Equal(t, "Configuratiebestanden", g.Options[0].Label)
+			assert.Equal(t, 0, g.Options[0].Count)
+			assert.True(t, g.Options[0].Selected)
+		}
+	}
+}
+
+func TestGetRepositoryFilters_OrganisationKeepsSelectedOptionWithoutCount(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+	org := "https://example.org/org"
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{
+		Query:        "bla",
+		Organisation: &org,
+	})
+	require.NoError(t, err)
+
+	for _, g := range groups {
+		if g.Key == "organisation" {
+			require.Len(t, g.Options, 1)
+			assert.Equal(t, org, g.Options[0].Value)
+			assert.Equal(t, org, g.Options[0].Label)
+			assert.Equal(t, 0, g.Options[0].Count)
+			assert.True(t, g.Options[0].Selected)
 		}
 	}
 }

@@ -493,7 +493,7 @@
         "name": "publiccode",
         "in": "query",
         "required": false,
-        "description": "Filter on publiccode.yml presence. true: only repositories with a publiccode.yml URL. Omit or set false for all repositories.",
+        "description": "Filter on publiccode.yml presence. Omit or set true for repositories with a publiccode.yml URL. Set false for repositories without a publiccode.yml URL.",
         "schema": {
           "type": "boolean"
         }
@@ -1008,7 +1008,7 @@
           },
           "count": {
             "type": ["integer", "null"],
-            "description": "For toggle filters, the number of repositories that would match when the toggle is enabled (value true), regardless of the current value. For date filters, the number of repositories matching the current date value; only present when a date is set. Not present for multi-select."
+            "description": "For toggle filters, the number of repositories with the toggle condition available. For date filters, the number of repositories matching the current date value; only present when a date is set. Not present for multi-select."
           },
           "options": {
             "type": "array",

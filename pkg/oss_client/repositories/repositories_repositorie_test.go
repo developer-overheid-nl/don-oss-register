@@ -144,20 +144,21 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 		PublicCode:   &publicCodeDisabled,
 	})
 	require.NoError(t, err)
-	require.Len(t, results, 3)
-	assert.Equal(t, 3, pagination.TotalRecords)
+	require.Len(t, results, 1)
+	assert.Equal(t, 1, pagination.TotalRecords)
+	assert.Equal(t, "repo-5", results[0].Id)
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 	})
 	require.NoError(t, err)
-	require.Len(t, results, 3)
-	assert.Equal(t, 3, pagination.TotalRecords)
+	require.Len(t, results, 2)
+	assert.Equal(t, 2, pagination.TotalRecords)
 	ids = make([]string, len(results))
 	for i, repo := range results {
 		ids[i] = repo.Id
 	}
-	assert.ElementsMatch(t, []string{"repo-1", "repo-2", "repo-5"}, ids)
+	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
@@ -237,9 +238,10 @@ func TestRepositoriesRepository_GetRepositoriesPaginatesFilteredResults(t *testi
 
 	for i, name := range []string{"Alpha", "Beta", "Gamma"} {
 		require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
-			Id:     string(rune('a' + i)),
-			Name:   name,
-			Active: true,
+			Id:            string(rune('a' + i)),
+			Name:          name,
+			PublicCodeUrl: "https://example.org/" + name + "/publiccode.yml",
+			Active:        true,
 		}))
 	}
 
@@ -270,8 +272,8 @@ func TestRepositoriesRepository_GetRepositoriesLastActivityAfterFilter(t *testin
 	recent := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
 	old := time.Date(2023, 12, 31, 12, 0, 0, 0, time.UTC)
 	repositoriesToSave := []*models.Repository{
-		{Id: "repo-1", Name: "Repo One", OrganisationID: &org.Uri, LastActivityAt: recent, Active: true},
-		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org.Uri, LastActivityAt: old, Active: true},
+		{Id: "repo-1", Name: "Repo One", OrganisationID: &org.Uri, PublicCodeUrl: "https://example.org/repo-1/publiccode.yml", LastActivityAt: recent, Active: true},
+		{Id: "repo-2", Name: "Repo Two", OrganisationID: &org.Uri, PublicCodeUrl: "https://example.org/repo-2/publiccode.yml", LastActivityAt: old, Active: true},
 	}
 	for _, r := range repositoriesToSave {
 		require.NoError(t, repo.SaveRepository(ctx, r))
@@ -572,5 +574,5 @@ func TestRepositoriesRepository_GetRepositoryFilterCountsAppliesCrossFilters(t *
 	for _, fc := range counts.Organisation {
 		orgCounts[fc.Value] = fc.Count
 	}
-	assert.Equal(t, map[string]int{"org-1": 1, "org-2": 1}, orgCounts)
+	assert.Equal(t, map[string]int{"org-1": 1}, orgCounts)
 }

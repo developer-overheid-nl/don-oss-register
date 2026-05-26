@@ -8,11 +8,11 @@ import (
 )
 
 func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
-	value := p.PublicCode != nil && *p.PublicCode
+	value := p == nil || p.PublicCode == nil || *p.PublicCode
 	return models.FilterGroup{
 		Key:         "publiccode",
 		Label:       "Heeft publiccode.yml",
-		Description: "Toon alleen repositories met een publiccode.yml bestand.",
+		Description: "Filter repositories op aanwezigheid van een publiccode.yml bestand.",
 		Type:        "toggle",
 		Value:       value,
 		Count:       &counts.PublicCode,
@@ -78,17 +78,20 @@ func buildAvailableLanguagesGroup(p *models.RepositoryFiltersParams, counts *mod
 	selected := selectedSet(p.AvailableLanguages)
 	options := make([]models.FilterOption, 0, len(counts.AvailableLanguages))
 	for _, fc := range counts.AvailableLanguages {
-		label := fc.Value
-		if name, ok := models.LanguageLabels[fc.Value]; ok {
-			label = name
-		}
 		options = append(options, models.FilterOption{
 			Value:    fc.Value,
-			Label:    label,
+			Label:    languageLabel(fc.Value),
 			Count:    fc.Count,
 			Selected: selected[fc.Value],
 		})
 	}
+	options = appendMissingSelectedOptions(options, selected, func(value string) models.FilterOption {
+		return models.FilterOption{
+			Value:    value,
+			Label:    languageLabel(value),
+			Selected: true,
+		}
+	})
 	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "availableLanguages",
@@ -110,6 +113,13 @@ func buildLicenseGroup(p *models.RepositoryFiltersParams, counts *models.Reposit
 			Selected: selected[fc.Value],
 		})
 	}
+	options = appendMissingSelectedOptions(options, selected, func(value string) models.FilterOption {
+		return models.FilterOption{
+			Value:    value,
+			Label:    value,
+			Selected: true,
+		}
+	})
 	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "license",
@@ -134,6 +144,15 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 			Selected: activeOrg == fc.Value,
 		})
 	}
+	if activeOrg != "" {
+		options = appendMissingSelectedOptions(options, map[string]bool{activeOrg: true}, func(value string) models.FilterOption {
+			return models.FilterOption{
+				Value:    value,
+				Label:    value,
+				Selected: true,
+			}
+		})
+	}
 	sortFilterOptions(options)
 	return models.FilterGroup{
 		Key:         "organisation",
@@ -147,23 +166,51 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 func buildMultiSelectOptions(counts []models.FilterCount, selected map[string]bool, labels map[string][2]string) []models.FilterOption {
 	options := make([]models.FilterOption, 0, len(counts))
 	for _, fc := range counts {
-		label := fc.Value
-		var desc *string
-		if meta, ok := labels[fc.Value]; ok {
-			label = meta[0]
-			d := meta[1]
-			desc = &d
-		}
-		options = append(options, models.FilterOption{
-			Value:       fc.Value,
-			Label:       label,
-			Description: desc,
-			Count:       fc.Count,
-			Selected:    selected[fc.Value],
-		})
+		options = append(options, multiSelectOption(fc.Value, fc.Count, selected[fc.Value], labels))
 	}
+	options = appendMissingSelectedOptions(options, selected, func(value string) models.FilterOption {
+		return multiSelectOption(value, 0, true, labels)
+	})
 	sortFilterOptions(options)
 	return options
+}
+
+func multiSelectOption(value string, count int, selected bool, labels map[string][2]string) models.FilterOption {
+	label := value
+	var desc *string
+	if meta, ok := labels[value]; ok {
+		label = meta[0]
+		d := meta[1]
+		desc = &d
+	}
+	return models.FilterOption{
+		Value:       value,
+		Label:       label,
+		Description: desc,
+		Count:       count,
+		Selected:    selected,
+	}
+}
+
+func appendMissingSelectedOptions(options []models.FilterOption, selected map[string]bool, build func(string) models.FilterOption) []models.FilterOption {
+	seen := make(map[string]bool, len(options))
+	for _, option := range options {
+		seen[option.Value] = true
+	}
+	for value, isSelected := range selected {
+		if value == "" || !isSelected || seen[value] {
+			continue
+		}
+		options = append(options, build(value))
+	}
+	return options
+}
+
+func languageLabel(value string) string {
+	if label, ok := models.LanguageLabels[value]; ok {
+		return label
+	}
+	return value
 }
 
 func selectedSet(values []string) map[string]bool {
