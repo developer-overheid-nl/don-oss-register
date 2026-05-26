@@ -541,7 +541,7 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	require.NotNil(t, publiccodeGroup.Count)
 	assert.Equal(t, n, *publiccodeGroup.Count)
 	assert.Equal(t, "toggle", publiccodeGroup.Type)
-	assert.Nil(t, publiccodeGroup.Value)
+	assert.Equal(t, true, publiccodeGroup.Value)
 }
 
 func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
