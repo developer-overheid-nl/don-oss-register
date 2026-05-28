@@ -564,12 +564,10 @@ func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilte
 	if matcher.query != "" && !repoMatchesQuery(repo, matcher.query) {
 		return false
 	}
-	if exclude != "publiccode" && p.PublicCode != nil {
-		if *p.PublicCode {
-			// Toggle semantics: only true applies a filter.
-			if repo.PublicCodeUrl == "" {
-				return false
-			}
+	if exclude != "publiccode" {
+		hasPublicCode := repo.PublicCodeUrl != ""
+		if publicCodeFilterValue(p) != hasPublicCode {
+			return false
 		}
 	}
 	if exclude != "lastActivityAfter" && matcher.lastActivityAfter != nil {
@@ -636,6 +634,13 @@ func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilte
 		}
 	}
 	return true
+}
+
+func publicCodeFilterValue(p *models.RepositoryFiltersParams) bool {
+	if p == nil || p.PublicCode == nil {
+		return true
+	}
+	return *p.PublicCode
 }
 
 func repoMatchesQuery(repo models.Repository, query string) bool {

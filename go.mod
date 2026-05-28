@@ -1,6 +1,6 @@
 module github.com/developer-overheid-nl/don-oss-register
 
-go 1.25.8
+go 1.26.3
 
 require (
 	github.com/gin-contrib/cors v1.7.7

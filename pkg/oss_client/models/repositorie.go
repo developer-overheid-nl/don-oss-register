@@ -210,6 +210,9 @@ type FilterGroup struct {
 func (f FilterGroup) Validate() error {
 	switch f.Type {
 	case "toggle":
+		if f.Value == nil {
+			return nil
+		}
 		if _, ok := f.Value.(bool); !ok {
 			return fmt.Errorf("filter %q: toggle value must be bool, got %T", f.Key, f.Value)
 		}

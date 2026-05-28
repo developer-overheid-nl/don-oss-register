@@ -340,6 +340,9 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	if err != nil {
 		return nil, err
 	}
+	if p == nil {
+		p = &models.RepositoryFiltersParams{}
+	}
 	groups := []models.FilterGroup{
 		buildPublicCodeGroup(p, counts),
 		buildLastActivityGroup(p, counts),
@@ -350,6 +353,12 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 		buildAvailableLanguagesGroup(p, counts),
 		buildLicenseGroup(p, counts),
 		buildOrganisationGroup(p, counts),
+	}
+	if p.PublicCode != nil && !*p.PublicCode {
+		groups = []models.FilterGroup{
+			buildPublicCodeGroup(p, counts),
+			buildOrganisationGroup(p, counts),
+		}
 	}
 	for _, g := range groups {
 		if err := g.Validate(); err != nil {

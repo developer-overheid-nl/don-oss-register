@@ -115,6 +115,17 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, repoModel))
 
+	repoWithoutPublicCode := &models.Repository{
+		Id:               "repo-without-publiccode",
+		Name:             "Repository zonder publiccode",
+		ShortDescription: "Geen publiccode.yml",
+		OrganisationID:   &org.Uri,
+		Url:              "https://example.org/repos/repo-without-publiccode",
+		LastActivityAt:   time.Date(2024, 5, 11, 12, 0, 0, 0, time.UTC),
+		Active:           true,
+	}
+	require.NoError(t, env.repo.SaveRepository(ctx, repoWithoutPublicCode))
+
 	t.Run("list repositories", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/repositories")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -150,6 +161,38 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		body := decodeBody[[]models.RepositorySummary](t, resp)
 		require.Len(t, body, 1)
 		require.Equal(t, "repo-1", body[0].Id)
+	})
+
+	t.Run("list repositories supports publiccode false", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?publiccode=false")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
+
+		body := decodeBody[[]models.RepositorySummary](t, resp)
+		require.Len(t, body, 1)
+		require.Equal(t, "repo-without-publiccode", body[0].Id)
+	})
+
+	t.Run("list repositories rejects repeated publiccode values", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?publiccode=true&publiccode=false")
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		require.NoError(t, resp.Body.Close())
+	})
+
+	t.Run("repository filters preserve publiccode false", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/filters?publiccode=false")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		body := decodeBody[[]models.FilterGroup](t, resp)
+		require.NotEmpty(t, body)
+		require.Equal(t, "publiccode", body[0].Key)
+		require.Equal(t, false, body[0].Value)
+	})
+
+	t.Run("repository filters reject repeated publiccode values", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories/filters?publiccode=true&publiccode=false")
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		require.NoError(t, resp.Body.Close())
 	})
 
 	t.Run("legacy search path remains available", func(t *testing.T) {

@@ -17,6 +17,7 @@ func makeRepo(opts ...func(*models.Repository)) models.Repository {
 	r := models.Repository{
 		Id:             "repo-1",
 		Active:         true,
+		PublicCodeUrl:  "https://example.org/publiccode.yml",
 		OrganisationID: &orgID,
 		LastActivityAt: time.Now(),
 	}
@@ -64,8 +65,20 @@ func TestRepoMatchesFilters_PublicCode_Match(t *testing.T) {
 }
 
 func TestRepoMatchesFilters_PublicCode_NoMatch(t *testing.T) {
-	repo := makeRepo()
+	repo := makeRepo(withPublicCodeUrl(""))
 	p := &models.RepositoryFiltersParams{PublicCode: boolPtr(true)}
+	assert.False(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_PublicCodeFalse_MatchesWithoutPublicCode(t *testing.T) {
+	repo := makeRepo(withPublicCodeUrl(""))
+	p := &models.RepositoryFiltersParams{PublicCode: boolPtr(false)}
+	assert.True(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_PublicCodeFalse_DoesNotMatchWithPublicCode(t *testing.T) {
+	repo := makeRepo()
+	p := &models.RepositoryFiltersParams{PublicCode: boolPtr(false)}
 	assert.False(t, repoMatchesFilters(repo, p, ""))
 }
 
@@ -112,7 +125,10 @@ func TestRepoMatchesFilters_Query_MatchesPublicCodeLandingURL(t *testing.T) {
 }
 
 func TestRepoMatchesFilters_Query_DoesNotMatchRepositoryURLWithoutPublicCode(t *testing.T) {
-	repo := makeRepo(func(r *models.Repository) { r.Url = "https://git.example.org/open-forms" })
+	repo := makeRepo(
+		withPublicCodeUrl(""),
+		func(r *models.Repository) { r.Url = "https://git.example.org/open-forms" },
+	)
 	p := &models.RepositoryFiltersParams{Query: "open-forms"}
 	assert.False(t, repoMatchesFilters(repo, p, ""))
 }
@@ -227,8 +243,8 @@ func TestCountByField_RespectsOtherFilters(t *testing.T) {
 	org1 := "https://org1.nl"
 	org2 := "https://org2.nl"
 	repos := []models.Repository{
-		{OrganisationID: &org1, Active: true, PublicCode: &models.PublicCode{SoftwareType: "library"}},
-		{OrganisationID: &org2, Active: true, PublicCode: &models.PublicCode{SoftwareType: "addon"}},
+		{OrganisationID: &org1, Active: true, PublicCodeUrl: "https://org1.nl/publiccode.yml", PublicCode: &models.PublicCode{SoftwareType: "library"}},
+		{OrganisationID: &org2, Active: true, PublicCodeUrl: "https://org2.nl/publiccode.yml", PublicCode: &models.PublicCode{SoftwareType: "addon"}},
 	}
 	p := &models.RepositoryFiltersParams{Organisation: &org1}
 	result := countByField(repos, p, "softwareType", func(r models.Repository) string {
@@ -289,7 +305,7 @@ func TestCountByArrayField_CountsEachValue(t *testing.T) {
 func TestCountRepos_Toggle(t *testing.T) {
 	repos := []models.Repository{
 		makeRepo(withPublicCodeUrl("https://example.org/publiccode.yml")),
-		makeRepo(),
+		makeRepo(withPublicCodeUrl("")),
 		makeRepo(withPublicCodeUrl("https://other.org/publiccode.yml")),
 	}
 	p := &models.RepositoryFiltersParams{}
