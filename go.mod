@@ -3,7 +3,7 @@ module github.com/developer-overheid-nl/don-oss-register
 go 1.26.3
 
 require (
-	github.com/developer-overheid-nl/don-register-common v0.1.0
+	github.com/developer-overheid-nl/don-register-common v0.1.1
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/lib/pq v1.12.3
 	github.com/loopfz/gadgeto v0.11.6
