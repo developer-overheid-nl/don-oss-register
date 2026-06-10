@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	commonpagination "github.com/developer-overheid-nl/don-register-common/pagination"
+	commonquery "github.com/developer-overheid-nl/don-register-common/query"
 	"gorm.io/gorm"
 )
 
@@ -114,25 +115,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	}
 
 	totalRecords := len(filtered)
-	totalPages := 0
-	if totalRecords > 0 {
-		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
-	}
-	pagination := models.Pagination{
-		CurrentPage:    page,
-		RecordsPerPage: perPage,
-		TotalPages:     totalPages,
-		TotalRecords:   totalRecords,
-	}
-
-	if page < totalPages {
-		next := page + 1
-		pagination.Next = &next
-	}
-	if page > 1 {
-		prev := page - 1
-		pagination.Previous = &prev
-	}
+	pagination := commonpagination.New(page, perPage, totalRecords)
 
 	offset := (page - 1) * perPage
 	if offset >= totalRecords {
@@ -171,22 +154,7 @@ func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, 
 		return nil, models.Pagination{}, err
 	}
 
-	totalPages := int(math.Ceil(float64(totalRecords) / float64(perPage)))
-	pagination := models.Pagination{
-		CurrentPage:    page,
-		RecordsPerPage: perPage,
-		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
-	}
-
-	if page < totalPages {
-		next := page + 1
-		pagination.Next = &next
-	}
-	if page > 1 {
-		prev := page - 1
-		pagination.Previous = &prev
-	}
+	pagination := commonpagination.New(page, perPage, int(totalRecords))
 
 	return gitOrganisations, pagination, nil
 }
@@ -217,13 +185,13 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 		}, nil
 	}
 
-	pattern := fmt.Sprintf("%%%s%%", strings.ToLower(trimmed))
+	pattern := fmt.Sprintf("%%%s%%", commonquery.EscapeSQLLike(strings.ToLower(trimmed)))
 	applySearchFilters := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("(active IS NULL OR active = ?)", true)
 		if organisation != nil && strings.TrimSpace(*organisation) != "" {
 			db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
 		}
-		return db.Where("(LOWER(name) LIKE ? OR LOWER(short_description) LIKE ? OR LOWER(long_description) LIKE ?)", pattern, pattern, pattern)
+		return db.Where("(LOWER(name) LIKE ? ESCAPE '\\' OR LOWER(short_description) LIKE ? ESCAPE '\\' OR LOWER(long_description) LIKE ? ESCAPE '\\')", pattern, pattern, pattern)
 	}
 
 	var totalRecords int64
@@ -240,24 +208,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 		return nil, models.Pagination{}, err
 	}
 
-	totalPages := 0
-	if totalRecords > 0 {
-		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
-	}
-	pagination := models.Pagination{
-		CurrentPage:    page,
-		RecordsPerPage: perPage,
-		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
-	}
-	if page < totalPages {
-		next := page + 1
-		pagination.Next = &next
-	}
-	if page > 1 && totalPages > 0 {
-		prev := page - 1
-		pagination.Previous = &prev
-	}
+	pagination := commonpagination.New(page, perPage, int(totalRecords))
 
 	return repositories, pagination, nil
 }
@@ -293,24 +244,7 @@ func (r *repositoriesRepository) GetOrganisations(ctx context.Context, page, per
 		return nil, models.Pagination{}, err
 	}
 
-	totalPages := 0
-	if totalRecords > 0 {
-		totalPages = int(math.Ceil(float64(totalRecords) / float64(perPage)))
-	}
-	pagination := models.Pagination{
-		CurrentPage:    page,
-		RecordsPerPage: perPage,
-		TotalPages:     totalPages,
-		TotalRecords:   int(totalRecords),
-	}
-	if page < totalPages {
-		next := page + 1
-		pagination.Next = &next
-	}
-	if page > 1 && totalPages > 0 {
-		prev := page - 1
-		pagination.Previous = &prev
-	}
+	pagination := commonpagination.New(page, perPage, int(totalRecords))
 
 	return organisations, pagination, nil
 }

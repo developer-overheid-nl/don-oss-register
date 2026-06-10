@@ -1,10 +1,10 @@
 package services
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	commonfilters "github.com/developer-overheid-nl/don-register-common/filters"
 )
 
 func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
@@ -164,46 +164,15 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 }
 
 func buildMultiSelectOptions(counts []models.FilterCount, selected map[string]bool, labels map[string][2]string) []models.FilterOption {
-	options := make([]models.FilterOption, 0, len(counts))
-	for _, fc := range counts {
-		options = append(options, multiSelectOption(fc.Value, fc.Count, selected[fc.Value], labels))
-	}
-	options = appendMissingSelectedOptions(options, selected, func(value string) models.FilterOption {
-		return multiSelectOption(value, 0, true, labels)
-	})
-	sortFilterOptions(options)
-	return options
+	return commonfilters.LabeledOptions(counts, selected, labels, true)
 }
 
 func multiSelectOption(value string, count int, selected bool, labels map[string][2]string) models.FilterOption {
-	label := value
-	var desc *string
-	if meta, ok := labels[value]; ok {
-		label = meta[0]
-		d := meta[1]
-		desc = &d
-	}
-	return models.FilterOption{
-		Value:       value,
-		Label:       label,
-		Description: desc,
-		Count:       count,
-		Selected:    selected,
-	}
+	return commonfilters.LabeledOption(value, count, selected, labels)
 }
 
 func appendMissingSelectedOptions(options []models.FilterOption, selected map[string]bool, build func(string) models.FilterOption) []models.FilterOption {
-	seen := make(map[string]bool, len(options))
-	for _, option := range options {
-		seen[option.Value] = true
-	}
-	for value, isSelected := range selected {
-		if value == "" || !isSelected || seen[value] {
-			continue
-		}
-		options = append(options, build(value))
-	}
-	return options
+	return commonfilters.AppendMissingSelectedOptions(options, selected, build)
 }
 
 func languageLabel(value string) string {
@@ -214,20 +183,9 @@ func languageLabel(value string) string {
 }
 
 func selectedSet(values []string) map[string]bool {
-	m := make(map[string]bool, len(values))
-	for _, v := range values {
-		m[v] = true
-	}
-	return m
+	return commonfilters.SelectedSet(values)
 }
 
 func sortFilterOptions(options []models.FilterOption) {
-	sort.Slice(options, func(i, j int) bool {
-		left := strings.ToLower(options[i].Label)
-		right := strings.ToLower(options[j].Label)
-		if left == right {
-			return options[i].Value < options[j].Value
-		}
-		return left < right
-	})
+	commonfilters.SortOptions(options)
 }

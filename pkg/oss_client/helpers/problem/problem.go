@@ -1,29 +1,18 @@
 package problem
 
-import "net/http"
+import (
+	"net/http"
 
-type ErrorDetail struct {
-	In       string `json:"in"`
-	Location string `json:"location"`
-	Code     string `json:"code"`
-	Detail   string `json:"detail"`
-}
+	commonproblem "github.com/developer-overheid-nl/don-register-common/problem"
+)
+
+type ErrorDetail = commonproblem.ErrorDetail
 
 // ProblemJSON implements the OSS-register error envelope.
-type ProblemJSON struct {
-	Status int           `json:"status"`
-	Title  string        `json:"title"`
-	Errors []ErrorDetail `json:"errors,omitempty"`
-}
-
-func (e ProblemJSON) Error() string { return e.Title }
+type ProblemJSON = commonproblem.Problem
 
 func New(status int, title string, details ...ErrorDetail) ProblemJSON {
-	return ProblemJSON{
-		Status: status,
-		Title:  title,
-		Errors: details,
-	}
+	return commonproblem.New(status, title, details...)
 }
 
 func NewBadRequest(title string, details ...ErrorDetail) ProblemJSON {

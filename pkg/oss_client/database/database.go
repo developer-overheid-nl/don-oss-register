@@ -4,16 +4,16 @@ import (
 	"fmt"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	commondatabase "github.com/developer-overheid-nl/don-register-common/database"
 	_ "github.com/lib/pq"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 // Connect connects to the database, optionally resets the schema, and performs migrations.
 func Connect(connStr string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(connStr))
+	db, err := commondatabase.ConnectPostgres(connStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return nil, err
 	}
 
 	// if resetSchema {

@@ -1,11 +1,8 @@
 package oss_client
 
 import (
-	"net/http"
-
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
-	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
-	"github.com/gin-contrib/cors"
+	commonrouter "github.com/developer-overheid-nl/don-register-common/router"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/wI2L/fizz"
@@ -22,32 +19,11 @@ var (
 
 func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz {
 	//gin.SetMode(gin.ReleaseMode)
-	g := gin.Default()
-	g.HandleMethodNotAllowed = true
-
-	// Configure CORS to allow access from everywhere
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"}
-	config.ExposeHeaders = []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"}
-	g.Use(cors.New(config))
-
-	g.Use(APIVersionMiddleware(apiVersion))
-	g.NoMethod(func(c *gin.Context) {
-		apiErr := problem.New(http.StatusMethodNotAllowed, "Method not allowed")
-		c.Abort()
-		c.Header("API-Version", apiVersion)
-		c.Header("Content-Type", "application/problem+json")
-		c.JSON(apiErr.Status, apiErr)
+	g := commonrouter.NewEngine(apiVersion, commonrouter.CORSOptions{
+		AllowHeaders:  []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"},
+		ExposeHeaders: []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"},
 	})
-	g.NoRoute(func(c *gin.Context) {
-		apiErr := problem.NewNotFound("Resource does not exist")
-		c.Abort()
-		c.Header("API-Version", apiVersion)
-		c.Header("Content-Type", "application/problem+json")
-		c.JSON(apiErr.Status, apiErr)
-	})
+	commonrouter.InstallProblemHandlers(g, apiVersion)
 	f := fizz.NewFromEngine(g)
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")
@@ -190,19 +166,6 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	return f
 }
 
-type apiVersionWriter struct {
-	gin.ResponseWriter
-	version string
-}
-
-func (w *apiVersionWriter) WriteHeader(code int) {
-	w.Header().Set("API-Version", w.version)
-	w.ResponseWriter.WriteHeader(code)
-}
-
 func APIVersionMiddleware(version string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer = &apiVersionWriter{c.Writer, version}
-		c.Next()
-	}
+	return commonrouter.APIVersionMiddleware(version)
 }
