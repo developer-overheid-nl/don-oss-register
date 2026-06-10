@@ -167,10 +167,6 @@ func buildMultiSelectOptions(counts []models.FilterCount, selected map[string]bo
 	return commonfilters.LabeledOptions(counts, selected, labels, true)
 }
 
-func multiSelectOption(value string, count int, selected bool, labels map[string][2]string) models.FilterOption {
-	return commonfilters.LabeledOption(value, count, selected, labels)
-}
-
 func appendMissingSelectedOptions(options []models.FilterOption, selected map[string]bool, build func(string) models.FilterOption) []models.FilterOption {
 	return commonfilters.AppendMissingSelectedOptions(options, selected, build)
 }
