@@ -10,8 +10,10 @@
 package models
 
 import (
-	"fmt"
 	"time"
+
+	commonfilters "github.com/developer-overheid-nl/don-register-common/filters"
+	commonpagination "github.com/developer-overheid-nl/don-register-common/pagination"
 )
 
 type PublicCode struct {
@@ -180,62 +182,15 @@ type UpdateRepositoryRequest struct {
 	RepositoryInput
 }
 
-type Pagination struct {
-	Next           *int
-	Previous       *int
-	CurrentPage    int
-	RecordsPerPage int
-	TotalPages     int
-	TotalRecords   int
-}
+type Pagination = commonpagination.Pagination
 
-type FilterOption struct {
-	Value       string  `json:"value"`
-	Label       string  `json:"label"`
-	Description *string `json:"description"`
-	Count       int     `json:"count"`
-	Selected    bool    `json:"selected"`
-}
+type FilterOption = commonfilters.FilterOption
 
-type FilterGroup struct {
-	Key         string         `json:"key"`
-	Label       string         `json:"label"`
-	Description string         `json:"description"`
-	Type        string         `json:"type"`
-	Value       any            `json:"value,omitempty"`
-	Count       *int           `json:"count,omitempty"`
-	Options     []FilterOption `json:"options,omitempty"`
-}
+type FilterGroup = commonfilters.FilterGroup
 
-func (f FilterGroup) Validate() error {
-	switch f.Type {
-	case "toggle":
-		if f.Value == nil {
-			return nil
-		}
-		if _, ok := f.Value.(bool); !ok {
-			return fmt.Errorf("filter %q: toggle value must be bool, got %T", f.Key, f.Value)
-		}
-	case "date":
-		if f.Value != nil {
-			if _, ok := f.Value.(string); !ok {
-				return fmt.Errorf("filter %q: date value must be string, got %T", f.Key, f.Value)
-			}
-		}
-	}
-	return nil
-}
+type FilterCount = commonfilters.FilterCount
 
-type FilterCount struct {
-	Value string
-	Count int
-}
-
-type OrgFilterCount struct {
-	Value string
-	Label string
-	Count int
-}
+type OrgFilterCount = commonfilters.FilterCount
 
 type RepositoryFilterCounts struct {
 	PublicCode         int
