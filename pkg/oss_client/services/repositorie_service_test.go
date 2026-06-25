@@ -146,12 +146,14 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	orgURI := "org-1"
 	date := "2024-01-01"
 	publicCode := true
+	archived := true
 	query := "forms"
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, &orgURI, p.Organisation)
 			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
+			require.Equal(t, &archived, p.Archived)
 			require.Equal(t, &date, p.LastActivityAfter)
 			require.Equal(t, []string{"library"}, p.SoftwareType)
 			require.Equal(t, []string{"stable"}, p.DevelopmentStatus)
@@ -168,6 +170,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 		Organisation:       &orgURI,
 		Query:              query,
 		PublicCode:         &publicCode,
+		Archived:           &archived,
 		LastActivityAfter:  &date,
 		SoftwareType:       []string{"library"},
 		DevelopmentStatus:  []string{"stable"},
@@ -510,6 +513,7 @@ func TestGetRepositoryFilters_ReturnsAllGroups(t *testing.T) {
 		keys[i] = g.Key
 	}
 	assert.Contains(t, keys, "publiccode")
+	assert.Contains(t, keys, "archived")
 	assert.Contains(t, keys, "lastActivityAfter")
 	assert.Contains(t, keys, "softwareType")
 	assert.Contains(t, keys, "developmentStatus")
@@ -524,7 +528,7 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	n := 42
 	repo := &stubRepo{
 		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
-			return &models.RepositoryFilterCounts{PublicCode: n}, nil
+			return &models.RepositoryFilterCounts{PublicCode: n, Archived: n}, nil
 		},
 	}
 	svc := services.NewRepositoryService(repo)
@@ -542,6 +546,17 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	assert.Equal(t, n, *publiccodeGroup.Count)
 	assert.Equal(t, "toggle", publiccodeGroup.Type)
 	assert.Equal(t, true, publiccodeGroup.Value)
+
+	var archivedGroup models.FilterGroup
+	for _, g := range groups {
+		if g.Key == "archived" {
+			archivedGroup = g
+		}
+	}
+	require.NotNil(t, archivedGroup.Count)
+	assert.Equal(t, n, *archivedGroup.Count)
+	assert.Equal(t, "toggle", archivedGroup.Type)
+	assert.Equal(t, false, archivedGroup.Value)
 }
 
 func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
@@ -549,11 +564,14 @@ func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
 	svc := services.NewRepositoryService(repo)
 	trueVal := true
 
-	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &trueVal})
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &trueVal, Archived: &trueVal})
 	require.NoError(t, err)
 
 	for _, g := range groups {
 		if g.Key == "publiccode" {
+			assert.Equal(t, true, g.Value)
+		}
+		if g.Key == "archived" {
 			assert.Equal(t, true, g.Value)
 		}
 	}
@@ -571,7 +589,7 @@ func TestGetRepositoryFilters_PublicCodeFalseReturnsOnlyPublicCodeAndOrganisatio
 	for i, g := range groups {
 		keys[i] = g.Key
 	}
-	assert.Equal(t, []string{"publiccode", "organisation"}, keys)
+	assert.Equal(t, []string{"publiccode", "archived", "organisation"}, keys)
 }
 
 func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {

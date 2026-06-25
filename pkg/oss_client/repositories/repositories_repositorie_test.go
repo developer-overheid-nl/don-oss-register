@@ -148,6 +148,21 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.Equal(t, 1, pagination.TotalRecords)
 	assert.Equal(t, "repo-5", results[0].Id)
 
+	includeArchived := true
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
+		Organisation: &org1.Uri,
+		PublicCode:   &publicCodeDisabled,
+		Archived:     &includeArchived,
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	assert.Equal(t, 2, pagination.TotalRecords)
+	ids = make([]string, len(results))
+	for i, repo := range results {
+		ids[i] = repo.Id
+	}
+	assert.ElementsMatch(t, []string{"repo-4", "repo-5"}, ids)
+
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 	})
@@ -177,6 +192,48 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
 	assert.Equal(t, "repo-2", results[0].Id)
+}
+
+func TestRepositoriesRepository_GetRepositoriesArchivedFilter(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
+	require.NoError(t, repo.SaveOrganisatie(org))
+
+	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
+		Id:             "active-repo",
+		Name:           "Active Repo",
+		OrganisationID: &org.Uri,
+		PublicCodeUrl:  "https://example.org/active/publiccode.yml",
+		Active:         true,
+	}))
+	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{
+		Id:             "archived-repo",
+		Name:           "Archived Repo",
+		OrganisationID: &org.Uri,
+		PublicCodeUrl:  "https://example.org/archived/publiccode.yml",
+		Active:         false,
+	}))
+	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "active-repo").Error)
+
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, 1, pagination.TotalRecords)
+	assert.Equal(t, "active-repo", results[0].Id)
+
+	includeArchived := true
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{Archived: &includeArchived})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	assert.Equal(t, 2, pagination.TotalRecords)
+	ids := make([]string, len(results))
+	for i, repo := range results {
+		ids[i] = repo.Id
+	}
+	assert.ElementsMatch(t, []string{"active-repo", "archived-repo"}, ids)
 }
 
 func TestRepositoriesRepository_GetRepositoriesCombinesQueryAndFilters(t *testing.T) {
@@ -558,6 +615,7 @@ func TestRepositoriesRepository_GetRepositoryFilterCountsAppliesCrossFilters(t *
 	assert.Equal(t, []models.FilterCount{{Value: "stable", Count: 1}}, counts.DevelopmentStatus)
 	assert.Equal(t, []models.FilterCount{{Value: "internal", Count: 1}}, counts.MaintenanceType)
 	assert.Equal(t, []models.FilterCount{{Value: "EUPL-1.2", Count: 1}}, counts.License)
+	assert.Equal(t, 1, counts.Archived)
 
 	platformCounts := map[string]int{}
 	for _, fc := range counts.Platforms {

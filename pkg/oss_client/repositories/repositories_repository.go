@@ -100,10 +100,13 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		return nil, models.Pagination{}, err
 	}
 
+	query := r.db.WithContext(ctx)
+	if !includeArchivedRepositories(p) {
+		query = query.Where("(active IS NULL OR active = ?)", true)
+	}
+
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(
-		r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true),
-	).Preload("Organisation").Find(&repositories).Error; err != nil {
+	if err := applyRepositoryOrdering(query).Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
@@ -290,11 +293,20 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	query := r.db.WithContext(ctx)
+	if !includeArchivedRepositories(p) {
+		query = query.Where("(active IS NULL OR active = ?)", true)
+	}
+
 	var allRepos []models.Repository
+	if err := query.Preload("Organisation").Find(&allRepos).Error; err != nil {
+		return nil, err
+	}
+	var archivedRepos []models.Repository
 	if err := r.db.WithContext(ctx).
-		Where("(active IS NULL OR active = ?)", true).
+		Where("active = ?", false).
 		Preload("Organisation").
-		Find(&allRepos).Error; err != nil {
+		Find(&archivedRepos).Error; err != nil {
 		return nil, err
 	}
 
@@ -302,6 +314,9 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 
 	result.PublicCode = countReposWithFilters(allRepos, matcher, "publiccode", func(repo models.Repository) bool {
 		return repo.PublicCodeUrl != ""
+	})
+	result.Archived = countReposWithFilters(archivedRepos, matcher, "archived", func(repo models.Repository) bool {
+		return !repo.Active
 	})
 
 	if matcher.lastActivityAfter != nil {
@@ -575,6 +590,10 @@ func publicCodeFilterValue(p *models.RepositoryFiltersParams) bool {
 		return true
 	}
 	return *p.PublicCode
+}
+
+func includeArchivedRepositories(p *models.RepositoryFiltersParams) bool {
+	return p != nil && p.Archived != nil && *p.Archived
 }
 
 func repoMatchesQuery(repo models.Repository, query string) bool {

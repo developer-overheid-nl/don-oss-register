@@ -30,6 +30,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		CreatedAt:        repo.CreatedAt,
 		LastCrawledAt:    repo.LastCrawledAt,
 		LastActivityAt:   repo.LastActivityAt,
+		Archived:         !repo.Active,
 		Organisation:     orgSummary,
 	}
 }
