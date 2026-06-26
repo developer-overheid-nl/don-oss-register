@@ -116,7 +116,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 			Active: true,
 		},
 		{Id: "repo-3", Name: "Repo Three", OrganisationID: &org2.Uri, Active: true},
-		{Id: "repo-4", Name: "Repo Four", OrganisationID: &org1.Uri, Active: false},
+		{Id: "repo-4", Name: "Repo Four", OrganisationID: &org1.Uri, Active: true, Archived: true},
 		{Id: "repo-5", Name: "Repo Five", OrganisationID: &org1.Uri, Active: true},
 	}
 	for _, r := range repositoriesToSave {
@@ -214,7 +214,8 @@ func TestRepositoriesRepository_GetRepositoriesArchivedFilter(t *testing.T) {
 		Name:           "Archived Repo",
 		OrganisationID: &org.Uri,
 		PublicCodeUrl:  "https://example.org/archived/publiccode.yml",
-		Active:         false,
+		Active:         true,
+		Archived:       true,
 	}))
 	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "active-repo").Error)
 
@@ -451,6 +452,27 @@ func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {
 	assert.True(t, all[0].IsFork)
 }
 
+func TestRepositoriesRepository_SaveRepositoryPersistsArchivedFlag(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	archivedRepo := &models.Repository{
+		Id:       "repo-archived",
+		Name:     "Archived frontend",
+		Url:      "https://git.example.org/custom/archived-frontend",
+		Archived: true,
+		Active:   true,
+	}
+	require.NoError(t, repo.SaveRepository(ctx, archivedRepo))
+
+	all, err := repo.AllRepositorys(ctx)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	assert.Equal(t, "https://git.example.org/custom/archived-frontend", all[0].Url)
+	assert.True(t, all[0].Archived)
+}
+
 func TestRepositoriesRepository_SaveRepositoryPersistsForkBasedOnURLs(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
@@ -598,7 +620,8 @@ func TestRepositoriesRepository_GetRepositoryFilterCountsAppliesCrossFilters(t *
 		OrganisationID: &org1.Uri,
 		PublicCodeUrl:  "https://example.org/inactive/publiccode.yml",
 		LastActivityAt: recent,
-		Active:         false,
+		Active:         true,
+		Archived:       true,
 	}))
 
 	date := "2024-01-01"

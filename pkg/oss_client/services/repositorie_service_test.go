@@ -759,11 +759,13 @@ localisation:
 
 	inputURL := "https://git.example.org/custom/digitale-balie"
 	isFork := true
+	archived := true
 	created, err := svc.CreateRepository(context.Background(), models.RepositoryInput{
 		Url:             &inputURL,
 		OrganisationUri: &org.Uri,
 		PublicCodeUrl:   &publicCode,
 		IsFork:          &isFork,
+		Archived:        &archived,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, created)
@@ -771,7 +773,9 @@ localisation:
 	require.NotNil(t, created.PublicCode)
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", saved.Url)
 	assert.True(t, saved.IsFork)
+	assert.True(t, saved.Archived)
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", created.Url)
+	assert.True(t, created.Archived)
 	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
 	assert.Equal(t, "https://git.example.org/upstream/digitale-balie", created.PublicCode.Url)
 }

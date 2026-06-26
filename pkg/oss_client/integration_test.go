@@ -134,7 +134,8 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		Url:              "https://example.org/repos/archived-repo",
 		PublicCodeUrl:    "https://publiccode.net/archived-repo",
 		LastActivityAt:   time.Date(2024, 5, 12, 12, 0, 0, 0, time.UTC),
-		Active:           false,
+		Active:           true,
+		Archived:         true,
 	}
 	require.NoError(t, env.repo.SaveRepository(ctx, archivedRepo))
 

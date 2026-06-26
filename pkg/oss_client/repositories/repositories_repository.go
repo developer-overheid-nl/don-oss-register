@@ -100,9 +100,9 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		return nil, models.Pagination{}, err
 	}
 
-	query := r.db.WithContext(ctx)
+	query := r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true)
 	if !includeArchivedRepositories(p) {
-		query = query.Where("(active IS NULL OR active = ?)", true)
+		query = query.Where("(archived IS NULL OR archived = ?)", false)
 	}
 
 	var repositories []models.Repository
@@ -293,9 +293,9 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	query := r.db.WithContext(ctx)
+	query := r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true)
 	if !includeArchivedRepositories(p) {
-		query = query.Where("(active IS NULL OR active = ?)", true)
+		query = query.Where("(archived IS NULL OR archived = ?)", false)
 	}
 
 	var allRepos []models.Repository
@@ -304,7 +304,8 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	}
 	var archivedRepos []models.Repository
 	if err := r.db.WithContext(ctx).
-		Where("active = ?", false).
+		Where("(active IS NULL OR active = ?)", true).
+		Where("archived = ?", true).
 		Preload("Organisation").
 		Find(&archivedRepos).Error; err != nil {
 		return nil, err
@@ -316,7 +317,7 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 		return repo.PublicCodeUrl != ""
 	})
 	result.Archived = countReposWithFilters(archivedRepos, matcher, "archived", func(repo models.Repository) bool {
-		return !repo.Active
+		return repo.Archived
 	})
 
 	if matcher.lastActivityAfter != nil {
