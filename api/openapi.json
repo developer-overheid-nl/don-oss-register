@@ -504,7 +504,7 @@
         "name": "archived",
         "in": "query",
         "required": false,
-        "description": "Include archived repositories. Defaults to false, hiding repositories marked as archived.",
+        "description": "Filter archived repositories. Defaults to false, hiding repositories marked as archived. Set true to return only archived repositories.",
         "schema": {
           "type": "boolean",
           "default": false

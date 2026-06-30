@@ -24,7 +24,7 @@ func buildArchivedGroup(p *models.RepositoryFiltersParams, counts *models.Reposi
 	return models.FilterGroup{
 		Key:         "archived",
 		Label:       "Toon archived repos",
-		Description: "Toon ook repositories die als archived zijn gemarkeerd.",
+		Description: "Toon repositories die als archived zijn gemarkeerd.",
 		Type:        "toggle",
 		Value:       value,
 		Count:       &counts.Archived,

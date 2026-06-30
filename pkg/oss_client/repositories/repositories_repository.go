@@ -100,10 +100,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		return nil, models.Pagination{}, err
 	}
 
-	query := r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true)
-	if !includeArchivedRepositories(p) {
-		query = query.Where("(archived IS NULL OR archived = ?)", false)
-	}
+	query := applyArchivedRepositoryFilter(r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true), p)
 
 	var repositories []models.Repository
 	if err := applyRepositoryOrdering(query).Preload("Organisation").Find(&repositories).Error; err != nil {
@@ -293,10 +290,7 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	query := r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true)
-	if !includeArchivedRepositories(p) {
-		query = query.Where("(archived IS NULL OR archived = ?)", false)
-	}
+	query := applyArchivedRepositoryFilter(r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true), p)
 
 	var allRepos []models.Repository
 	if err := query.Preload("Organisation").Find(&allRepos).Error; err != nil {
@@ -593,8 +587,11 @@ func publicCodeFilterValue(p *models.RepositoryFiltersParams) bool {
 	return *p.PublicCode
 }
 
-func includeArchivedRepositories(p *models.RepositoryFiltersParams) bool {
-	return p != nil && p.Archived != nil && *p.Archived
+func applyArchivedRepositoryFilter(db *gorm.DB, p *models.RepositoryFiltersParams) *gorm.DB {
+	if p != nil && p.Archived != nil && *p.Archived {
+		return db.Where("archived = ?", true)
+	}
+	return db.Where("(archived IS NULL OR archived = ?)", false)
 }
 
 func repoMatchesQuery(repo models.Repository, query string) bool {

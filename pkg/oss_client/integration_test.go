@@ -157,18 +157,23 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	t.Run("list repositories supports archived true", func(t *testing.T) {
 		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?archived=true")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
-		require.Equal(t, "2", resp.Header.Get("Total-Count"))
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
 
 		body := decodeBody[[]models.RepositorySummary](t, resp)
-		require.Len(t, body, 2)
-		ids := make([]string, len(body))
-		for i, repo := range body {
-			ids[i] = repo.Id
-			if repo.Id == "archived-repo" {
-				require.True(t, repo.Archived)
-			}
-		}
-		require.ElementsMatch(t, []string{"repo-1", "archived-repo"}, ids)
+		require.Len(t, body, 1)
+		require.Equal(t, "archived-repo", body[0].Id)
+		require.True(t, body[0].Archived)
+	})
+
+	t.Run("list repositories combines publiccode and archived filters", func(t *testing.T) {
+		resp := env.doRequest(t, http.MethodGet, "/v1/repositories?publiccode=true&archived=true")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, "1", resp.Header.Get("Total-Count"))
+
+		body := decodeBody[[]models.RepositorySummary](t, resp)
+		require.Len(t, body, 1)
+		require.Equal(t, "archived-repo", body[0].Id)
+		require.True(t, body[0].Archived)
 	})
 
 	t.Run("retrieve repository", func(t *testing.T) {
