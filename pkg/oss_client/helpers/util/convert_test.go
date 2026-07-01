@@ -1,6 +1,7 @@
 package util_test
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -137,6 +138,8 @@ func TestApplyRepositoryInputKeepsExistingTimestampsWhenZero(t *testing.T) {
 }
 
 func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := validPublicCodeYAML(`
   nl:
     shortDescription: Korte beschrijving van de Digitale Balie.
@@ -185,6 +188,8 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
 }
 
 func TestApplyRepositoryInputParsesRegionalLocaleDescription(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
 url: https://example.org/repo
@@ -232,6 +237,8 @@ func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
 }
 
 func TestApplyRepositoryInputStoresBasedOnURLsFromPublicCode(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	inputURL := "https://git.example.org/variant/openzaak-brug"
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: OpenZaakBrug
@@ -267,6 +274,8 @@ localisation:
 }
 
 func TestApplyRepositoryInputSelectsDescriptionUsingAvailableLanguages(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Service Guichet
 url: https://example.org/repo
@@ -306,6 +315,8 @@ localisation:
 }
 
 func TestApplyRepositoryInputParsesContractMaintenanceAndSpecialMandatoryFields(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Zaaksysteem
 url: https://example.org/repo
@@ -361,6 +372,8 @@ localisation:
 }
 
 func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := validPublicCodeYAML(`
   nl:
     shortDescription: Korte beschrijving van de Digitale Balie.
@@ -381,6 +394,8 @@ func TestApplyRepositoryInputParsesLegacyVersionWithWarnings(t *testing.T) {
 }
 
 func TestApplyRepositoryInputIgnoresInvalidPublicCodeYAML(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	invalid := `
 publiccodeYmlVersion: '0.2'
 description:
@@ -403,7 +418,36 @@ description:
 	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
 }
 
+func TestApplyRepositoryInputIgnoresPublicCodeWhenValidationFails(t *testing.T) {
+	validator := &fakePublicCodeValidator{
+		err: errors.New("publiccode validation failed"),
+	}
+	util.SetPublicCodeValidatorForTest(t, validator)
+
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+`)
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:              strPtr("https://manual.example/repo"),
+		Name:             strPtr("Handmatige naam"),
+		ShortDescription: strPtr("Handmatige korte omschrijving"),
+		PublicCodeUrl:    strPtr(publicCode),
+	})
+
+	assert.Equal(t, "Handmatige naam", repo.Name)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.ShortDescription)
+	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
+	assert.Nil(t, repo.PublicCode)
+	assert.Nil(t, repo.ForkBasedOnURLs)
+	assert.Equal(t, 1, validator.calls)
+}
+
 func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
+	disablePublicCodeValidation(t)
+
 	publicCode := validPublicCodeYAML(`
   nl:
     shortDescription: Korte beschrijving van de Digitale Balie.
@@ -461,4 +505,19 @@ localisation:
 
 func strPtr(val string) *string {
 	return &val
+}
+
+func disablePublicCodeValidation(t *testing.T) {
+	t.Helper()
+	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{})
+}
+
+type fakePublicCodeValidator struct {
+	err   error
+	calls int
+}
+
+func (v *fakePublicCodeValidator) ValidatePublicCode(string) error {
+	v.calls++
+	return v.err
 }

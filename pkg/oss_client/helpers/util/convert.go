@@ -1,9 +1,13 @@
 package util
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -11,6 +15,101 @@ import (
 	"github.com/google/uuid"
 	publiccode "github.com/italia/publiccode-parser-go/v5"
 )
+
+// PublicCodeValidator validates publiccode.yml input before it is parsed.
+type PublicCodeValidator interface {
+	ValidatePublicCode(input string) error
+}
+
+var publicCodeValidator PublicCodeValidator = donCheckerPublicCodeValidator{}
+
+type cleanupT interface {
+	Helper()
+	Cleanup(func())
+}
+
+// SetPublicCodeValidatorForTest replaces the publiccode validator for a single test.
+func SetPublicCodeValidatorForTest(t cleanupT, validator PublicCodeValidator) {
+	t.Helper()
+
+	previous := publicCodeValidator
+	publicCodeValidator = validator
+	t.Cleanup(func() {
+		publicCodeValidator = previous
+	})
+}
+
+type donCheckerPublicCodeValidator struct{}
+
+func (donCheckerPublicCodeValidator) ValidatePublicCode(input string) error {
+	trimmed := strings.TrimSpace(strings.TrimPrefix(input, "\ufeff"))
+	if trimmed == "" {
+		return nil
+	}
+
+	inputArg := trimmed
+	var cleanup func()
+	if !isLikelyURL(trimmed) {
+		file, err := os.CreateTemp("", "publiccode-*.yml")
+		if err != nil {
+			return fmt.Errorf("create temporary publiccode file: %w", err)
+		}
+		cleanup = func() {
+			if err := os.Remove(file.Name()); err != nil {
+				_ = err
+			}
+		}
+
+		if _, err := file.WriteString(trimmed); err != nil {
+			_ = file.Close()
+			cleanup()
+			return fmt.Errorf("write temporary publiccode file: %w", err)
+		}
+		if err := file.Close(); err != nil {
+			cleanup()
+			return fmt.Errorf("close temporary publiccode file: %w", err)
+		}
+		inputArg = file.Name()
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	cmd := exec.Command("don-checker", publicCodeValidationArgs(inputArg)...)
+	output, err := cmd.CombinedOutput()
+	if isExecutableNotFound(err) {
+		cmd = exec.Command("npx", append([]string{"--yes", "@developer-overheid-nl/don-checker@latest"}, publicCodeValidationArgs(inputArg)...)...)
+		output, err = cmd.CombinedOutput()
+	}
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			return fmt.Errorf("don-checker publiccode validation failed: %w", err)
+		}
+		return fmt.Errorf("don-checker publiccode validation failed: %w: %s", err, message)
+	}
+
+	return nil
+}
+
+func publicCodeValidationArgs(input string) []string {
+	return []string{
+		"validate",
+		"--ruleset",
+		"publiccode-05",
+		"--input",
+		input,
+	}
+}
+
+func isExecutableNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var execErr *exec.Error
+	return errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound)
+}
 
 func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 	var orgSummary *models.OrganisationSummary
@@ -97,6 +196,11 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	}
 
 	if publicCodeRaw != "" {
+		if err := publicCodeValidator.ValidatePublicCode(publicCodeRaw); err != nil {
+			log.Printf("publiccode validation failed: %v", err)
+			return target
+		}
+
 		content := publicCodeRaw
 		if isLikelyURL(publicCodeRaw) {
 			if resp, err := http.Get(publicCodeRaw); err == nil && resp != nil {
