@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"sort"
@@ -196,11 +197,6 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	}
 
 	if publicCodeRaw != "" {
-		if err := publicCodeValidator.ValidatePublicCode(publicCodeRaw); err != nil {
-			log.Printf("publiccode validation failed: %v", err)
-			return target
-		}
-
 		content := publicCodeRaw
 		if isLikelyURL(publicCodeRaw) {
 			if resp, err := http.Get(publicCodeRaw); err == nil && resp != nil {
@@ -217,7 +213,23 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			}
 		}
 
+		publicCodeValid := true
+		if err := publicCodeValidator.ValidatePublicCode(content); err != nil {
+			publicCodeValid = false
+			log.Printf("publiccode validation failed: %s", summarizePublicCodeValidationError(err))
+		}
+
 		parsedPublicCode := parsePublicCodeYAML(content)
+		if !publicCodeValid {
+			if strings.TrimSpace(target.Name) == "" && parsedPublicCode.Name != "" {
+				target.Name = parsedPublicCode.Name
+			}
+			if strings.TrimSpace(target.Name) == "" {
+				target.Name = repositoryNameFromURL(target.Url)
+			}
+			return target
+		}
+
 		if parsedPublicCode.Name != "" {
 			target.Name = parsedPublicCode.Name
 		}
@@ -234,7 +246,67 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		target.ForkBasedOnURLs = append([]string(nil), parsedPublicCode.BasedOnURLs...)
 	}
 
+	if strings.TrimSpace(target.Name) == "" {
+		target.Name = repositoryNameFromURL(target.Url)
+	}
+
 	return target
+}
+
+func repositoryNameFromURL(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+
+	path := strings.Trim(parsed.Path, "/")
+	if path == "" {
+		return ""
+	}
+
+	parts := strings.Split(path, "/")
+	name := strings.TrimSpace(parts[len(parts)-1])
+	name = strings.TrimSuffix(name, ".git")
+
+	return strings.TrimSpace(name)
+}
+
+func summarizePublicCodeValidationError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	lines := strings.Split(err.Error(), "\n")
+	parts := make([]string, 0, 2)
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "Diagnostics:") {
+			parts = append(parts, trimmed)
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "message:") {
+			parts = append(parts, trimmed)
+			break
+		}
+	}
+
+	if len(parts) > 0 {
+		return strings.Join(parts, "; ")
+	}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+
+	return err.Error()
 }
 
 type parsedPublicCodeYAML struct {

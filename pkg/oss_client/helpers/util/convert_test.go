@@ -1,7 +1,9 @@
 package util_test
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -418,7 +420,7 @@ description:
 	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
 }
 
-func TestApplyRepositoryInputIgnoresPublicCodeWhenValidationFails(t *testing.T) {
+func TestApplyRepositoryInputUsesPublicCodeNameWhenValidationFails(t *testing.T) {
 	validator := &fakePublicCodeValidator{
 		err: errors.New("publiccode validation failed"),
 	}
@@ -428,21 +430,102 @@ func TestApplyRepositoryInputIgnoresPublicCodeWhenValidationFails(t *testing.T) 
   nl:
     shortDescription: Korte beschrijving van de Digitale Balie.
     longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
 `)
 
 	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
-		Url:              strPtr("https://manual.example/repo"),
-		Name:             strPtr("Handmatige naam"),
-		ShortDescription: strPtr("Handmatige korte omschrijving"),
-		PublicCodeUrl:    strPtr(publicCode),
+		Url:           strPtr("https://manual.example/repo"),
+		PublicCodeUrl: strPtr(publicCode),
 	})
 
-	assert.Equal(t, "Handmatige naam", repo.Name)
-	assert.Equal(t, "Handmatige korte omschrijving", repo.ShortDescription)
-	assert.Equal(t, "Handmatige korte omschrijving", repo.LongDescription)
+	assert.Equal(t, "Digitale Balie", repo.Name)
+	assert.Empty(t, repo.ShortDescription)
 	assert.Nil(t, repo.PublicCode)
 	assert.Nil(t, repo.ForkBasedOnURLs)
 	assert.Equal(t, 1, validator.calls)
+}
+
+func TestApplyRepositoryInputKeepsManualNameWhenValidationFails(t *testing.T) {
+	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{
+		err: errors.New("publiccode validation failed"),
+	})
+
+	repoURL := "https://github.com/OpenWebconcept/plugin-accessible-docs.git"
+	manualName := "Handmatige titel"
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`)
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repoURL,
+		Name:          &manualName,
+		PublicCodeUrl: &publicCode,
+	})
+
+	assert.Equal(t, "Handmatige titel", repo.Name)
+	assert.Nil(t, repo.PublicCode)
+}
+
+func TestApplyRepositoryInputUsesRepositoryURLSlugWhenValidationFailsWithoutName(t *testing.T) {
+	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{
+		err: errors.New("publiccode validation failed"),
+	})
+
+	repoURL := "https://github.com/OpenWebconcept/plugin-accessible-docs.git"
+	publicCodeURL := "publiccodeYmlVersion: '0.2'\ndescription:\n\tinvalid"
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repoURL,
+		PublicCodeUrl: &publicCodeURL,
+	})
+
+	assert.Equal(t, "plugin-accessible-docs", repo.Name)
+	assert.Equal(t, publicCodeURL, repo.PublicCodeUrl)
+	assert.Nil(t, repo.PublicCode)
+}
+
+func TestApplyRepositoryInputLogsCompactValidationFailure(t *testing.T) {
+	var logs bytes.Buffer
+	previousOutput := log.Writer()
+	previousFlags := log.Flags()
+	log.SetOutput(&logs)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(previousOutput)
+		log.SetFlags(previousFlags)
+	})
+
+	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{
+		err: errors.New(`don-checker publiccode validation failed: exit status 1: Ruleset: publiccode-05
+Applied rulesets: https://yml.publiccode.tools/schema/0.5
+Diagnostics: 27 (errors 26, warnings 1, info 0, hints 0)
+
+Errors (26)
+  1. parser
+     message: Invalid symbol
+     path: []
+     source: https://yml.publiccode.tools/schema/0.5
+  2. parser
+     message: Invalid symbol
+     path: []
+     source: https://yml.publiccode.tools/schema/0.5`),
+	})
+
+	util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		PublicCodeUrl: strPtr(validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving.
+    longDescription: Lange beschrijving.
+`)),
+	})
+
+	logged := logs.String()
+	assert.Contains(t, logged, "publiccode validation failed: Diagnostics: 27 (errors 26, warnings 1, info 0, hints 0); message: Invalid symbol")
+	assert.NotContains(t, logged, "Errors (26)")
+	assert.NotContains(t, logged, "source: https://yml.publiccode.tools/schema/0.5")
 }
 
 func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
