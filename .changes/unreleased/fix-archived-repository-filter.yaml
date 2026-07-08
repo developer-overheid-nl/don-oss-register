@@ -1,3 +1,0 @@
-kind: Fixed
-body: Filter archived repositories as a separate result set instead of including them with active repositories. 
-time: 2026-06-30T10:56:15+02:00
