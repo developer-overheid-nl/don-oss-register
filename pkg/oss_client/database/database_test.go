@@ -38,6 +38,28 @@ func TestMigrateRepositorySchemaColumnsSkipsMissingRepositoryTable(t *testing.T)
 	require.NoError(t, migrateRepositorySchemaColumns(db))
 }
 
+func TestMigrateRepositoryTimestampColumnsRenamesLegacyColumns(t *testing.T) {
+	db := openLegacyTimestampRepositoryDB(t)
+
+	require.NoError(t, migrateRepositoryTimestampColumns(db))
+
+	m := db.Migrator()
+	require.True(t, m.HasColumn(&models.Repository{}, "last_crawled_at"))
+	require.True(t, m.HasColumn(&models.Repository{}, "last_activity_at"))
+	require.False(t, m.HasColumn(&models.Repository{}, "updated_at"))
+	require.False(t, m.HasColumn(&models.Repository{}, "last_activity"))
+}
+
+func TestMigrateRepositoryTimestampColumnsKeepsCurrentColumns(t *testing.T) {
+	db := openCurrentTimestampRepositoryDB(t)
+
+	require.NoError(t, migrateRepositoryTimestampColumns(db))
+
+	m := db.Migrator()
+	require.True(t, m.HasColumn(&models.Repository{}, "last_crawled_at"))
+	require.True(t, m.HasColumn(&models.Repository{}, "last_activity_at"))
+}
+
 func openLegacyRepositoryDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -47,6 +69,40 @@ func openLegacyRepositoryDB(t *testing.T) *gorm.DB {
 		CREATE TABLE repositories (
 			id text PRIMARY KEY,
 			name text
+		)
+	`).Error)
+
+	return db
+}
+
+func openLegacyTimestampRepositoryDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE repositories (
+			id text PRIMARY KEY,
+			name text,
+			updated_at datetime,
+			last_activity datetime
+		)
+	`).Error)
+
+	return db
+}
+
+func openCurrentTimestampRepositoryDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE repositories (
+			id text PRIMARY KEY,
+			name text,
+			last_crawled_at datetime,
+			last_activity_at datetime
 		)
 	`).Error)
 

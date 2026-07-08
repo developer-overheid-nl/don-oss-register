@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -268,6 +269,10 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("uri", "url", "must be a valid URL"),
 		)
 	}
+	if lbl, err := httpclient.FetchOrganisationLabel(ctx, org.Uri); err == nil && strings.TrimSpace(lbl) != "" {
+		org.Label = lbl
+	}
+
 	if org.Label == "" {
 		return nil, problem.NewBadRequest("Invalid input",
 			bodyError("label", "required", "label is required"),

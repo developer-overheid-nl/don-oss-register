@@ -294,3 +294,19 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		require.Equal(t, "Method not allowed", body.Title)
 	})
 }
+
+func TestAPIVersionMiddlewareSetsHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(oss_client.APIVersionMiddleware("2024-07-01"))
+	router.GET("/ping", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	resp := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	router.ServeHTTP(resp, req)
+
+	require.Equal(t, http.StatusNoContent, resp.Code)
+	require.Equal(t, "2024-07-01", resp.Header().Get("API-Version"))
+}

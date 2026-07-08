@@ -179,6 +179,24 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestListRepositories_DefaultsNilParams(t *testing.T) {
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+			require.Equal(t, 0, page)
+			require.Equal(t, 0, perPage)
+			require.NotNil(t, p)
+			return []models.Repository{}, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	results, pagination, err := svc.ListRepositorys(context.Background(), nil)
+
+	require.NoError(t, err)
+	assert.Empty(t, results)
+	assert.Equal(t, models.Pagination{}, pagination)
+}
+
 func TestSearchRepositories_ReturnsEmptyOnBlankQuery(t *testing.T) {
 	repo := &stubRepo{}
 	svc := services.NewRepositoryService(repo)
@@ -242,6 +260,17 @@ func TestRetrieveRepository_InvalidIDReturnsBadRequest(t *testing.T) {
 	svc := services.NewRepositoryService(repo)
 
 	_, err := svc.RetrieveRepository(context.Background(), "bad\x00id")
+	require.Error(t, err)
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+}
+
+func TestRetrieveRepository_EmptyIDReturnsBadRequest(t *testing.T) {
+	svc := services.NewRepositoryService(&stubRepo{})
+
+	_, err := svc.RetrieveRepository(context.Background(), "")
+
 	require.Error(t, err)
 	var apiErr problem.ProblemJSON
 	require.ErrorAs(t, err, &apiErr)
