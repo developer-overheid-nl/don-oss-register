@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestMigrateRepositorySchemaColumnsAddsForkColumns(t *testing.T) {
+func TestMigrateRepositorySchemaColumnsAddsRepositoryStatusColumns(t *testing.T) {
 	db := openLegacyRepositoryDB(t)
 
 	require.NoError(t, migrateRepositorySchemaColumns(db))
@@ -17,6 +17,7 @@ func TestMigrateRepositorySchemaColumnsAddsForkColumns(t *testing.T) {
 	m := db.Migrator()
 	require.True(t, m.HasColumn(&models.Repository{}, "is_fork"))
 	require.True(t, m.HasColumn(&models.Repository{}, "fork_based_on_urls"))
+	require.True(t, m.HasColumn(&models.Repository{}, "archived"))
 }
 
 func TestMigrateRepositorySchemaColumnsBackfillsForkFlag(t *testing.T) {
@@ -29,6 +30,18 @@ func TestMigrateRepositorySchemaColumnsBackfillsForkFlag(t *testing.T) {
 	var isFork bool
 	require.NoError(t, db.Raw("SELECT is_fork FROM repositories WHERE id = ?", "repo-1").Scan(&isFork).Error)
 	require.False(t, isFork)
+}
+
+func TestMigrateRepositorySchemaColumnsBackfillsArchivedFlag(t *testing.T) {
+	db := openLegacyRepositoryDB(t)
+	require.NoError(t, db.Exec("ALTER TABLE repositories ADD COLUMN archived boolean").Error)
+	require.NoError(t, db.Exec("INSERT INTO repositories (id, name, archived) VALUES (?, ?, NULL)", "repo-1", "Repo 1").Error)
+
+	require.NoError(t, migrateRepositorySchemaColumns(db))
+
+	var archived bool
+	require.NoError(t, db.Raw("SELECT archived FROM repositories WHERE id = ?", "repo-1").Scan(&archived).Error)
+	require.False(t, archived)
 }
 
 func TestMigrateRepositorySchemaColumnsSkipsMissingRepositoryTable(t *testing.T) {

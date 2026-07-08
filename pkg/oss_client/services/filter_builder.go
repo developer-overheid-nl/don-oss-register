@@ -19,6 +19,18 @@ func buildPublicCodeGroup(p *models.RepositoryFiltersParams, counts *models.Repo
 	}
 }
 
+func buildArchivedGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
+	value := p != nil && p.Archived != nil && *p.Archived
+	return models.FilterGroup{
+		Key:         "archived",
+		Label:       "Toon archived repos",
+		Description: "Toon repositories die als archived zijn gemarkeerd.",
+		Type:        "toggle",
+		Value:       value,
+		Count:       &counts.Archived,
+	}
+}
+
 func buildLastActivityGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
 	var value any
 	if p.LastActivityAfter != nil {

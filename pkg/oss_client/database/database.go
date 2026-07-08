@@ -73,6 +73,16 @@ func migrateRepositorySchemaColumns(db *gorm.DB) error {
 			return fmt.Errorf("failed to add column fork_based_on_urls: %w", err)
 		}
 	}
+	if !m.HasColumn(&models.Repository{}, "archived") {
+		if err := m.AddColumn(&models.Repository{}, "Archived"); err != nil {
+			return fmt.Errorf("failed to add column archived: %w", err)
+		}
+	}
+	if err := db.Model(&models.Repository{}).
+		Where("archived IS NULL").
+		Update("archived", false).Error; err != nil {
+		return fmt.Errorf("failed to backfill column archived: %w", err)
+	}
 
 	return nil
 }

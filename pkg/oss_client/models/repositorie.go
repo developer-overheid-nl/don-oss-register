@@ -93,6 +93,7 @@ type RepositorySummary struct {
 	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
 	LastCrawledAt    time.Time            `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
 	LastActivityAt   time.Time            `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
+	Archived         bool                 `json:"archived"`
 }
 
 type RepositoryDetail struct {
@@ -111,6 +112,7 @@ type Repository struct {
 	Url              string        `json:"url" gorm:"column:repository_url"`
 	IsFork           bool          `json:"-" gorm:"column:is_fork;default:false"`
 	ForkBasedOnURLs  []string      `json:"-" gorm:"column:fork_based_on_urls;serializer:json"`
+	Archived         bool          `json:"archived" gorm:"column:archived;default:false"`
 	PublicCodeUrl    string        `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
 	PublicCode       *PublicCode   `json:"publicCode,omitempty" gorm:"column:public_code_data;serializer:json"`
 	CreatedAt        time.Time     `json:"createdAt" gorm:"column:created_at"`
@@ -124,6 +126,7 @@ type RepositoryInput struct {
 	OrganisationUri  *string   `json:"organisationUri" binding:"required,url"`
 	PublicCodeUrl    *string   `json:"publicCodeUrl" binding:"omitempty,url"`
 	IsFork           *bool     `json:"isFork,omitempty"`
+	Archived         *bool     `json:"archived,omitempty"`
 	ShortDescription *string   `json:"shortDescription,omitempty"`
 	CreatedAt        time.Time `json:"createdAt" gorm:"column:created_at"`
 	LastCrawledAt    time.Time `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
@@ -145,6 +148,7 @@ type ListRepositorysParams struct {
 	Organisation       *string  `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
+	Archived           *bool    `query:"archived"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`
 	DevelopmentStatus  []string `query:"developmentStatus"`
@@ -163,6 +167,7 @@ func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
 		Organisation:       p.Organisation,
 		Query:              p.Query,
 		PublicCode:         p.PublicCode,
+		Archived:           p.Archived,
 		LastActivityAfter:  p.LastActivityAfter,
 		SoftwareType:       append([]string(nil), p.SoftwareType...),
 		DevelopmentStatus:  append([]string(nil), p.DevelopmentStatus...),
@@ -194,6 +199,7 @@ type OrgFilterCount = commonfilters.FilterCount
 
 type RepositoryFilterCounts struct {
 	PublicCode         int
+	Archived           int
 	LastActivityAfter  *int
 	SoftwareType       []FilterCount
 	DevelopmentStatus  []FilterCount
@@ -208,6 +214,7 @@ type RepositoryFiltersParams struct {
 	Organisation       *string  `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
+	Archived           *bool    `query:"archived"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`
 	DevelopmentStatus  []string `query:"developmentStatus"`

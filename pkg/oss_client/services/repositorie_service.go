@@ -345,6 +345,7 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	}
 	groups := []models.FilterGroup{
 		buildPublicCodeGroup(p, counts),
+		buildArchivedGroup(p, counts),
 		buildLastActivityGroup(p, counts),
 		buildSoftwareTypeGroup(p, counts),
 		buildDevelopmentStatusGroup(p, counts),
@@ -357,6 +358,7 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	if p.PublicCode != nil && !*p.PublicCode {
 		groups = []models.FilterGroup{
 			buildPublicCodeGroup(p, counts),
+			buildArchivedGroup(p, counts),
 			buildOrganisationGroup(p, counts),
 		}
 	}

@@ -30,6 +30,7 @@ func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 		CreatedAt:        repo.CreatedAt,
 		LastCrawledAt:    repo.LastCrawledAt,
 		LastActivityAt:   repo.LastActivityAt,
+		Archived:         repo.Archived,
 		Organisation:     orgSummary,
 	}
 }
@@ -79,6 +80,9 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	}
 	if input.IsFork != nil {
 		target.IsFork = *input.IsFork
+	}
+	if input.Archived != nil {
+		target.Archived = *input.Archived
 	}
 	if input.Name != nil {
 		target.Name = strings.TrimSpace(*input.Name)

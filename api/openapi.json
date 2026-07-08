@@ -132,6 +132,7 @@
           { "$ref": "#/components/parameters/SearchFilter" },
           { "$ref": "#/components/parameters/OrganisationFilter" },
           { "$ref": "#/components/parameters/PublicCodeFilter" },
+          { "$ref": "#/components/parameters/ArchivedFilter" },
           { "$ref": "#/components/parameters/LastActivityAfterFilter" },
           { "$ref": "#/components/parameters/SoftwareTypeFilter" },
           { "$ref": "#/components/parameters/DevelopmentStatusFilter" },
@@ -178,6 +179,7 @@
           { "$ref": "#/components/parameters/SearchFilter" },
           { "$ref": "#/components/parameters/OrganisationFilter" },
           { "$ref": "#/components/parameters/PublicCodeFilter" },
+          { "$ref": "#/components/parameters/ArchivedFilter" },
           { "$ref": "#/components/parameters/LastActivityAfterFilter" },
           { "$ref": "#/components/parameters/SoftwareTypeFilter" },
           { "$ref": "#/components/parameters/DevelopmentStatusFilter" },
@@ -496,6 +498,16 @@
         "description": "Filter on publiccode.yml presence. Omit or set true for repositories with a publiccode.yml URL. Set false for repositories without a publiccode.yml URL.",
         "schema": {
           "type": "boolean"
+        }
+      },
+      "ArchivedFilter": {
+        "name": "archived",
+        "in": "query",
+        "required": false,
+        "description": "Filter archived repositories. Defaults to false, hiding repositories marked as archived. Set true to return only archived repositories.",
+        "schema": {
+          "type": "boolean",
+          "default": false
         }
       },
       "LastActivityAfterFilter": {
@@ -878,6 +890,11 @@
           "lastActivityAt": {
             "$ref": "#/components/schemas/LastActivityAt",
             "readOnly": true
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Whether the repository is archived and hidden from default repository listings.",
+            "readOnly": true
           }
         }
       },
@@ -909,6 +926,10 @@
           "isFork": {
             "type": "boolean",
             "description": "Fork status supplied by the crawler based on the code hosting provider."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Archived status supplied by the crawler based on the code hosting provider."
           },
           "shortDescription": {
             "$ref": "#/components/schemas/RepositoryShortDescription"
