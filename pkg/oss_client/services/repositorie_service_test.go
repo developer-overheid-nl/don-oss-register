@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -764,6 +765,8 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 }
 
 func TestCreateRepository_PreservesManualURLWhenPublicCodeIsProvided(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
 url: https://git.example.org/upstream/digitale-balie
@@ -842,10 +845,19 @@ func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
 }
 
 func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
-	var calls int
+	var mu sync.Mutex
+	sentIDs := map[string]int{}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
+		if r.Method == http.MethodPost && r.URL.Path == "/collections/oss-register/documents" && r.URL.Query().Get("action") == "upsert" {
+			var body struct {
+				ID string `json:"id"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			mu.Lock()
+			sentIDs[body.ID]++
+			mu.Unlock()
+		}
 		w.WriteHeader(http.StatusCreated)
 	}))
 	defer server.Close()
@@ -872,5 +884,11 @@ func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t
 	service := services.NewRepositoryService(repo)
 	err := service.PublishAllRepositoriesToTypesense(context.Background())
 	assert.NoError(t, err)
-	assert.Equal(t, 2, calls)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, map[string]int{
+		"repo-1": 1,
+		"repo-3": 1,
+	}, sentIDs)
 }
