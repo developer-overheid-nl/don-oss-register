@@ -2,8 +2,10 @@ package services_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -400,6 +402,29 @@ func TestCreateOrganisation_ConflictWhenExistingOrganisationFound(t *testing.T) 
 
 func TestCreateOrganisation_Saves(t *testing.T) {
 	var saved *models.Organisation
+	tooiURI := "https://identifier.overheid.nl/tooi/id/oorg/oorg10111"
+	tooiLabel := "KOOP"
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "application/ld+json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/ld+json")
+		_ = json.NewEncoder(w).Encode([]httpclient.TooIGraph{{
+			Graph: []httpclient.TooIObject{{
+				ID: tooiURI,
+				Label: []struct {
+					Value    string `json:"@value"`
+					Language string `json:"@language"`
+				}{{Value: tooiLabel, Language: "nl"}},
+			}},
+		}})
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
 	repo := &stubRepo{
 		saveOrgFunc: func(org *models.Organisation) error {
 			saved = org
@@ -408,10 +433,31 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	}
 	svc := services.NewRepositoryService(repo)
 
-	org := &models.Organisation{Uri: "https://example.org", Label: "Example"}
+	org := &models.Organisation{Uri: tooiURI, Label: "Wrong label from request"}
 	created, err := svc.CreateOrganisation(context.Background(), org)
 	require.NoError(t, err)
 	assert.Equal(t, saved, created)
+	require.NotNil(t, saved)
+	assert.Equal(t, tooiLabel, saved.Label)
+}
+
+func rewriteHostTransport(targetBase string) http.RoundTripper {
+	return &rewriteTransport{
+		base:   http.DefaultTransport,
+		target: targetBase,
+	}
+}
+
+type rewriteTransport struct {
+	base   http.RoundTripper
+	target string
+}
+
+func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	u, _ := url.Parse(t.target)
+	req.URL.Scheme = u.Scheme
+	req.URL.Host = u.Host
+	return t.base.RoundTrip(req)
 }
 
 func TestListOrganisations_ReturnsSummaries(t *testing.T) {

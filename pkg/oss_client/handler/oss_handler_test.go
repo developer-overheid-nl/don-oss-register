@@ -2,11 +2,14 @@ package handler_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 	"github.com/gin-gonic/gin"
@@ -199,6 +202,28 @@ func TestListOrganisations_SetsHeader(t *testing.T) {
 
 func TestCreateOrganisation_DelegatesToService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	tooiURI := "https://identifier.overheid.nl/tooi/id/oorg/oorg10111"
+	tooiLabel := "KOOP"
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/ld+json")
+		_ = json.NewEncoder(w).Encode([]httpclient.TooIGraph{{
+			Graph: []httpclient.TooIObject{{
+				ID: tooiURI,
+				Label: []struct {
+					Value    string `json:"@value"`
+					Language string `json:"@language"`
+				}{{Value: tooiLabel, Language: "nl"}},
+			}},
+		}})
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
 	repo := &serviceStubRepo{
 		saveOrgFunc: func(org *models.Organisation) error {
 			return nil
@@ -211,10 +236,29 @@ func TestCreateOrganisation_DelegatesToService(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/organisations", nil)
 	ctx.Request = req
 
-	org := &models.Organisation{Uri: "https://example.org", Label: "Example"}
+	org := &models.Organisation{Uri: tooiURI, Label: "Wrong label from request"}
 	resp, err := ctrl.CreateOrganisation(ctx, org)
 	require.NoError(t, err)
-	assert.Equal(t, "Example", resp.Label)
+	assert.Equal(t, tooiLabel, resp.Label)
+}
+
+func rewriteHostTransport(targetBase string) http.RoundTripper {
+	return &rewriteTransport{
+		base:   http.DefaultTransport,
+		target: targetBase,
+	}
+}
+
+type rewriteTransport struct {
+	base   http.RoundTripper
+	target string
+}
+
+func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	u, _ := url.Parse(t.target)
+	req.URL.Scheme = u.Scheme
+	req.URL.Host = u.Host
+	return t.base.RoundTrip(req)
 }
 
 func TestCreateRepository_DelegatesToService(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -268,11 +269,6 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("uri", "url", "must be a valid URL"),
 		)
 	}
-	if org.Label == "" {
-		return nil, problem.NewBadRequest("Invalid input",
-			bodyError("label", "required", "label is required"),
-		)
-	}
 	existing, err := s.repo.FindOrganisationByURI(ctx, org.Uri)
 	if err != nil {
 		return nil, err
@@ -282,6 +278,20 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("uri", "conflict", "organisation already exists"),
 		)
 	}
+
+	label, err := httpclient.FetchOrganisationLabel(ctx, org.Uri)
+	if err != nil {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("uri", "tooi", "uri must resolve to a TOOI organisation label"),
+		)
+	}
+	org.Label = strings.TrimSpace(label)
+	if org.Label == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("uri", "tooi", "TOOI organisation label is empty"),
+		)
+	}
+
 	if err := s.repo.SaveOrganisatie(org); err != nil {
 		return nil, err
 	}

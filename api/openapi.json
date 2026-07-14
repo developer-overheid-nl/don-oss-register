@@ -432,7 +432,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrganisationSummary"
+                "$ref": "#/components/schemas/OrganisationInput"
               }
             }
           }
@@ -824,6 +824,17 @@
           }
         },
         "required": ["uri", "label"]
+      },
+      "OrganisationInput": {
+        "title": "Organisation input",
+        "description": "An organisation to add to the catalog. The label is resolved from TOOI.",
+        "type": "object",
+        "properties": {
+          "uri": {
+            "$ref": "#/components/schemas/OrganisationUri"
+          }
+        },
+        "required": ["uri"]
       },
       "GitOrganisationInput": {
         "title": "Git Organisation Input",

@@ -95,11 +95,11 @@ func TestRepositoriesEndpoints(t *testing.T) {
 	env := newIntegrationEnv(t)
 	ctx := context.Background()
 
-	org, err := env.service.CreateOrganisation(ctx, &models.Organisation{
+	org := &models.Organisation{
 		Uri:   "https://example.org/organisations/integration",
 		Label: "Integration Org",
-	})
-	require.NoError(t, err)
+	}
+	require.NoError(t, env.repo.SaveOrganisatie(org))
 
 	repoModel := &models.Repository{
 		Id:               "repo-1",
