@@ -19,6 +19,7 @@ type ListRepositorysParams struct {
 	Organisation       *string  `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
+	Archived           *bool    `query:"archived"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`
 	DevelopmentStatus  []string `query:"developmentStatus"`
@@ -37,6 +38,7 @@ func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
 		Organisation:       p.Organisation,
 		Query:              p.Query,
 		PublicCode:         p.PublicCode,
+		Archived:           p.Archived,
 		LastActivityAfter:  p.LastActivityAfter,
 		SoftwareType:       append([]string(nil), p.SoftwareType...),
 		DevelopmentStatus:  append([]string(nil), p.DevelopmentStatus...),
@@ -59,6 +61,7 @@ type OrgFilterCount = commonfilters.FilterCount
 
 type RepositoryFilterCounts struct {
 	PublicCode         int
+	Archived           int
 	LastActivityAfter  *int
 	SoftwareType       []FilterCount
 	DevelopmentStatus  []FilterCount
@@ -73,6 +76,7 @@ type RepositoryFiltersParams struct {
 	Organisation       *string  `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
+	Archived           *bool    `query:"archived"`
 	LastActivityAfter  *string  `query:"lastActivityAfter"`
 	SoftwareType       []string `query:"softwareType"`
 	DevelopmentStatus  []string `query:"developmentStatus"`
