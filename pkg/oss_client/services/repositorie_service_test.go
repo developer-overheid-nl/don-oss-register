@@ -2,8 +2,11 @@ package services_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -146,12 +149,14 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	orgURI := "org-1"
 	date := "2024-01-01"
 	publicCode := true
+	archived := true
 	query := "forms"
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, &orgURI, p.Organisation)
 			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
+			require.Equal(t, &archived, p.Archived)
 			require.Equal(t, &date, p.LastActivityAfter)
 			require.Equal(t, []string{"library"}, p.SoftwareType)
 			require.Equal(t, []string{"stable"}, p.DevelopmentStatus)
@@ -168,6 +173,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 		Organisation:       &orgURI,
 		Query:              query,
 		PublicCode:         &publicCode,
+		Archived:           &archived,
 		LastActivityAfter:  &date,
 		SoftwareType:       []string{"library"},
 		DevelopmentStatus:  []string{"stable"},
@@ -426,6 +432,29 @@ func TestCreateOrganisation_ConflictWhenExistingOrganisationFound(t *testing.T) 
 
 func TestCreateOrganisation_Saves(t *testing.T) {
 	var saved *models.Organisation
+	tooiURI := "https://identifier.overheid.nl/tooi/id/oorg/oorg10111"
+	tooiLabel := "KOOP"
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "application/ld+json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/ld+json")
+		_ = json.NewEncoder(w).Encode([]httpclient.TooIGraph{{
+			Graph: []httpclient.TooIObject{{
+				ID: tooiURI,
+				Label: []struct {
+					Value    string `json:"@value"`
+					Language string `json:"@language"`
+				}{{Value: tooiLabel, Language: "nl"}},
+			}},
+		}})
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
 	repo := &stubRepo{
 		saveOrgFunc: func(org *models.Organisation) error {
 			saved = org
@@ -434,10 +463,31 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	}
 	svc := services.NewRepositoryService(repo)
 
-	org := &models.Organisation{Uri: "https://example.org", Label: "Example"}
+	org := &models.Organisation{Uri: tooiURI, Label: "Wrong label from request"}
 	created, err := svc.CreateOrganisation(context.Background(), org)
 	require.NoError(t, err)
 	assert.Equal(t, saved, created)
+	require.NotNil(t, saved)
+	assert.Equal(t, tooiLabel, saved.Label)
+}
+
+func rewriteHostTransport(targetBase string) http.RoundTripper {
+	return &rewriteTransport{
+		base:   http.DefaultTransport,
+		target: targetBase,
+	}
+}
+
+type rewriteTransport struct {
+	base   http.RoundTripper
+	target string
+}
+
+func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	u, _ := url.Parse(t.target)
+	req.URL.Scheme = u.Scheme
+	req.URL.Host = u.Host
+	return t.base.RoundTrip(req)
 }
 
 func TestListOrganisations_ReturnsSummaries(t *testing.T) {
@@ -539,6 +589,7 @@ func TestGetRepositoryFilters_ReturnsAllGroups(t *testing.T) {
 		keys[i] = g.Key
 	}
 	assert.Contains(t, keys, "publiccode")
+	assert.Contains(t, keys, "archived")
 	assert.Contains(t, keys, "lastActivityAfter")
 	assert.Contains(t, keys, "softwareType")
 	assert.Contains(t, keys, "developmentStatus")
@@ -553,7 +604,7 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	n := 42
 	repo := &stubRepo{
 		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
-			return &models.RepositoryFilterCounts{PublicCode: n}, nil
+			return &models.RepositoryFilterCounts{PublicCode: n, Archived: n}, nil
 		},
 	}
 	svc := services.NewRepositoryService(repo)
@@ -571,6 +622,17 @@ func TestGetRepositoryFilters_ToggleGroupHasCount(t *testing.T) {
 	assert.Equal(t, n, *publiccodeGroup.Count)
 	assert.Equal(t, "toggle", publiccodeGroup.Type)
 	assert.Equal(t, true, publiccodeGroup.Value)
+
+	var archivedGroup models.FilterGroup
+	for _, g := range groups {
+		if g.Key == "archived" {
+			archivedGroup = g
+		}
+	}
+	require.NotNil(t, archivedGroup.Count)
+	assert.Equal(t, n, *archivedGroup.Count)
+	assert.Equal(t, "toggle", archivedGroup.Type)
+	assert.Equal(t, false, archivedGroup.Value)
 }
 
 func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
@@ -578,11 +640,14 @@ func TestGetRepositoryFilters_ToggleValue_TrueWhenActive(t *testing.T) {
 	svc := services.NewRepositoryService(repo)
 	trueVal := true
 
-	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &trueVal})
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{PublicCode: &trueVal, Archived: &trueVal})
 	require.NoError(t, err)
 
 	for _, g := range groups {
 		if g.Key == "publiccode" {
+			assert.Equal(t, true, g.Value)
+		}
+		if g.Key == "archived" {
 			assert.Equal(t, true, g.Value)
 		}
 	}
@@ -600,7 +665,7 @@ func TestGetRepositoryFilters_PublicCodeFalseReturnsOnlyPublicCodeAndOrganisatio
 	for i, g := range groups {
 		keys[i] = g.Key
 	}
-	assert.Equal(t, []string{"publiccode", "organisation"}, keys)
+	assert.Equal(t, []string{"publiccode", "archived", "organisation"}, keys)
 }
 
 func TestGetRepositoryFilters_MultiSelectOptionsSelected(t *testing.T) {
@@ -729,6 +794,8 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 }
 
 func TestCreateRepository_PreservesManualURLWhenPublicCodeIsProvided(t *testing.T) {
+	t.Setenv("ENABLE_TYPESENSE", "false")
+
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie
 url: https://git.example.org/upstream/digitale-balie
@@ -770,11 +837,13 @@ localisation:
 
 	inputURL := "https://git.example.org/custom/digitale-balie"
 	isFork := true
+	archived := true
 	created, err := svc.CreateRepository(context.Background(), models.RepositoryInput{
 		Url:             &inputURL,
 		OrganisationUri: &org.Uri,
 		PublicCodeUrl:   &publicCode,
 		IsFork:          &isFork,
+		Archived:        &archived,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, created)
@@ -782,7 +851,9 @@ localisation:
 	require.NotNil(t, created.PublicCode)
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", saved.Url)
 	assert.True(t, saved.IsFork)
+	assert.True(t, saved.Archived)
 	assert.Equal(t, "https://git.example.org/custom/digitale-balie", created.Url)
+	assert.True(t, created.Archived)
 	assert.Equal(t, models.RepositoryForkTypeTechnicalFork, created.ForkType)
 	assert.Equal(t, "https://git.example.org/upstream/digitale-balie", created.PublicCode.Url)
 }
@@ -803,10 +874,19 @@ func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
 }
 
 func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
-	var calls int
+	var mu sync.Mutex
+	sentIDs := map[string]int{}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
+		if r.Method == http.MethodPost && r.URL.Path == "/collections/oss-register/documents" && r.URL.Query().Get("action") == "upsert" {
+			var body struct {
+				ID string `json:"id"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			mu.Lock()
+			sentIDs[body.ID]++
+			mu.Unlock()
+		}
 		w.WriteHeader(http.StatusCreated)
 	}))
 	defer server.Close()
@@ -833,5 +913,11 @@ func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t
 	service := services.NewRepositoryService(repo)
 	err := service.PublishAllRepositoriesToTypesense(context.Background())
 	assert.NoError(t, err)
-	assert.Equal(t, 2, calls)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, map[string]int{
+		"repo-1": 1,
+		"repo-3": 1,
+	}, sentIDs)
 }

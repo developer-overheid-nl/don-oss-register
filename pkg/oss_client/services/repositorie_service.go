@@ -11,7 +11,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+<<<<<<< HEAD
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
+=======
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
+>>>>>>> origin/main
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
@@ -269,6 +273,7 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("uri", "url", "must be a valid URL"),
 		)
 	}
+<<<<<<< HEAD
 	if lbl, err := httpclient.FetchOrganisationLabel(ctx, org.Uri); err == nil && strings.TrimSpace(lbl) != "" {
 		org.Label = lbl
 	}
@@ -278,6 +283,8 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("label", "required", "label is required"),
 		)
 	}
+=======
+>>>>>>> origin/main
 	existing, err := s.repo.FindOrganisationByURI(ctx, org.Uri)
 	if err != nil {
 		return nil, err
@@ -287,6 +294,20 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 			bodyError("uri", "conflict", "organisation already exists"),
 		)
 	}
+
+	label, err := httpclient.FetchOrganisationLabel(ctx, org.Uri)
+	if err != nil {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("uri", "tooi", "uri must resolve to a TOOI organisation label"),
+		)
+	}
+	org.Label = strings.TrimSpace(label)
+	if org.Label == "" {
+		return nil, problem.NewBadRequest("Invalid input",
+			bodyError("uri", "tooi", "TOOI organisation label is empty"),
+		)
+	}
+
 	if err := s.repo.SaveOrganisatie(org); err != nil {
 		return nil, err
 	}
@@ -350,6 +371,7 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	}
 	groups := []models.FilterGroup{
 		buildPublicCodeGroup(p, counts),
+		buildArchivedGroup(p, counts),
 		buildLastActivityGroup(p, counts),
 		buildSoftwareTypeGroup(p, counts),
 		buildDevelopmentStatusGroup(p, counts),
@@ -362,6 +384,7 @@ func (s *RepositoryService) GetRepositoryFilters(ctx context.Context, p *models.
 	if p.PublicCode != nil && !*p.PublicCode {
 		groups = []models.FilterGroup{
 			buildPublicCodeGroup(p, counts),
+			buildArchivedGroup(p, counts),
 			buildOrganisationGroup(p, counts),
 		}
 	}

@@ -45,7 +45,9 @@ func TestRepositoryConversionsIncludeOrganisationAndForkType(t *testing.T) {
 		CreatedAt:        created,
 		LastCrawledAt:    lastCrawled,
 		LastActivityAt:   lastActivity,
+		Active:           true,
 		IsFork:           true,
+		Archived:         true,
 		Organisation:     &models.Organisation{Uri: "https://example.org/org", Label: "Example"},
 		PublicCode:       &models.PublicCode{Name: "Repo"},
 	}
@@ -58,6 +60,7 @@ func TestRepositoryConversionsIncludeOrganisationAndForkType(t *testing.T) {
 	assert.Equal(t, created, summary.CreatedAt)
 	assert.Equal(t, lastCrawled, summary.LastCrawledAt)
 	assert.Equal(t, lastActivity, summary.LastActivityAt)
+	assert.True(t, summary.Archived)
 	require.NotNil(t, summary.Organisation)
 	assert.Equal(t, "Example", summary.Organisation.Label)
 	assert.Equal(t, models.RepositoryForkTypeGitFork, summary.ForkType)
@@ -229,6 +232,18 @@ func TestApplyRepositoryInputSetsExplicitForkFlag(t *testing.T) {
 
 	assert.Equal(t, "https://git.example.org/custom/frontend", repo.Url)
 	assert.True(t, repo.IsFork)
+}
+
+func TestApplyRepositoryInputSetsExplicitArchivedFlag(t *testing.T) {
+	inputURL := "https://git.example.org/custom/frontend"
+	archived := true
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:      &inputURL,
+		Archived: &archived,
+	})
+
+	assert.Equal(t, "https://git.example.org/custom/frontend", repo.Url)
+	assert.True(t, repo.Archived)
 }
 
 func TestApplyRepositoryInputStoresBasedOnURLsFromPublicCode(t *testing.T) {

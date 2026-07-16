@@ -100,10 +100,10 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 		return nil, models.Pagination{}, err
 	}
 
+	query := applyArchivedRepositoryFilter(r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true), p)
+
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(
-		r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true),
-	).Preload("Organisation").Find(&repositories).Error; err != nil {
+	if err := applyRepositoryOrdering(query).Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
@@ -290,11 +290,18 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	query := applyArchivedRepositoryFilter(r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true), p)
+
 	var allRepos []models.Repository
+	if err := query.Preload("Organisation").Find(&allRepos).Error; err != nil {
+		return nil, err
+	}
+	var archivedRepos []models.Repository
 	if err := r.db.WithContext(ctx).
 		Where("(active IS NULL OR active = ?)", true).
+		Where("archived = ?", true).
 		Preload("Organisation").
-		Find(&allRepos).Error; err != nil {
+		Find(&archivedRepos).Error; err != nil {
 		return nil, err
 	}
 
@@ -302,6 +309,9 @@ func (r *repositoriesRepository) GetRepositoryFilterCounts(ctx context.Context, 
 
 	result.PublicCode = countReposWithFilters(allRepos, matcher, "publiccode", func(repo models.Repository) bool {
 		return repo.PublicCodeUrl != ""
+	})
+	result.Archived = countReposWithFilters(archivedRepos, matcher, "archived", func(repo models.Repository) bool {
+		return repo.Archived
 	})
 
 	if matcher.lastActivityAfter != nil {
@@ -575,6 +585,13 @@ func publicCodeFilterValue(p *models.RepositoryFiltersParams) bool {
 		return true
 	}
 	return *p.PublicCode
+}
+
+func applyArchivedRepositoryFilter(db *gorm.DB, p *models.RepositoryFiltersParams) *gorm.DB {
+	if p != nil && p.Archived != nil && *p.Archived {
+		return db.Where("archived = ?", true)
+	}
+	return db.Where("(archived IS NULL OR archived = ?)", false)
 }
 
 func repoMatchesQuery(repo models.Repository, query string) bool {
