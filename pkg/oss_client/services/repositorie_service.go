@@ -181,8 +181,10 @@ func (s *RepositoryService) CreateRepository(ctx context.Context, requestBody mo
 		return nil, err
 	}
 
-	repoCopy := *repo
-	go s.publishToTypesense(repoCopy)
+	if typesense.Enabled() {
+		repoCopy := *repo
+		go s.publishToTypesense(repoCopy)
+	}
 
 	return util.ToRepositoryDetail(repo), nil
 }
@@ -238,8 +240,10 @@ func (s *RepositoryService) UpdateRepository(ctx context.Context, id string, req
 		return nil, err
 	}
 
-	updatedCopy := *updated
-	go s.publishToTypesense(updatedCopy)
+	if typesense.Enabled() {
+		updatedCopy := *updated
+		go s.publishToTypesense(updatedCopy)
+	}
 
 	return util.ToRepositoryDetail(updated), nil
 }
