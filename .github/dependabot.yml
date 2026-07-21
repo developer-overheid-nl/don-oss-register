@@ -1,14 +1,35 @@
-# Set update schedule for GitHub Actions
-
 version: 2
 updates:
-
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    assignees:
+      - "pasibun"
 
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "daily"
+    labels:
+      - "dependencies"
+      - "go"
+    assignees:
+      - "pasibun"
+    groups:
+      go-modules:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    assignees:
+      - "pasibun"

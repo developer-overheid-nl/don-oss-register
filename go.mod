@@ -1,6 +1,6 @@
 module github.com/developer-overheid-nl/don-oss-register
 
-go 1.26.3
+go 1.26.5
 
 require (
 	github.com/developer-overheid-nl/don-register-common v0.1.1
