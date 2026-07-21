@@ -1,7 +1,11 @@
+FROM node:24-bookworm-slim AS don-checker
+
+RUN npm install -g @developer-overheid-nl/don-checker@latest && \
+    npm cache clean --force
+
 FROM golang:1.26.3
 
-RUN apt-get update && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* 
+COPY --from=don-checker /usr/local/ /usr/local/
 
 WORKDIR /app
 

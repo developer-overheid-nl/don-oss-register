@@ -1,9 +1,14 @@
 package util
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -11,6 +16,101 @@ import (
 	"github.com/google/uuid"
 	publiccode "github.com/italia/publiccode-parser-go/v5"
 )
+
+// PublicCodeValidator validates publiccode.yml input before it is parsed.
+type PublicCodeValidator interface {
+	ValidatePublicCode(input string) error
+}
+
+var publicCodeValidator PublicCodeValidator = donCheckerPublicCodeValidator{}
+
+type cleanupT interface {
+	Helper()
+	Cleanup(func())
+}
+
+// SetPublicCodeValidatorForTest replaces the publiccode validator for a single test.
+func SetPublicCodeValidatorForTest(t cleanupT, validator PublicCodeValidator) {
+	t.Helper()
+
+	previous := publicCodeValidator
+	publicCodeValidator = validator
+	t.Cleanup(func() {
+		publicCodeValidator = previous
+	})
+}
+
+type donCheckerPublicCodeValidator struct{}
+
+func (donCheckerPublicCodeValidator) ValidatePublicCode(input string) error {
+	trimmed := strings.TrimSpace(strings.TrimPrefix(input, "\ufeff"))
+	if trimmed == "" {
+		return nil
+	}
+
+	inputArg := trimmed
+	var cleanup func()
+	if !isLikelyURL(trimmed) {
+		file, err := os.CreateTemp("", "publiccode-*.yml")
+		if err != nil {
+			return fmt.Errorf("create temporary publiccode file: %w", err)
+		}
+		cleanup = func() {
+			if err := os.Remove(file.Name()); err != nil {
+				_ = err
+			}
+		}
+
+		if _, err := file.WriteString(trimmed); err != nil {
+			_ = file.Close()
+			cleanup()
+			return fmt.Errorf("write temporary publiccode file: %w", err)
+		}
+		if err := file.Close(); err != nil {
+			cleanup()
+			return fmt.Errorf("close temporary publiccode file: %w", err)
+		}
+		inputArg = file.Name()
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	cmd := exec.Command("don-checker", publicCodeValidationArgs(inputArg)...)
+	output, err := cmd.CombinedOutput()
+	if isExecutableNotFound(err) {
+		cmd = exec.Command("npx", append([]string{"--yes", "@developer-overheid-nl/don-checker@latest"}, publicCodeValidationArgs(inputArg)...)...)
+		output, err = cmd.CombinedOutput()
+	}
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			return fmt.Errorf("don-checker publiccode validation failed: %w", err)
+		}
+		return fmt.Errorf("don-checker publiccode validation failed: %w: %s", err, message)
+	}
+
+	return nil
+}
+
+func publicCodeValidationArgs(input string) []string {
+	return []string{
+		"validate",
+		"--ruleset",
+		"publiccode-05",
+		"--input",
+		input,
+	}
+}
+
+func isExecutableNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var execErr *exec.Error
+	return errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound)
+}
 
 func ToRepositorySummary(repo *models.Repository) models.RepositorySummary {
 	var orgSummary *models.OrganisationSummary
@@ -117,7 +217,23 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 			}
 		}
 
+		publicCodeValid := true
+		if err := publicCodeValidator.ValidatePublicCode(content); err != nil {
+			publicCodeValid = false
+			log.Printf("publiccode validation failed: %s", summarizePublicCodeValidationError(err))
+		}
+
 		parsedPublicCode := parsePublicCodeYAML(content)
+		if !publicCodeValid {
+			if strings.TrimSpace(target.Name) == "" && parsedPublicCode.Name != "" {
+				target.Name = parsedPublicCode.Name
+			}
+			if strings.TrimSpace(target.Name) == "" {
+				target.Name = repositoryNameFromURL(target.Url)
+			}
+			return target
+		}
+
 		if parsedPublicCode.Name != "" {
 			target.Name = parsedPublicCode.Name
 		}
@@ -134,7 +250,67 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 		target.ForkBasedOnURLs = append([]string(nil), parsedPublicCode.BasedOnURLs...)
 	}
 
+	if strings.TrimSpace(target.Name) == "" {
+		target.Name = repositoryNameFromURL(target.Url)
+	}
+
 	return target
+}
+
+func repositoryNameFromURL(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+
+	path := strings.Trim(parsed.Path, "/")
+	if path == "" {
+		return ""
+	}
+
+	parts := strings.Split(path, "/")
+	name := strings.TrimSpace(parts[len(parts)-1])
+	name = strings.TrimSuffix(name, ".git")
+
+	return strings.TrimSpace(name)
+}
+
+func summarizePublicCodeValidationError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	lines := strings.Split(err.Error(), "\n")
+	parts := make([]string, 0, 2)
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "Diagnostics:") {
+			parts = append(parts, trimmed)
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "message:") {
+			parts = append(parts, trimmed)
+			break
+		}
+	}
+
+	if len(parts) > 0 {
+		return strings.Join(parts, "; ")
+	}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+
+	return err.Error()
 }
 
 type parsedPublicCodeYAML struct {
