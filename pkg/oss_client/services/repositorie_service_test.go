@@ -12,6 +12,7 @@ import (
 
 	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
+	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,12 @@ type stubRepo struct {
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
 	filterCountsFunc    func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
+}
+
+type fakePublicCodeValidator struct{}
+
+func (fakePublicCodeValidator) ValidatePublicCode(string) error {
+	return nil
 }
 
 func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
@@ -766,6 +773,7 @@ func TestGetRepositoryFilters_DateGroup_NoCountWhenEmpty(t *testing.T) {
 
 func TestCreateRepository_PreservesManualURLWhenPublicCodeIsProvided(t *testing.T) {
 	t.Setenv("ENABLE_TYPESENSE", "false")
+	util.SetPublicCodeValidatorForTest(t, fakePublicCodeValidator{})
 
 	publicCode := `publiccodeYmlVersion: "0.5.0"
 name: Digitale Balie

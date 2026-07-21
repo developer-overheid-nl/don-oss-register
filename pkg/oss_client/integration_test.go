@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	oss_client "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
@@ -34,7 +36,8 @@ func newIntegrationEnv(t *testing.T) *integrationEnv {
 
 	gin.SetMode(gin.TestMode)
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+	dsn := "file:" + url.QueryEscape(t.Name()) + "?mode=memory&cache=shared"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
@@ -79,6 +82,23 @@ func (e *integrationEnv) doJSONRequest(t *testing.T, method, path string, payloa
 	return resp
 }
 
+func (e *integrationEnv) doJSONRequestWithHeaders(t *testing.T, method, path string, payload any, headers map[string]string) *http.Response {
+	t.Helper()
+	var buf bytes.Buffer
+	if payload != nil {
+		require.NoError(t, json.NewEncoder(&buf).Encode(payload))
+	}
+	req, err := http.NewRequest(method, e.server.URL+path, &buf)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	resp, err := e.client.Do(req)
+	require.NoError(t, err)
+	return resp
+}
+
 func decodeBody[T any](t *testing.T, resp *http.Response) T {
 	t.Helper()
 	defer func() {
@@ -89,6 +109,67 @@ func decodeBody[T any](t *testing.T, resp *http.Response) T {
 	var out T
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
 	return out
+}
+
+func TestCreateOrganisationResolvesTOOILabelOverHTTP(t *testing.T) {
+	env := newIntegrationEnv(t)
+	tooiURI := "https://identifier.overheid.nl/tooi/id/gemeente/gm0142"
+	tooiLabel := "Gemeente Almelo"
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/ld+json")
+		_ = json.NewEncoder(w).Encode([]httpclient.TooIGraph{{
+			Graph: []httpclient.TooIObject{{
+				ID: tooiURI,
+				Label: []struct {
+					Value    string `json:"@value"`
+					Language string `json:"@language"`
+				}{{Value: tooiLabel, Language: "nl"}},
+			}},
+		}})
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
+	resp := env.doJSONRequestWithHeaders(t, http.MethodPost, "/v1/organisations", map[string]string{
+		"uri": tooiURI,
+	}, map[string]string{
+		"Accept":        "application/json, application/problem+json",
+		"Authorization": "Bearer abc",
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	body := decodeBody[models.OrganisationSummary](t, resp)
+	require.Equal(t, tooiURI, body.Uri)
+	require.Equal(t, tooiLabel, body.Label)
+
+	saved, err := env.repo.FindOrganisationByURI(context.Background(), tooiURI)
+	require.NoError(t, err)
+	require.NotNil(t, saved)
+	require.Equal(t, tooiLabel, saved.Label)
+}
+
+func rewriteHostTransport(targetBase string) http.RoundTripper {
+	return &rewriteTransport{
+		base:   http.DefaultTransport,
+		target: targetBase,
+	}
+}
+
+type rewriteTransport struct {
+	base   http.RoundTripper
+	target string
+}
+
+func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	u, _ := url.Parse(t.target)
+	req.URL.Scheme = u.Scheme
+	req.URL.Host = u.Host
+	return t.base.RoundTrip(req)
 }
 
 func TestRepositoriesEndpoints(t *testing.T) {
