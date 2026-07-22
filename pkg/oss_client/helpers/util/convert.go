@@ -15,7 +15,6 @@ import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/google/uuid"
 	publiccode "github.com/italia/publiccode-parser-go/v5"
-	"gopkg.in/yaml.v3"
 )
 
 // PublicCodeValidator validates publiccode.yml input before it is parsed.
@@ -334,7 +333,12 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
 	if parsed == nil {
-		return parsePublicCodeYAMLDocument(raw, parseErr)
+		if parseErr != nil {
+			log.Printf("publiccode parse failed: %v", parseErr)
+		} else {
+			log.Printf("publiccode parse failed: empty parse result")
+		}
+		return parsedPublicCodeYAML{}
 	}
 	if parseErr != nil {
 		// Only continue if error is ValidationResults (validation warnings/errors)
@@ -351,7 +355,7 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
 		log.Printf("publiccode parse result is not version 0: %T", parsed)
-		return parsePublicCodeYAMLDocument(raw, nil)
+		return parsedPublicCodeYAML{}
 	}
 	result := parsedPublicCodeYAML{
 		PublicCode:  mapPublicCodeMandatoryFields(v0),
@@ -376,338 +380,6 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 	}
 	if result.LongDescription == "" {
 		log.Printf("publiccode description does not contain a long description for repository with url %q", result.URL)
-	}
-
-	return result
-}
-
-type publicCodeYAMLDocument struct {
-	PubliccodeYmlVersion string `yaml:"publiccodeYmlVersion"`
-	Name                 string `yaml:"name"`
-	URL                  string `yaml:"url"`
-	LandingURL           string `yaml:"landingURL"`
-	Platforms            []string
-	DevelopmentStatus    string         `yaml:"developmentStatus"`
-	SoftwareType         string         `yaml:"softwareType"`
-	IsBasedOn            yamlStringList `yaml:"isBasedOn"`
-	Legal                struct {
-		License string
-	}
-	Description map[string]publicCodeYAMLDescription
-	Maintenance struct {
-		Type        string
-		Contractors []publicCodeYAMLContractor
-		Contacts    []publicCodeYAMLContact
-	}
-	Localisation struct {
-		LocalisationReady  *bool    `yaml:"localisationReady"`
-		AvailableLanguages []string `yaml:"availableLanguages"`
-	}
-	Organisation *struct {
-		URI string `yaml:"uri"`
-	}
-	DependsOn *struct {
-		Open        []publicCodeYAMLDependency
-		Proprietary []publicCodeYAMLDependency
-		Hardware    []publicCodeYAMLDependency
-	} `yaml:"dependsOn"`
-	FundedBy []publicCodeYAMLOrganisation `yaml:"fundedBy"`
-}
-
-type publicCodeYAMLDescription struct {
-	LocalisedName    string `yaml:"localisedName"`
-	ShortDescription string `yaml:"shortDescription"`
-	LongDescription  string `yaml:"longDescription"`
-	Features         []string
-}
-
-type publicCodeYAMLContractor struct {
-	Name  string
-	Until string
-}
-
-type publicCodeYAMLContact struct {
-	Name string
-}
-
-type publicCodeYAMLDependency struct {
-	Name string
-}
-
-type publicCodeYAMLOrganisation struct {
-	Name string
-}
-
-type yamlStringList []string
-
-func (items *yamlStringList) UnmarshalYAML(value *yaml.Node) error {
-	switch value.Kind {
-	case yaml.ScalarNode:
-		if strings.TrimSpace(value.Value) != "" {
-			*items = []string{value.Value}
-		}
-	case yaml.SequenceNode:
-		result := make([]string, 0, len(value.Content))
-		for _, item := range value.Content {
-			if item.Kind != yaml.ScalarNode {
-				continue
-			}
-			if strings.TrimSpace(item.Value) == "" {
-				continue
-			}
-			result = append(result, item.Value)
-		}
-		*items = result
-	}
-
-	return nil
-}
-
-func parsePublicCodeYAMLDocument(raw string, parserErr error) parsedPublicCodeYAML {
-	var doc publicCodeYAMLDocument
-	if err := yaml.Unmarshal([]byte(strings.TrimPrefix(raw, "\ufeff")), &doc); err != nil {
-		if parserErr != nil {
-			log.Printf("publiccode parse failed: %v", parserErr)
-		} else {
-			log.Printf("publiccode parse failed: %v", err)
-		}
-		return parsedPublicCodeYAML{}
-	}
-
-	result := parsedPublicCodeYAML{
-		Name:        strings.TrimSpace(doc.Name),
-		PublicCode:  mapPublicCodeYAMLFields(doc),
-		BasedOnURLs: trimNonEmpty([]string(doc.IsBasedOn)),
-	}
-
-	desc := selectYAMLDescription(doc.Description, doc.Localisation.AvailableLanguages)
-	if result.Name == "" {
-		result.Name = strings.TrimSpace(desc.LocalisedName)
-	}
-
-	result.ShortDescription = strings.TrimSpace(desc.ShortDescription)
-	result.LongDescription = strings.TrimSpace(desc.LongDescription)
-	if result.PublicCode != nil {
-		result.URL = result.PublicCode.Url
-	}
-	if result.ShortDescription == "" {
-		log.Printf("publiccode description does not contain a short description for repository with url %q", result.URL)
-	}
-	if result.LongDescription == "" {
-		log.Printf("publiccode description does not contain a long description for repository with url %q", result.URL)
-	}
-
-	return result
-}
-
-func mapPublicCodeYAMLFields(doc publicCodeYAMLDocument) *models.PublicCode {
-	result := &models.PublicCode{
-		PubliccodeYmlVersion: strings.TrimSpace(doc.PubliccodeYmlVersion),
-		Name:                 strings.TrimSpace(doc.Name),
-		Url:                  strings.TrimSpace(doc.URL),
-		LandingUrl:           strings.TrimSpace(doc.LandingURL),
-		Platforms:            trimNonEmpty(doc.Platforms),
-		DevelopmentStatus:    strings.TrimSpace(doc.DevelopmentStatus),
-		SoftwareType:         strings.TrimSpace(doc.SoftwareType),
-	}
-
-	if result.Name == "" {
-		desc := selectYAMLDescription(doc.Description, doc.Localisation.AvailableLanguages)
-		result.Name = strings.TrimSpace(desc.LocalisedName)
-	}
-
-	if license := strings.TrimSpace(doc.Legal.License); license != "" {
-		result.Legal = &models.PublicCodeLegal{
-			License: license,
-		}
-	}
-
-	if descriptions := mapYAMLDescriptions(doc.Description); len(descriptions) > 0 {
-		result.Description = descriptions
-	}
-
-	if maintenance := mapYAMLMaintenance(doc); maintenance != nil {
-		result.Maintenance = maintenance
-	}
-
-	if localisation := mapYAMLLocalisation(doc); localisation != nil {
-		result.Localisation = localisation
-	}
-
-	if doc.Organisation != nil {
-		if uri := strings.TrimSpace(doc.Organisation.URI); uri != "" {
-			result.Organisation = &models.PublicCodeOrganisation{Uri: uri}
-		}
-	}
-
-	if doc.DependsOn != nil {
-		if dependsOn := mapYAMLDependsOn(doc.DependsOn.Open, doc.DependsOn.Proprietary, doc.DependsOn.Hardware); dependsOn != nil {
-			result.DependsOn = dependsOn
-		}
-	}
-
-	if fundedBy := mapYAMLFundedBy(doc.FundedBy); len(fundedBy) > 0 {
-		result.FundedBy = fundedBy
-	}
-
-	if isEmptyPublicCode(result) {
-		return nil
-	}
-
-	return result
-}
-
-func mapYAMLDescriptions(descriptions map[string]publicCodeYAMLDescription) map[string]models.PublicCodeDescription {
-	if len(descriptions) == 0 {
-		return nil
-	}
-
-	mapped := make(map[string]models.PublicCodeDescription, len(descriptions))
-	for lang, desc := range descriptions {
-		item := models.PublicCodeDescription{
-			ShortDescription: strings.TrimSpace(desc.ShortDescription),
-			LongDescription:  strings.TrimSpace(desc.LongDescription),
-			Features:         trimNonEmpty(desc.Features),
-		}
-		if item.ShortDescription == "" && item.LongDescription == "" && len(item.Features) == 0 {
-			continue
-		}
-		mapped[lang] = item
-	}
-
-	if len(mapped) == 0 {
-		return nil
-	}
-
-	return mapped
-}
-
-func mapYAMLMaintenance(doc publicCodeYAMLDocument) *models.PublicCodeMaintenance {
-	maintenance := &models.PublicCodeMaintenance{
-		Type:        strings.TrimSpace(doc.Maintenance.Type),
-		Contractors: mapYAMLContractors(doc.Maintenance.Contractors),
-		Contacts:    mapYAMLContacts(doc.Maintenance.Contacts),
-	}
-
-	if maintenance.Type == "" && len(maintenance.Contractors) == 0 && len(maintenance.Contacts) == 0 {
-		return nil
-	}
-
-	return maintenance
-}
-
-func mapYAMLContractors(input []publicCodeYAMLContractor) []models.PublicCodeContractor {
-	if len(input) == 0 {
-		return nil
-	}
-
-	result := make([]models.PublicCodeContractor, 0, len(input))
-	for _, contractor := range input {
-		item := models.PublicCodeContractor{
-			Name:  strings.TrimSpace(contractor.Name),
-			Until: strings.TrimSpace(contractor.Until),
-		}
-		if item.Name == "" && item.Until == "" {
-			continue
-		}
-		result = append(result, item)
-	}
-
-	if len(result) == 0 {
-		return nil
-	}
-
-	return result
-}
-
-func mapYAMLContacts(input []publicCodeYAMLContact) []models.PublicCodeContact {
-	if len(input) == 0 {
-		return nil
-	}
-
-	result := make([]models.PublicCodeContact, 0, len(input))
-	for _, contact := range input {
-		name := strings.TrimSpace(contact.Name)
-		if name == "" {
-			continue
-		}
-		result = append(result, models.PublicCodeContact{Name: name})
-	}
-
-	if len(result) == 0 {
-		return nil
-	}
-
-	return result
-}
-
-func mapYAMLLocalisation(doc publicCodeYAMLDocument) *models.PublicCodeLocalisation {
-	languages := trimNonEmpty(doc.Localisation.AvailableLanguages)
-	if doc.Localisation.LocalisationReady == nil && len(languages) == 0 {
-		return nil
-	}
-
-	return &models.PublicCodeLocalisation{
-		LocalisationReady:  doc.Localisation.LocalisationReady,
-		AvailableLanguages: languages,
-	}
-}
-
-func mapYAMLDependsOn(
-	open []publicCodeYAMLDependency,
-	proprietary []publicCodeYAMLDependency,
-	hardware []publicCodeYAMLDependency,
-) *models.PublicCodeDependsOn {
-	result := &models.PublicCodeDependsOn{
-		Open:        mapYAMLDependencies(open),
-		Proprietary: mapYAMLDependencies(proprietary),
-		Hardware:    mapYAMLDependencies(hardware),
-	}
-
-	if len(result.Open) == 0 && len(result.Proprietary) == 0 && len(result.Hardware) == 0 {
-		return nil
-	}
-
-	return result
-}
-
-func mapYAMLDependencies(input []publicCodeYAMLDependency) []models.PublicCodeDependency {
-	if len(input) == 0 {
-		return nil
-	}
-
-	result := make([]models.PublicCodeDependency, 0, len(input))
-	for _, dependency := range input {
-		name := strings.TrimSpace(dependency.Name)
-		if name == "" {
-			continue
-		}
-		result = append(result, models.PublicCodeDependency{Name: name})
-	}
-
-	if len(result) == 0 {
-		return nil
-	}
-
-	return result
-}
-
-func mapYAMLFundedBy(input []publicCodeYAMLOrganisation) []models.PublicCodeOrganisationReference {
-	if len(input) == 0 {
-		return nil
-	}
-
-	result := make([]models.PublicCodeOrganisationReference, 0, len(input))
-	for _, organisation := range input {
-		name := strings.TrimSpace(organisation.Name)
-		if name == "" {
-			continue
-		}
-		result = append(result, models.PublicCodeOrganisationReference{Name: name})
-	}
-
-	if len(result) == 0 {
-		return nil
 	}
 
 	return result
@@ -1067,31 +739,6 @@ func selectDescription(descriptions map[string]publiccode.DescV0, preferredLocal
 	return publiccode.DescV0{}
 }
 
-func selectYAMLDescription(descriptions map[string]publicCodeYAMLDescription, preferredLocales []string) publicCodeYAMLDescription {
-	if len(descriptions) == 0 {
-		return publicCodeYAMLDescription{}
-	}
-
-	for _, key := range preferredYAMLLocaleKeys(descriptions, preferredLocales) {
-		value := descriptions[key]
-		if strings.TrimSpace(value.ShortDescription) != "" || strings.TrimSpace(value.LongDescription) != "" {
-			return value
-		}
-	}
-
-	return publicCodeYAMLDescription{}
-}
-
-func preferredYAMLLocaleKeys(descriptions map[string]publicCodeYAMLDescription, preferredLocales []string) []string {
-	keys := make([]string, 0, len(descriptions))
-	for key := range descriptions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	return orderPreferredLocaleKeys(keys, preferredLocales)
-}
-
 func preferredLocaleKeys(descriptions map[string]publiccode.DescV0, preferredLocales []string) []string {
 	keys := make([]string, 0, len(descriptions))
 	for key := range descriptions {
@@ -1099,10 +746,6 @@ func preferredLocaleKeys(descriptions map[string]publiccode.DescV0, preferredLoc
 	}
 	sort.Strings(keys)
 
-	return orderPreferredLocaleKeys(keys, preferredLocales)
-}
-
-func orderPreferredLocaleKeys(keys []string, preferredLocales []string) []string {
 	ordered := make([]string, 0, len(keys))
 	seen := make(map[string]struct{}, len(keys))
 	appendMatches := func(match func(key string) bool) {
