@@ -1,3 +1,0 @@
-kind: Changed
-body: Werk Go dependencies, GitHub Actions workflows, testcoverage en modelindeling bij; CI bewaakt nu minimaal 80% coverage.
-time: 2026-07-08T10:19:21.757559+02:00
