@@ -38,7 +38,34 @@ jobs:
         with:
           go-version-file: "go.mod"
       - name: Run tests
-        run: go test -coverprofile coverage.out ./...
+        run: |
+          set -euo pipefail
+
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tee coverage.txt
+
+          coverage="$(awk '/^total:/ { gsub(/%/, "", $3); print $3 }' coverage.txt)"
+          {
+            echo "### Go coverage"
+            echo
+            echo "Total coverage: ${coverage}%"
+            echo "Required minimum: 80.0%"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          awk -v coverage="$coverage" 'BEGIN {
+            if (coverage + 0 < 80.0) {
+              printf("coverage %.1f%% is below required 80.0%%\n", coverage)
+              exit 1
+            }
+          }'
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: go-coverage
+          path: |
+            coverage.out
+            coverage.txt
 
   build-and-push:
     name: Build Docker Image

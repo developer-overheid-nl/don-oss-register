@@ -24,10 +24,3 @@ type ListGitOrganisationsParams struct {
 	Organisation *string `query:"organisation"`
 	BaseURL      string
 }
-
-type ListOrganisationsParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
-	BaseURL      string
-}

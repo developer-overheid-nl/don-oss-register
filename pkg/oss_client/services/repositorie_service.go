@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
+	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
