@@ -192,6 +192,87 @@ func TestApplyRepositoryInputParsesStandardPublicCodeYAML(t *testing.T) {
 	assert.Equal(t, []string{"Videoafspraak"}, repo.PublicCode.Description["nl"].Features)
 }
 
+func TestApplyRepositoryInputParsesPublicCodeVersion07YAML(t *testing.T) {
+	disablePublicCodeValidation(t)
+
+	publicCode := `publiccodeYmlVersion: "0.7"
+name: Amsterdam Design System
+url: https://github.com/Amsterdam/design-system.git
+landingURL: https://designsystem.amsterdam
+softwareType: library
+platforms:
+  - web
+developmentStatus: stable
+description:
+  en:
+    shortDescription: >-
+      An implementation of NL Design System for the City of Amsterdam:
+      reusable components, patterns, and guidelines to build user interfaces.
+    longDescription: |
+      Amsterdam Design System is an open-source toolkit of ready-made
+      components that are accessible (WCAG), adaptive, and user-friendly.
+      Teams reuse them instead of starting from scratch on every project,
+      saving time and money.
+    features:
+      - Design tokens
+      - CSS components
+  nl:
+    shortDescription: >-
+      Een implementatie van NL Design System voor gemeente Amsterdam:
+      herbruikbare componenten, patronen en richtlijnen om gebruikersinterfaces te bouwen.
+    longDescription: |
+      Amsterdam Design System is een open source toolkit met kant-en-klare
+      componenten die toegankelijk (WCAG), adaptief en gebruiksvriendelijk
+      zijn. Teams hergebruiken ze in plaats van bij elk project opnieuw
+      te beginnen en besparen zo tijd en geld.
+    features:
+      - Design tokens
+      - CSS-componenten
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Gemeente Amsterdam
+localisation:
+  availableLanguages:
+    - en
+    - nl
+  localisationReady: true
+maintenance:
+  type: internal
+  contacts:
+    - name: Design System Team
+      email: designsystem@amsterdam.nl
+      affiliation: Gemeente Amsterdam
+`
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           strPtr("https://github.com/Amsterdam/design-system.git"),
+		PublicCodeUrl: strPtr(publicCode),
+	})
+
+	assert.Equal(t, "Amsterdam Design System", repo.Name)
+	assert.Equal(t, "An implementation of NL Design System for the City of Amsterdam: reusable components, patterns, and guidelines to build user interfaces.", repo.ShortDescription)
+	require.NotNil(t, repo.PublicCode)
+	assert.Equal(t, "0.7", repo.PublicCode.PubliccodeYmlVersion)
+	assert.Equal(t, "Amsterdam Design System", repo.PublicCode.Name)
+	assert.Equal(t, "https://github.com/Amsterdam/design-system.git", repo.PublicCode.Url)
+	assert.Equal(t, "https://designsystem.amsterdam", repo.PublicCode.LandingUrl)
+	assert.Equal(t, []string{"web"}, repo.PublicCode.Platforms)
+	assert.Equal(t, "stable", repo.PublicCode.DevelopmentStatus)
+	assert.Equal(t, "library", repo.PublicCode.SoftwareType)
+	require.NotNil(t, repo.PublicCode.Legal)
+	assert.Equal(t, "EUPL-1.2", repo.PublicCode.Legal.License)
+	require.NotNil(t, repo.PublicCode.Maintenance)
+	assert.Equal(t, "internal", repo.PublicCode.Maintenance.Type)
+	require.Len(t, repo.PublicCode.Maintenance.Contacts, 1)
+	assert.Equal(t, "Design System Team", repo.PublicCode.Maintenance.Contacts[0].Name)
+	require.NotNil(t, repo.PublicCode.Localisation)
+	require.NotNil(t, repo.PublicCode.Localisation.LocalisationReady)
+	assert.True(t, *repo.PublicCode.Localisation.LocalisationReady)
+	assert.Equal(t, []string{"en", "nl"}, repo.PublicCode.Localisation.AvailableLanguages)
+	require.Contains(t, repo.PublicCode.Description, "nl")
+	assert.Equal(t, "Een implementatie van NL Design System voor gemeente Amsterdam: herbruikbare componenten, patronen en richtlijnen om gebruikersinterfaces te bouwen.", repo.PublicCode.Description["nl"].ShortDescription)
+}
+
 func TestApplyRepositoryInputParsesRegionalLocaleDescription(t *testing.T) {
 	disablePublicCodeValidation(t)
 
