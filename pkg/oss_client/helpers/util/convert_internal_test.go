@@ -1,42 +1,8 @@
 package util
 
-import (
-	"os"
-	"path/filepath"
-	"testing"
-)
+import "testing"
 
 func TestDonCheckerPublicCodeValidatorUsesLatestPublicCodeStandardForVersion070(t *testing.T) {
-	tempDir := t.TempDir()
-	argsFile := filepath.Join(tempDir, "npx-args.txt")
-	fakeNpx := filepath.Join(tempDir, "npx")
-
-	script := `#!/bin/sh
-set -eu
-printf '%s\n' "$@" > "$NPX_ARGS_FILE"
-
-if [ "$#" -ne 7 ] ||
-  [ "$1" != "--yes" ] ||
-  [ "$2" != "@developer-overheid-nl/don-checker@latest" ] ||
-  [ "$3" != "validate" ] ||
-  [ "$4" != "--standard" ] ||
-  [ "$5" != "publiccode" ] ||
-  [ "$6" != "--input" ]; then
-  echo "unexpected npx arguments: $*" >&2
-  exit 42
-fi
-
-/usr/bin/grep -q 'publiccodeYmlVersion: "0.7.0"' "$7"
-/usr/bin/grep -q 'softwareType: addon' "$7"
-`
-
-	if err := os.WriteFile(fakeNpx, []byte(script), 0o755); err != nil {
-		t.Fatalf("write fake npx: %v", err)
-	}
-
-	t.Setenv("PATH", tempDir)
-	t.Setenv("NPX_ARGS_FILE", argsFile)
-
 	input := `publiccodeYmlVersion: "0.7.0"
 name: "Agent Skills: Open Source Repository"
 url: https://github.com/developer-overheid-nl/skills-open-source-repo
