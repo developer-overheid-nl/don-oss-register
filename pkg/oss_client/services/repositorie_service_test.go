@@ -478,6 +478,38 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	assert.Equal(t, tooiLabel, saved.Label)
 }
 
+func TestCreateOrganisation_FallsBackToRequestLabelWhenTOOIUnavailable(t *testing.T) {
+	var saved *models.Organisation
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
+	repo := &stubRepo{
+		saveOrgFunc: func(org *models.Organisation) error {
+			saved = org
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	org := &models.Organisation{
+		Uri:   "https://identifier.overheid.nl/tooi/id/oorg/oorg99999",
+		Label: "Fallback label",
+	}
+	created, err := svc.CreateOrganisation(context.Background(), org)
+	require.NoError(t, err)
+	assert.Equal(t, saved, created)
+	require.NotNil(t, saved)
+	assert.Equal(t, "Fallback label", saved.Label)
+}
+
 func rewriteHostTransport(targetBase string) http.RoundTripper {
 	return &rewriteTransport{
 		base:   http.DefaultTransport,

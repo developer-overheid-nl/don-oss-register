@@ -827,11 +827,16 @@
       },
       "OrganisationInput": {
         "title": "Organisation input",
-        "description": "An organisation to add to the catalog. The label is resolved from TOOI.",
+        "description": "An organisation to add to the catalog. The label is resolved from TOOI, with an optional fallback label when TOOI does not provide one.",
         "type": "object",
         "properties": {
           "uri": {
             "$ref": "#/components/schemas/OrganisationUri"
+          },
+          "label": {
+            "description": "Fallback label when TOOI does not provide one",
+            "type": "string",
+            "examples": ["KOOP"]
           }
         },
         "required": ["uri"]
