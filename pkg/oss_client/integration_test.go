@@ -153,6 +153,39 @@ func TestCreateOrganisationResolvesTOOILabelOverHTTP(t *testing.T) {
 	require.Equal(t, tooiLabel, saved.Label)
 }
 
+func TestCreateOrganisationFallsBackToRequestLabelOverHTTP(t *testing.T) {
+	env := newIntegrationEnv(t)
+	tooiURI := "https://identifier.overheid.nl/tooi/id/oorg/oorg99999"
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
+	resp := env.doJSONRequestWithHeaders(t, http.MethodPost, "/v1/organisations", map[string]string{
+		"uri":   tooiURI,
+		"label": "Fallback label",
+	}, map[string]string{
+		"Accept":        "application/json, application/problem+json",
+		"Authorization": "Bearer abc",
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	body := decodeBody[models.OrganisationSummary](t, resp)
+	require.Equal(t, tooiURI, body.Uri)
+	require.Equal(t, "Fallback label", body.Label)
+
+	saved, err := env.repo.FindOrganisationByURI(context.Background(), tooiURI)
+	require.NoError(t, err)
+	require.NotNil(t, saved)
+	require.Equal(t, "Fallback label", saved.Label)
+}
+
 func rewriteHostTransport(targetBase string) http.RoundTripper {
 	return &rewriteTransport{
 		base:   http.DefaultTransport,

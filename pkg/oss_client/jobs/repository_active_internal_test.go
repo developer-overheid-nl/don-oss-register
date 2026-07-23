@@ -117,3 +117,32 @@ func TestRefreshRepositoryActiveFlagsPropagatesErrors(t *testing.T) {
 	err = job.refreshRepositoryActiveFlags(context.Background(), time.Now().Add(-time.Hour))
 	assert.ErrorIs(t, err, expected)
 }
+
+func TestRunOnceRefreshesRepositoryActiveFlags(t *testing.T) {
+	repo := &activeJobRepoStub{
+		all: []models.Repository{
+			{Id: "stale", LastCrawledAt: time.Now().UTC().Add(-2 * time.Hour), Active: true},
+		},
+	}
+	job := &RepositoryActiveJob{
+		repo:       repo,
+		staleAfter: time.Hour,
+	}
+
+	job.runOnce(context.Background())
+
+	require.Len(t, repo.saved, 1)
+	assert.Equal(t, "stale", repo.saved[0].Id)
+	assert.False(t, repo.saved[0].Active)
+}
+
+func TestRunOnceLogsRefreshErrors(t *testing.T) {
+	job := &RepositoryActiveJob{
+		repo:       &activeJobRepoStub{allErr: errors.New("database unavailable")},
+		staleAfter: time.Hour,
+	}
+
+	assert.NotPanics(t, func() {
+		job.runOnce(context.Background())
+	})
+}

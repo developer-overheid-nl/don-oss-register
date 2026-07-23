@@ -283,16 +283,12 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 		)
 	}
 
-	label, err := httpclient.FetchOrganisationLabel(ctx, org.Uri)
-	if err != nil {
-		return nil, problem.NewBadRequest("Invalid input",
-			bodyError("uri", "tooi", "uri must resolve to a TOOI organisation label"),
-		)
+	if label, err := httpclient.FetchOrganisationLabel(ctx, org.Uri); err == nil && strings.TrimSpace(label) != "" {
+		org.Label = strings.TrimSpace(label)
 	}
-	org.Label = strings.TrimSpace(label)
 	if org.Label == "" {
 		return nil, problem.NewBadRequest("Invalid input",
-			bodyError("uri", "tooi", "TOOI organisation label is empty"),
+			bodyError("label", "required", "label is required when TOOI does not provide one"),
 		)
 	}
 
