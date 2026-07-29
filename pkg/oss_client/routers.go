@@ -18,6 +18,7 @@ var (
 )
 
 func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz {
+	installProblemErrorHook()
 	//gin.SetMode(gin.ReleaseMode)
 	g := commonrouter.NewEngine(apiVersion, commonrouter.CORSOptions{
 		AllowHeaders:  []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"},
@@ -32,7 +33,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		[]fizz.OperationOption{
 			fizz.ID("listRepositories"),
 			fizz.Summary("List repositories"),
-			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Ondersteunt dezelfde filterquery's als het filterendpoint en combineert deze met de optionele zoekterm q."),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Combineert filters met de optionele zoekterm q en sorteert het gefilterde resultaat vóór paginering."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),

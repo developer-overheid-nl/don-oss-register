@@ -192,6 +192,43 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestListRepositorys_ForwardsParsedSort(t *testing.T) {
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
+			require.Equal(t, models.RepositorySortLastActivity, sorting.Field)
+			require.Equal(t, models.RepositorySortDescending, sorting.Order)
+			return []models.Repository{}, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
+		SortBy:    "lastActivity",
+		SortOrder: "desc",
+	})
+
+	require.NoError(t, err)
+}
+
+func TestListRepositorys_RejectsInvalidSortBeforeCallingRepository(t *testing.T) {
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
+			t.Fatal("expected invalid sorting to stop before repository access")
+			return nil, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{SortBy: "lastCrawled"})
+
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+	require.Len(t, apiErr.Errors, 1)
+	assert.Equal(t, "query", apiErr.Errors[0].In)
+	assert.Equal(t, "sortBy", apiErr.Errors[0].Location)
+}
+
 func TestListRepositories_DefaultsNilParams(t *testing.T) {
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {

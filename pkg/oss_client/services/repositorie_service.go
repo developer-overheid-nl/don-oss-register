@@ -37,10 +37,21 @@ func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListR
 		p = &models.ListRepositorysParams{}
 	}
 
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.RepositoryFilters(), models.RepositorySort{
-		Field: models.RepositorySortTitle,
-		Order: models.RepositorySortAscending,
-	})
+	sorting, err := models.ParseRepositorySort(p.SortBy, p.SortOrder)
+	if err != nil {
+		var invalid models.InvalidRepositorySortError
+		if errors.As(err, &invalid) {
+			return nil, models.Pagination{}, problem.New(http.StatusBadRequest, "Request validation failed", problem.ErrorDetail{
+				In:       "query",
+				Location: invalid.Parameter,
+				Code:     invalid.Parameter,
+				Detail:   invalid.Error(),
+			})
+		}
+		return nil, models.Pagination{}, err
+	}
+
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.RepositoryFilters(), sorting)
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}
