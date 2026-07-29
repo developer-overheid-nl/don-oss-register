@@ -25,7 +25,7 @@ func (s *stubRepositoriesRepo) SaveRepository(_ context.Context, r *models.Repos
 	return nil
 }
 
-func (s *stubRepositoriesRepo) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepositoriesRepo) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 func (s *stubRepositoriesRepo) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {

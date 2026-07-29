@@ -37,7 +37,10 @@ func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListR
 		p = &models.ListRepositorysParams{}
 	}
 
-	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.RepositoryFilters())
+	repositories, pagination, err := s.repo.GetRepositorys(ctx, p.Page, p.PerPage, p.RepositoryFilters(), models.RepositorySort{
+		Field: models.RepositorySortTitle,
+		Order: models.RepositorySortAscending,
+	})
 	if err != nil {
 		return nil, models.Pagination{}, err
 	}

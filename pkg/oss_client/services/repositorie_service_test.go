@@ -21,7 +21,7 @@ import (
 )
 
 type stubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
@@ -41,9 +41,9 @@ func (fakePublicCodeValidator) ValidatePublicCode(string) error {
 	return nil
 }
 
-func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, p)
+		return s.listFunc(ctx, page, perPage, p, sorting)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -129,7 +129,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
 					Id:               "repo-1",
@@ -159,7 +159,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	archived := true
 	query := "forms"
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, &orgURI, p.Organisation)
 			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
@@ -194,7 +194,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 
 func TestListRepositories_DefaultsNilParams(t *testing.T) {
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, 0, page)
 			require.Equal(t, 0, perPage)
 			require.NotNil(t, p)

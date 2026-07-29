@@ -21,6 +21,10 @@ func setupDB(t *testing.T) *gorm.DB {
 	return db
 }
 
+func titleAscendingSort() models.RepositorySort {
+	return models.RepositorySort{Field: models.RepositorySortTitle, Order: models.RepositorySortAscending}
+}
+
 func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
@@ -128,7 +132,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 		PublicCode:   &publicCodeOnly,
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
@@ -142,7 +146,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 		PublicCode:   &publicCodeDisabled,
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -153,7 +157,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 		Organisation: &org1.Uri,
 		PublicCode:   &publicCodeDisabled,
 		Archived:     &archivedOnly,
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -161,7 +165,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 	assert.Equal(t, 2, pagination.TotalRecords)
@@ -174,7 +178,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 		SoftwareType: []string{"library"},
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -183,7 +187,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation: &org1.Uri,
 		License:      []string{"EUPL-1.2"},
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -215,14 +219,14 @@ func TestRepositoriesRepository_GetRepositoriesArchivedFilter(t *testing.T) {
 	}))
 	require.NoError(t, db.Exec("UPDATE repositories SET active = NULL WHERE id = ?", "active-repo").Error)
 
-	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{})
+	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
 	assert.Equal(t, "active-repo", results[0].Id)
 
 	archivedOnly := true
-	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{Archived: &archivedOnly})
+	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{Archived: &archivedOnly}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -274,7 +278,7 @@ func TestRepositoriesRepository_GetRepositoriesCombinesQueryAndFilters(t *testin
 		Query:        "forms",
 		PublicCode:   &publicCodeOnly,
 		SoftwareType: []string{"library"},
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "repo-1", results[0].Id)
@@ -295,7 +299,7 @@ func TestRepositoriesRepository_GetRepositoriesPaginatesFilteredResults(t *testi
 		}))
 	}
 
-	results, pagination, err := repo.GetRepositorys(ctx, 2, 2, &models.RepositoryFiltersParams{})
+	results, pagination, err := repo.GetRepositorys(ctx, 2, 2, &models.RepositoryFiltersParams{}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "Gamma", results[0].Name)
@@ -305,10 +309,41 @@ func TestRepositoriesRepository_GetRepositoriesPaginatesFilteredResults(t *testi
 	assert.Equal(t, 1, *pagination.Previous)
 	assert.Nil(t, pagination.Next)
 
-	results, pagination, err = repo.GetRepositorys(ctx, 3, 2, &models.RepositoryFiltersParams{})
+	results, pagination, err = repo.GetRepositorys(ctx, 3, 2, &models.RepositoryFiltersParams{}, titleAscendingSort())
 	require.NoError(t, err)
 	assert.Empty(t, results)
 	assert.Equal(t, 3, pagination.TotalRecords)
+}
+
+func TestRepositoriesRepository_GetRepositoriesSortsFilteredResultsBeforePagination(t *testing.T) {
+	db := setupDB(t)
+	repo := repositories.NewRepositoriesRepository(db)
+	ctx := context.Background()
+
+	publicCodeOnly := true
+	repositoriesToSave := []*models.Repository{
+		{Id: "old", Name: "Alpha", PublicCodeUrl: "https://example.org/old/publiccode.yml", LastActivityAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Active: true},
+		{Id: "new", Name: "Zulu", PublicCodeUrl: "https://example.org/new/publiccode.yml", LastActivityAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC), Active: true},
+		{Id: "middle", Name: "Bravo", PublicCodeUrl: "https://example.org/middle/publiccode.yml", LastActivityAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), Active: true},
+		{Id: "excluded", Name: "Excluded", LastActivityAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Active: true},
+	}
+	for _, repository := range repositoriesToSave {
+		require.NoError(t, repo.SaveRepository(ctx, repository))
+	}
+
+	results, pagination, err := repo.GetRepositorys(
+		ctx,
+		1,
+		2,
+		&models.RepositoryFiltersParams{PublicCode: &publicCodeOnly},
+		models.RepositorySort{Field: models.RepositorySortLastActivity, Order: models.RepositorySortDescending},
+	)
+
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	assert.Equal(t, []string{"new", "middle"}, []string{results[0].Id, results[1].Id})
+	assert.Equal(t, 3, pagination.TotalRecords)
+	assert.Equal(t, 2, pagination.TotalPages)
 }
 
 func TestRepositoriesRepository_GetRepositoriesLastActivityAfterFilter(t *testing.T) {
@@ -333,7 +368,7 @@ func TestRepositoriesRepository_GetRepositoriesLastActivityAfterFilter(t *testin
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
 		Organisation:      &org.Uri,
 		LastActivityAfter: &date,
-	})
+	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 1, pagination.TotalRecords)
@@ -345,7 +380,7 @@ func TestRepositoriesRepository_GetRepositoriesInvalidLastActivityAfter(t *testi
 	repo := repositories.NewRepositoriesRepository(db)
 
 	date := "01-01-2024"
-	_, _, err := repo.GetRepositorys(context.Background(), 1, 10, &models.RepositoryFiltersParams{LastActivityAfter: &date})
+	_, _, err := repo.GetRepositorys(context.Background(), 1, 10, &models.RepositoryFiltersParams{LastActivityAfter: &date}, titleAscendingSort())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid lastActivityAfter format")
 }
