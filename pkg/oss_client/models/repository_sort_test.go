@@ -8,7 +8,7 @@ import (
 )
 
 func TestParseRepositorySortDefaultsToTitleAscending(t *testing.T) {
-	got, err := ParseRepositorySort("", "")
+	got, err := ParseRepositorySort(nil, nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, RepositorySort{Field: RepositorySortTitle, Order: RepositorySortAscending}, got)
@@ -35,7 +35,14 @@ func TestParseRepositorySortAppliesDefaultsIndependently(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseRepositorySort(tt.sortBy, tt.sortOrder)
+			var sortBy, sortOrder *string
+			if tt.sortBy != "" {
+				sortBy = &tt.sortBy
+			}
+			if tt.sortOrder != "" {
+				sortOrder = &tt.sortOrder
+			}
+			got, err := ParseRepositorySort(sortBy, sortOrder)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
@@ -66,7 +73,7 @@ func TestParseRepositorySortAcceptsSupportedValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseRepositorySort(tt.sortBy, tt.sortOrder)
+			got, err := ParseRepositorySort(&tt.sortBy, &tt.sortOrder)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
@@ -75,7 +82,8 @@ func TestParseRepositorySortAcceptsSupportedValues(t *testing.T) {
 }
 
 func TestParseRepositorySortRejectsUnsupportedSortBy(t *testing.T) {
-	_, err := ParseRepositorySort("lastCrawled", "asc")
+	sortBy, sortOrder := "lastCrawled", "asc"
+	_, err := ParseRepositorySort(&sortBy, &sortOrder)
 
 	var invalid InvalidRepositorySortError
 	require.ErrorAs(t, err, &invalid)
@@ -84,7 +92,8 @@ func TestParseRepositorySortRejectsUnsupportedSortBy(t *testing.T) {
 }
 
 func TestParseRepositorySortRejectsUnsupportedSortOrder(t *testing.T) {
-	_, err := ParseRepositorySort("title", "sideways")
+	sortBy, sortOrder := "title", "sideways"
+	_, err := ParseRepositorySort(&sortBy, &sortOrder)
 
 	var invalid InvalidRepositorySortError
 	require.ErrorAs(t, err, &invalid)

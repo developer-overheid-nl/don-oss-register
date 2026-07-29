@@ -20,6 +20,9 @@ func NewOSSController(s *services.RepositoryService) *OSSController {
 
 // ListRepositorys handles GET /Repositorys
 func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListRepositorysParams) ([]models.RepositorySummary, error) {
+	query := ctx.Request.URL.Query()
+	preserveExplicitEmptyQueryValue(query["sortBy"], &p.SortBy)
+	preserveExplicitEmptyQueryValue(query["sortOrder"], &p.SortOrder)
 	p.Page, p.PerPage = normalizePagination(p.Page, p.PerPage)
 	p.BaseURL = ctx.FullPath()
 	repos, pagination, err := c.Service.ListRepositorys(ctx.Request.Context(), p)
@@ -29,6 +32,16 @@ func (c *OSSController) ListRepositorys(ctx *gin.Context, p *models.ListReposito
 	util.SetPaginationHeaders(ctx.Request, ctx.Header, pagination)
 
 	return repos, nil
+}
+
+func preserveExplicitEmptyQueryValue(values []string, target **string) {
+	for _, value := range values {
+		if value == "" {
+			empty := ""
+			*target = &empty
+			return
+		}
+	}
 }
 
 // SearchRepositorys handles GET /repositories/_search

@@ -27,8 +27,8 @@ type ListRepositorysParams struct {
 	MaintenanceType    []string `query:"maintenanceType"`
 	License            []string `query:"license"`
 	Platforms          []string `query:"platforms"`
-	SortBy             string   `query:"sortBy"`
-	SortOrder          string   `query:"sortOrder"`
+	SortBy             *string  `query:"sortBy"`
+	SortOrder          *string  `query:"sortOrder"`
 	BaseURL            string
 }
 

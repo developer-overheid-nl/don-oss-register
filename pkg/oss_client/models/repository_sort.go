@@ -35,26 +35,26 @@ func (e InvalidRepositorySortError) Error() string {
 	}
 }
 
-func ParseRepositorySort(sortBy, sortOrder string) (RepositorySort, error) {
-	if sortBy == "" {
-		sortBy = string(RepositorySortTitle)
+func ParseRepositorySort(sortBy, sortOrder *string) (RepositorySort, error) {
+	field := RepositorySortTitle
+	if sortBy != nil {
+		field = RepositorySortField(*sortBy)
 	}
-	if sortOrder == "" {
-		sortOrder = string(RepositorySortAscending)
+	order := RepositorySortAscending
+	if sortOrder != nil {
+		order = RepositorySortOrder(*sortOrder)
 	}
 
-	field := RepositorySortField(sortBy)
 	switch field {
 	case RepositorySortTitle, RepositorySortLastActivity:
 	default:
-		return RepositorySort{}, InvalidRepositorySortError{Parameter: "sortBy", Value: sortBy}
+		return RepositorySort{}, InvalidRepositorySortError{Parameter: "sortBy", Value: *sortBy}
 	}
 
-	order := RepositorySortOrder(sortOrder)
 	switch order {
 	case RepositorySortAscending, RepositorySortDescending:
 	default:
-		return RepositorySort{}, InvalidRepositorySortError{Parameter: "sortOrder", Value: sortOrder}
+		return RepositorySort{}, InvalidRepositorySortError{Parameter: "sortOrder", Value: *sortOrder}
 	}
 
 	return RepositorySort{Field: field, Order: order}, nil

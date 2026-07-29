@@ -248,6 +248,12 @@ func TestListRepositories_RejectsInvalidSorting(t *testing.T) {
 	}{
 		{name: "sort field", path: "/v1/repositories?sortBy=lastCrawled", location: "sortBy"},
 		{name: "sort order", path: "/v1/repositories?sortOrder=sideways", location: "sortOrder"},
+		{name: "empty sort field", path: "/v1/repositories?sortBy=", location: "sortBy"},
+		{name: "empty sort order", path: "/v1/repositories?sortOrder=", location: "sortOrder"},
+		{name: "empty then valid sort field", path: "/v1/repositories?sortBy=&sortBy=title", location: "sortBy"},
+		{name: "valid then empty sort field", path: "/v1/repositories?sortBy=title&sortBy=", location: "sortBy"},
+		{name: "empty then valid sort order", path: "/v1/repositories?sortOrder=&sortOrder=asc", location: "sortOrder"},
+		{name: "valid then empty sort order", path: "/v1/repositories?sortOrder=asc&sortOrder=", location: "sortOrder"},
 	}
 
 	for _, tt := range tests {

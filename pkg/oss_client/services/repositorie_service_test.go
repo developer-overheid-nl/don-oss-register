@@ -201,10 +201,11 @@ func TestListRepositorys_ForwardsParsedSort(t *testing.T) {
 		},
 	}
 	svc := services.NewRepositoryService(repo)
+	sortBy, sortOrder := "lastActivity", "desc"
 
 	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
-		SortBy:    "lastActivity",
-		SortOrder: "desc",
+		SortBy:    &sortBy,
+		SortOrder: &sortOrder,
 	})
 
 	require.NoError(t, err)
@@ -218,8 +219,9 @@ func TestListRepositorys_RejectsInvalidSortBeforeCallingRepository(t *testing.T)
 		},
 	}
 	svc := services.NewRepositoryService(repo)
+	sortBy := "lastCrawled"
 
-	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{SortBy: "lastCrawled"})
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{SortBy: &sortBy})
 
 	var apiErr problem.ProblemJSON
 	require.ErrorAs(t, err, &apiErr)
