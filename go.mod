@@ -60,7 +60,7 @@ require (
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
-	github.com/italia/publiccode-parser-go/v5 v5.3.1
+	github.com/italia/publiccode-parser-go/v5 v5.4.3
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.10.0 // indirect
