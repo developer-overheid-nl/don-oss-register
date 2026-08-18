@@ -18,7 +18,7 @@ import (
 )
 
 type serviceStubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
@@ -31,9 +31,9 @@ type serviceStubRepo struct {
 	filterCountsFunc    func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
 }
 
-func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *serviceStubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, p)
+		return s.listFunc(ctx, page, perPage, p, sorting)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -115,7 +115,7 @@ func (s *serviceStubRepo) GetRepositoryFilterCounts(ctx context.Context, p *mode
 func TestListRepositorys_HandlerSetsHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 			return []models.Repository{
 				{Id: "repo-1", Name: "Repo One", Organisation: org},

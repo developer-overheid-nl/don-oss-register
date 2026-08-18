@@ -30,7 +30,7 @@ func (s *activeJobRepoStub) SaveRepository(_ context.Context, r *models.Reposito
 	return nil
 }
 
-func (s *activeJobRepoStub) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *activeJobRepoStub) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 func (s *activeJobRepoStub) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {

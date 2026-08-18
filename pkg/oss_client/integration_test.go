@@ -14,10 +14,12 @@ import (
 	oss_client "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
 	httpclient "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/httpclient"
+	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -184,6 +186,88 @@ func TestCreateOrganisationFallsBackToRequestLabelOverHTTP(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, saved)
 	require.Equal(t, "Fallback label", saved.Label)
+}
+
+func TestListRepositories_SortsLastActivityBeforePaginationAndPreservesQuery(t *testing.T) {
+	env := newIntegrationEnv(t)
+	ctx := context.Background()
+	org := &models.Organisation{Uri: "https://example.org/organisations/sorting", Label: "Sorting Org"}
+	require.NoError(t, env.repo.SaveOrganisatie(org))
+
+	repositoriesToSave := []*models.Repository{
+		{
+			Id:             "newest-activity",
+			Name:           "Zulu",
+			OrganisationID: &org.Uri,
+			PublicCodeUrl:  "https://example.org/newest/publiccode.yml",
+			LastActivityAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			LastCrawledAt:  time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			Active:         true,
+		},
+		{
+			Id:             "middle-activity",
+			Name:           "Bravo",
+			OrganisationID: &org.Uri,
+			PublicCodeUrl:  "https://example.org/middle/publiccode.yml",
+			LastActivityAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			LastCrawledAt:  time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			Active:         true,
+		},
+		{
+			Id:             "oldest-activity",
+			Name:           "Alpha",
+			OrganisationID: &org.Uri,
+			PublicCodeUrl:  "https://example.org/oldest/publiccode.yml",
+			LastActivityAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			LastCrawledAt:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Active:         true,
+		},
+	}
+	for _, repository := range repositoriesToSave {
+		require.NoError(t, env.repo.SaveRepository(ctx, repository))
+	}
+
+	path := "/v1/repositories?organisation=" + url.QueryEscape(org.Uri) + "&sortBy=lastActivity&sortOrder=desc&page=1&perPage=2"
+	resp := env.doRequest(t, http.MethodGet, path)
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	link := resp.Header.Get("Link")
+	require.Contains(t, link, "sortBy=lastActivity")
+	require.Contains(t, link, "sortOrder=desc")
+	results := decodeBody[[]models.RepositorySummary](t, resp)
+	require.Len(t, results, 2)
+	assert.Equal(t, []string{"newest-activity", "middle-activity"}, []string{results[0].Id, results[1].Id})
+}
+
+func TestListRepositories_RejectsInvalidSorting(t *testing.T) {
+	env := newIntegrationEnv(t)
+	tests := []struct {
+		name     string
+		path     string
+		location string
+	}{
+		{name: "sort field", path: "/v1/repositories?sortBy=lastCrawled", location: "sortBy"},
+		{name: "sort order", path: "/v1/repositories?sortOrder=sideways", location: "sortOrder"},
+		{name: "empty sort field", path: "/v1/repositories?sortBy=", location: "sortBy"},
+		{name: "empty sort order", path: "/v1/repositories?sortOrder=", location: "sortOrder"},
+		{name: "empty then valid sort field", path: "/v1/repositories?sortBy=&sortBy=title", location: "sortBy"},
+		{name: "valid then empty sort field", path: "/v1/repositories?sortBy=title&sortBy=", location: "sortBy"},
+		{name: "empty then valid sort order", path: "/v1/repositories?sortOrder=&sortOrder=asc", location: "sortOrder"},
+		{name: "valid then empty sort order", path: "/v1/repositories?sortOrder=asc&sortOrder=", location: "sortOrder"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := env.doRequest(t, http.MethodGet, tt.path)
+
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			require.Contains(t, resp.Header.Get("Content-Type"), "application/problem+json")
+			apiErr := decodeBody[problem.ProblemJSON](t, resp)
+			require.Len(t, apiErr.Errors, 1)
+			assert.Equal(t, "query", apiErr.Errors[0].In)
+			assert.Equal(t, tt.location, apiErr.Errors[0].Location)
+		})
+	}
 }
 
 func rewriteHostTransport(targetBase string) http.RoundTripper {
