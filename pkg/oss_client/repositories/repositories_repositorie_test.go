@@ -1,7 +1,10 @@
 package repositories_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -54,6 +57,7 @@ func TestRepositoriesRepository_SaveAndRetrieve(t *testing.T) {
 }
 
 func TestRepositoriesRepository_SaveRepositoryUpdatesExistingByURL(t *testing.T) {
+	output := captureRepositoryLogs(t)
 	db := setupDB(t)
 	repo := repositories.NewRepositoriesRepository(db)
 	ctx := context.Background()
@@ -80,10 +84,37 @@ func TestRepositoriesRepository_SaveRepositoryUpdatesExistingByURL(t *testing.T)
 	assert.Equal(t, createdAt, replacement.CreatedAt)
 	assert.Equal(t, &org.Uri, replacement.OrganisationID)
 
+	event := decodeRepositoryLog(t, output.Bytes())
+	assert.Equal(t, "DEBUG", event["level"])
+	assert.Equal(t, "repository_store", event["component"])
+	assert.Equal(t, "match_existing", event["operation"])
+	assert.Equal(t, "repo-original", event["repository_id"])
+	assert.Equal(t, "https://example.org/repo", event["repository_url"])
+
 	got, err := repo.GetRepositoryByID(ctx, "repo-original")
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	assert.Equal(t, "Replacement", got.Name)
+}
+
+func captureRepositoryLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeRepositoryLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }
 
 func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -64,7 +64,14 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 			return err
 		}
 		if err == nil {
-			log.Printf("SaveRepository: found existing repository for url %q with id %s", repository.Url, existing.Id)
+			slog.DebugContext(
+				ctx,
+				"existing repository matched by URL",
+				"component", "repository_store",
+				"operation", "match_existing",
+				"repository_id", existing.Id,
+				"repository_url", repository.Url,
+			)
 			found = true
 		}
 	}

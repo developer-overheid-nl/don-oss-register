@@ -1,7 +1,10 @@
 package oss_client
 
 import (
+	"log/slog"
+
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	commonlogging "github.com/developer-overheid-nl/don-register-common/logging"
 	commonrouter "github.com/developer-overheid-nl/don-register-common/router"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
@@ -24,6 +27,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		AllowHeaders:  []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"},
 		ExposeHeaders: []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"},
 	})
+	g.Use(commonlogging.NewGinMiddleware(slog.Default()))
 	commonrouter.InstallProblemHandlers(g, apiVersion)
 	f := fizz.NewFromEngine(g)
 

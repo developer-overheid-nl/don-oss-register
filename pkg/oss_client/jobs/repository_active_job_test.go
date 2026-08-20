@@ -1,7 +1,10 @@
 package jobs_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -81,11 +84,18 @@ func TestNewRepositoryActiveJob_EnvOverride(t *testing.T) {
 }
 
 func TestNewRepositoryActiveJob_InvalidEnvFallsBackToDefault(t *testing.T) {
+	output := captureJobLogs(t)
 	t.Setenv(jobs.EnvCrawlStaleAfterHours, "not-a-number")
 	repo := &stubRepositoriesRepo{}
 	job := jobs.NewRepositoryActiveJob(repo)
 	require.NotNil(t, job)
 	assert.Equal(t, jobs.DefaultRepositoryActiveStaleAfter, job.StaleAfter())
+
+	event := decodeJobLog(t, output.Bytes())
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "repository_active", event["component"])
+	assert.Equal(t, "configure_stale_after", event["operation"])
+	assert.Equal(t, "not-a-number", event["configured_value"])
 }
 
 func TestNewRepositoryActiveJob_ZeroEnvFallsBackToDefault(t *testing.T) {
@@ -94,4 +104,24 @@ func TestNewRepositoryActiveJob_ZeroEnvFallsBackToDefault(t *testing.T) {
 	job := jobs.NewRepositoryActiveJob(repo)
 	require.NotNil(t, job)
 	assert.Equal(t, jobs.DefaultRepositoryActiveStaleAfter, job.StaleAfter())
+}
+
+func captureJobLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeJobLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }

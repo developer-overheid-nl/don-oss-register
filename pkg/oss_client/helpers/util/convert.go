@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -203,24 +203,77 @@ func ApplyRepositoryInput(target *models.Repository, input *models.RepositoryInp
 	if publicCodeRaw != "" {
 		content := publicCodeRaw
 		if isLikelyURL(publicCodeRaw) {
-			if resp, err := http.Get(publicCodeRaw); err == nil && resp != nil {
-				defer func() {
-					if err := resp.Body.Close(); err != nil {
-						_ = err
-					}
-				}()
-				if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-					if body, err := io.ReadAll(resp.Body); err == nil {
-						content = string(body)
-					}
+			publicCodeURL := urlWithoutQuery(publicCodeRaw)
+			resp, err := http.Get(publicCodeRaw)
+			if err != nil {
+				slog.Warn(
+					"failed to fetch publiccode document",
+					"component", "publiccode",
+					"operation", "fetch",
+					"publiccode_url", publicCodeURL,
+					"error", errorWithoutURL(err),
+				)
+				if strings.TrimSpace(target.Name) == "" {
+					target.Name = repositoryNameFromURL(target.Url)
 				}
+				return target
 			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					slog.Warn(
+						"failed to close publiccode response",
+						"component", "publiccode",
+						"operation", "close_response",
+						"publiccode_url", publicCodeURL,
+						"error", err,
+					)
+				}
+			}()
+			if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+				slog.Warn(
+					"publiccode fetch returned non-success status",
+					"component", "publiccode",
+					"operation", "fetch",
+					"publiccode_url", publicCodeURL,
+					"status_code", resp.StatusCode,
+				)
+				if strings.TrimSpace(target.Name) == "" {
+					target.Name = repositoryNameFromURL(target.Url)
+				}
+				return target
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				slog.Warn(
+					"failed to read publiccode response",
+					"component", "publiccode",
+					"operation", "read_response",
+					"publiccode_url", publicCodeURL,
+					"error", err,
+				)
+				if strings.TrimSpace(target.Name) == "" {
+					target.Name = repositoryNameFromURL(target.Url)
+				}
+				return target
+			}
+			content = string(body)
 		}
 
 		publicCodeValid := true
 		if err := publicCodeValidator.ValidatePublicCode(content); err != nil {
 			publicCodeValid = false
-			log.Printf("publiccode validation failed: %s", summarizePublicCodeValidationError(err))
+			attrs := []any{
+				"component", "publiccode",
+				"operation", "validate",
+				"error", summarizePublicCodeValidationError(err),
+			}
+			if repositoryURL := urlWithoutQuery(target.Url); repositoryURL != "" {
+				attrs = append(attrs, "repository_url", repositoryURL)
+			}
+			if isLikelyURL(publicCodeRaw) {
+				attrs = append(attrs, "publiccode_url", urlWithoutQuery(publicCodeRaw))
+			}
+			slog.Warn("publiccode validation failed", attrs...)
 		}
 
 		parsedPublicCode := parsePublicCodeYAML(content)
@@ -275,6 +328,29 @@ func repositoryNameFromURL(rawURL string) string {
 	return strings.TrimSpace(name)
 }
 
+// urlWithoutQuery removes credentials, query parameters, and fragments before
+// a URL is written to a log event.
+func urlWithoutQuery(rawURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+	parsed.User = nil
+	parsed.RawQuery = ""
+	parsed.ForceQuery = false
+	parsed.Fragment = ""
+	return parsed.String()
+}
+
+func errorWithoutURL(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+
+	return err
+}
+
 func summarizePublicCodeValidationError(err error) string {
 	if err == nil {
 		return ""
@@ -327,16 +403,31 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 		DisableExternalChecks: true,
 	})
 	if err != nil {
-		log.Printf("publiccode parser initialization failed: %v", err)
+		slog.Error(
+			"publiccode parser initialization failed",
+			"component", "publiccode",
+			"operation", "initialize_parser",
+			"error", err,
+		)
 		return parsedPublicCodeYAML{}
 	}
 
 	parsed, parseErr := parser.ParseStream(strings.NewReader(strings.TrimPrefix(raw, "\ufeff")))
 	if parsed == nil {
 		if parseErr != nil {
-			log.Printf("publiccode parse failed: %v", parseErr)
+			slog.Warn(
+				"publiccode parse failed",
+				"component", "publiccode",
+				"operation", "parse",
+				"error", parseErr,
+			)
 		} else {
-			log.Printf("publiccode parse failed: empty parse result")
+			slog.Warn(
+				"publiccode parse returned no result",
+				"component", "publiccode",
+				"operation", "parse",
+				"reason", "empty_result",
+			)
 		}
 		return parsedPublicCodeYAML{}
 	}
@@ -344,17 +435,32 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 		// Only continue if error is ValidationResults (validation warnings/errors)
 		// Non-validation errors (e.g., YAML parse errors) are fatal
 		if _, ok := parseErr.(publiccode.ValidationResults); !ok {
-			log.Printf("publiccode parse failed with non-validation error: %v", parseErr)
+			slog.Warn(
+				"publiccode parse failed",
+				"component", "publiccode",
+				"operation", "parse",
+				"error", parseErr,
+			)
 			return parsedPublicCodeYAML{}
 		}
 		if hasValidationErrors(parseErr) {
-			log.Printf("publiccode parse validation issues ignored: %v", parseErr)
+			slog.Warn(
+				"publiccode parse validation issues ignored",
+				"component", "publiccode",
+				"operation", "parse_validation",
+				"error", parseErr,
+			)
 		}
 	}
 
 	v0, ok := asPublicCodeV0(parsed)
 	if !ok {
-		log.Printf("publiccode parse result is not version 0: %T", parsed)
+		slog.Warn(
+			"unsupported publiccode parse result",
+			"component", "publiccode",
+			"operation", "parse_version",
+			"result_type", fmt.Sprintf("%T", parsed),
+		)
 		return parsedPublicCodeYAML{}
 	}
 	result := parsedPublicCodeYAML{
@@ -376,10 +482,22 @@ func parsePublicCodeYAML(raw string) parsedPublicCodeYAML {
 	result.ShortDescription = strings.TrimSpace(desc.ShortDescription)
 	result.LongDescription = strings.TrimSpace(desc.LongDescription)
 	if result.ShortDescription == "" {
-		log.Printf("publiccode description does not contain a short description for repository with url %q", result.URL)
+		slog.Warn(
+			"publiccode description has no short description",
+			"component", "publiccode",
+			"operation", "select_description",
+			"description", "short",
+			"repository_url", urlWithoutQuery(result.URL),
+		)
 	}
 	if result.LongDescription == "" {
-		log.Printf("publiccode description does not contain a long description for repository with url %q", result.URL)
+		slog.Warn(
+			"publiccode description has no long description",
+			"component", "publiccode",
+			"operation", "select_description",
+			"description", "long",
+			"repository_url", urlWithoutQuery(result.URL),
+		)
 	}
 
 	return result

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -297,7 +297,18 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 		)
 	}
 
-	if label, err := httpclient.FetchOrganisationLabel(ctx, org.Uri); err == nil && strings.TrimSpace(label) != "" {
+	label, labelErr := httpclient.FetchOrganisationLabel(ctx, org.Uri)
+	if labelErr != nil && strings.HasPrefix(org.Uri, "https://identifier.overheid.nl/tooi/id/") {
+		organisationURI := logURLWithoutQuery(org.Uri)
+		slog.WarnContext(
+			ctx,
+			"organisation label lookup failed; using request label",
+			"component", "organisation",
+			"operation", "resolve_label",
+			"organisation_uri", organisationURI,
+			"error", strings.ReplaceAll(labelErr.Error(), org.Uri, organisationURI),
+		)
+	} else if strings.TrimSpace(label) != "" {
 		org.Label = strings.TrimSpace(label)
 	}
 	if org.Label == "" {
@@ -312,6 +323,19 @@ func (s *RepositoryService) CreateOrganisation(ctx context.Context, org *models.
 	return org, nil
 }
 
+func logURLWithoutQuery(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+
+	parsed.RawQuery = ""
+	parsed.ForceQuery = false
+	parsed.Fragment = ""
+	parsed.User = nil
+	return parsed.String()
+}
+
 func (s *RepositoryService) publishToTypesense(repository models.Repository) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -320,14 +344,26 @@ func (s *RepositoryService) publishToTypesense(repository models.Repository) {
 		if errors.Is(err, typesense.ErrDisabled) {
 			return
 		}
-		log.Printf("[typesense] indexing failed for repository=%s: %v", repository.Id, err)
+		slog.ErrorContext(
+			ctx,
+			"Typesense indexing failed",
+			"component", "typesense",
+			"operation", "index_repository",
+			"repository_id", repository.Id,
+			"error", err,
+		)
 	}
 }
 
 // PublishAllRepositoriesToTypesense pushes every active stored repository to Typesense.
 func (s *RepositoryService) PublishAllRepositoriesToTypesense(ctx context.Context) error {
 	if !typesense.Enabled() {
-		log.Printf("[typesense] indexing disabled; skip bulk publish")
+		slog.InfoContext(
+			ctx,
+			"Typesense indexing disabled; skipping bulk publish",
+			"component", "typesense",
+			"operation", "bulk_index",
+		)
 		return nil
 	}
 
@@ -350,10 +386,22 @@ func (s *RepositoryService) PublishAllRepositoriesToTypesense(ctx context.Contex
 		cancel()
 		if err != nil {
 			if errors.Is(err, typesense.ErrDisabled) {
-				log.Printf("[typesense] indexing disabled tijdens bulk run; stop")
+				slog.InfoContext(
+					ctx,
+					"Typesense indexing disabled during bulk publish",
+					"component", "typesense",
+					"operation", "bulk_index",
+				)
 				return nil
 			}
-			log.Printf("[typesense] bulk indexing failed for repository=%s: %v", repoCopy.Id, err)
+			slog.ErrorContext(
+				ctx,
+				"Typesense bulk indexing failed for repository",
+				"component", "typesense",
+				"operation", "bulk_index",
+				"repository_id", repoCopy.Id,
+				"error", err,
+			)
 		}
 	}
 	return nil
