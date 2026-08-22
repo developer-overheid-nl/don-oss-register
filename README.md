@@ -22,6 +22,31 @@ API van het OSS register (oss.developer.overheid.nl)
 
    De API luistert standaard op poort **1337**.
 
+## Logging
+
+De applicatie schrijft iedere logregel als één JSON-object naar `stdout`. Elk
+object bevat minimaal `time`, `level`, `msg`, `app`, `component` en
+`operation`. Het veld `app` heeft altijd de waarde `oss-register`. Stel met
+`LOG_LEVEL` het minimale niveau in: `debug`, `info`, `warn` of `error`
+(`info` is de standaard).
+
+HTTP-verzoeken bevatten onder andere `method`, `route`, `path`, `status_code`,
+`duration_ms` en `response_bytes`. Statuscodes vanaf 500 worden als `ERROR`
+gelogd; 4xx-reacties blijven `INFO`. Querystrings worden niet in `path`
+opgenomen.
+
+Voorbeelden voor Loki/Grafana:
+
+```logql
+{app="oss-register"} | json
+{app="oss-register"} | detected_level="error" | json
+{app="oss-register"} | json | component="publiccode"
+```
+
+`detected_level` wordt door Loki afgeleid uit `level` en wordt niet als apart
+veld geschreven. Als de ingestie `app` niet als label instelt, parseer dan
+eerst met `| json` en filter daarna op `app="oss-register"`.
+
 ## Typesense integratie
 
 Nieuwe repositories worden na een succesvolle POST of PUT ook naar Typesense gestuurd, zodat ze vindbaar zijn in de zoekfunctie. Bij het opstarten van de server worden bestaande actieve repositories bovendien opnieuw naar Typesense gepubliceerd. Stel hiervoor de volgende omgevingsvariabelen in:

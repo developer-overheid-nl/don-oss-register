@@ -1,8 +1,11 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -119,6 +122,7 @@ func TestRefreshRepositoryActiveFlagsPropagatesErrors(t *testing.T) {
 }
 
 func TestRunOnceRefreshesRepositoryActiveFlags(t *testing.T) {
+	output := captureInternalJobLogs(t)
 	repo := &activeJobRepoStub{
 		all: []models.Repository{
 			{Id: "stale", LastCrawledAt: time.Now().UTC().Add(-2 * time.Hour), Active: true},
@@ -134,15 +138,46 @@ func TestRunOnceRefreshesRepositoryActiveFlags(t *testing.T) {
 	require.Len(t, repo.saved, 1)
 	assert.Equal(t, "stale", repo.saved[0].Id)
 	assert.False(t, repo.saved[0].Active)
+
+	event := decodeInternalJobLog(t, output.Bytes())
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "repository_active", event["component"])
+	assert.Equal(t, "refresh", event["operation"])
+	assert.Equal(t, float64(1), event["updated_count"])
 }
 
 func TestRunOnceLogsRefreshErrors(t *testing.T) {
+	output := captureInternalJobLogs(t)
 	job := &RepositoryActiveJob{
 		repo:       &activeJobRepoStub{allErr: errors.New("database unavailable")},
 		staleAfter: time.Hour,
 	}
 
-	assert.NotPanics(t, func() {
-		job.runOnce(context.Background())
+	job.runOnce(context.Background())
+
+	event := decodeInternalJobLog(t, output.Bytes())
+	assert.Equal(t, "ERROR", event["level"])
+	assert.Equal(t, "repository_active", event["component"])
+	assert.Equal(t, "refresh", event["operation"])
+	assert.Equal(t, "database unavailable", event["error"])
+}
+
+func captureInternalJobLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
 	})
+	return &output
+}
+
+func decodeInternalJobLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }

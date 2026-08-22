@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,8 @@ import (
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	util "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/util"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	commondatabase "github.com/developer-overheid-nl/don-register-common/database"
+	commonlogging "github.com/developer-overheid-nl/don-register-common/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/loopfz/gadgeto/tonic"
@@ -27,6 +30,12 @@ import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
 )
+
+const appName = "oss-register"
+
+func newApplicationLogger(output io.Writer, configuredLevel string) (*slog.Logger, error) {
+	return commonlogging.NewJSONLogger(output, appName, configuredLevel)
+}
 
 func invalidParamsFromBinding(c *gin.Context, err error) []problem.ErrorDetail {
 	var verrs validator.ValidationErrors
@@ -98,6 +107,17 @@ func init() {
 		}
 
 		// 3) Alles anders → 500
+		logContext := context.Background()
+		if c.Request != nil {
+			logContext = c.Request.Context()
+		}
+		slog.ErrorContext(
+			logContext,
+			"HTTP request failed",
+			"component", "http_server",
+			"operation", "handle_error",
+			"error", err,
+		)
 		internal := problem.NewInternalServerError("Internal server error")
 		c.Header("Content-Type", "application/problem+json")
 		return internal.Status, internal
@@ -110,14 +130,51 @@ func isValidationErr(err error) bool {
 }
 
 func main() {
-	err := godotenv.Load()
+	envErr := godotenv.Load()
+	logger, err := newApplicationLogger(os.Stdout, os.Getenv("LOG_LEVEL"))
 	if err != nil {
-		log.Fatal("Error loading .env file ", err)
+		fallbackLogger, _ := newApplicationLogger(os.Stdout, "info")
+		fallbackLogger.Error(
+			"invalid logging configuration",
+			"component", "application",
+			"operation", "configure_logging",
+			"error", err,
+		)
+		os.Exit(1)
+		return
+	}
+	slog.SetDefault(logger)
+	commondatabase.ConfigureDefaultLogging(logger)
+	gin.DisableConsoleColor()
+	gin.DefaultWriter = io.Discard
+	gin.DefaultErrorWriter = commonlogging.NewSlogWriter(
+		logger,
+		slog.LevelError,
+		"http_server",
+		"recovery",
+	)
+
+	if envErr != nil {
+		slog.Error(
+			"failed to load environment file",
+			"component", "application",
+			"operation", "load_environment",
+			"error", envErr,
+		)
+		os.Exit(1)
+		return
 	}
 
 	version, err := util.LoadOASVersion("./api/openapi.json")
 	if err != nil {
-		log.Fatalf("failed to load OAS version: %v", err)
+		slog.Error(
+			"failed to load OAS version",
+			"component", "application",
+			"operation", "load_oas_version",
+			"error", err,
+		)
+		os.Exit(1)
+		return
 	}
 	host := os.Getenv("DB_HOSTNAME")
 	user := os.Getenv("DB_USERNAME")
@@ -140,34 +197,92 @@ func main() {
 	dbcon := u.String()
 	db, err := database.Connect(dbcon)
 	if err != nil {
-		log.Fatalf("Geen databaseverbinding: %v", err)
+		slog.Error(
+			"database connection failed",
+			"component", "database",
+			"operation", "connect",
+			"error", err,
+		)
+		os.Exit(1)
+		return
 	}
+	commondatabase.ConfigureLogging(db, logger)
 	repo := repositories.NewRepositoriesRepository(db)
 	repositoriesService := services.NewRepositoryService(repo)
 	controller := handler.NewOSSController(repositoriesService)
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.gpp-woo.nl", Label: "GPP-Woo"}); err != nil {
-		fmt.Printf("[GPP-Woo-import] create org warning: %v\n", err)
+		slog.Warn(
+			"failed to seed organisation",
+			"component", "organisation_seed",
+			"operation", "create",
+			"organisation_uri", "https://www.gpp-woo.nl",
+			"error", err,
+		)
 	}
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.geonovum.nl", Label: "Stichting Geonovum"}); err != nil {
-		fmt.Printf("[Geonovum-import] create org warning: %v\n", err)
+		slog.Warn(
+			"failed to seed organisation",
+			"component", "organisation_seed",
+			"operation", "create",
+			"organisation_uri", "https://www.geonovum.nl",
+			"error", err,
+		)
 	}
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.ictu.nl", Label: "ICTU"}); err != nil {
-		fmt.Printf("[ICTU-import] create org warning: %v\n", err)
+		slog.Warn(
+			"failed to seed organisation",
+			"component", "organisation_seed",
+			"operation", "create",
+			"organisation_uri", "https://www.ictu.nl",
+			"error", err,
+		)
 	}
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://vng.nl", Label: "Vereniging van Nederlandse Gemeenten"}); err != nil {
-		fmt.Printf("[VNG-import] create org warning: %v\n", err)
+		slog.Warn(
+			"failed to seed organisation",
+			"component", "organisation_seed",
+			"operation", "create",
+			"organisation_uri", "https://vng.nl",
+			"error", err,
+		)
 	}
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://developer.overheid.nl/", Label: "Developer overheid"}); err != nil {
-		fmt.Printf("[Developer-overheid-import] create org warning: %v\n", err)
+		slog.Warn(
+			"failed to seed organisation",
+			"component", "organisation_seed",
+			"operation", "create",
+			"organisation_uri", "https://developer.overheid.nl/",
+			"error", err,
+		)
 	}
 	if err := repositoriesService.PublishAllRepositoriesToTypesense(context.Background()); err != nil {
-		log.Fatalf("[typesense-sync] bulk publish failed: %v", err)
+		slog.Error(
+			"initial Typesense synchronization failed",
+			"component", "typesense",
+			"operation", "bulk_index",
+			"error", err,
+		)
+		os.Exit(1)
+		return
 	}
 	jobs.NewRepositoryActiveJob(repo).Start(context.Background())
 
 	// Start server
 	router := api.NewRouter(version, controller)
 
-	log.Println("Server is running on port 1337")
-	log.Fatal(http.ListenAndServe(":1337", router))
+	slog.Info(
+		"server started",
+		"component", "http_server",
+		"operation", "listen",
+		"address", ":1337",
+	)
+	if err := http.ListenAndServe(":1337", router); err != nil {
+		slog.Error(
+			"HTTP server stopped",
+			"component", "http_server",
+			"operation", "listen",
+			"error", err,
+		)
+		os.Exit(1)
+	}
 }

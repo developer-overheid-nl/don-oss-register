@@ -1,0 +1,3 @@
+kind: Changed
+body: Structureer applicatie-, HTTP-, database-, job- en integratielogs als JSON voor Loki en Grafana.
+time: 2026-08-20T11:16:00.000000+02:00

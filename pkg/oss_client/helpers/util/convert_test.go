@@ -2,8 +2,10 @@ package util_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
-	"log"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -503,15 +505,7 @@ func TestApplyRepositoryInputUsesRepositoryURLSlugWhenValidationFailsWithoutName
 }
 
 func TestApplyRepositoryInputLogsCompactValidationFailure(t *testing.T) {
-	var logs bytes.Buffer
-	previousOutput := log.Writer()
-	previousFlags := log.Flags()
-	log.SetOutput(&logs)
-	log.SetFlags(0)
-	t.Cleanup(func() {
-		log.SetOutput(previousOutput)
-		log.SetFlags(previousFlags)
-	})
+	logs := captureUtilLogs(t)
 
 	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{
 		err: errors.New(`don-checker publiccode validation failed: exit status 1: Ruleset: publiccode-05
@@ -537,10 +531,126 @@ Errors (26)
 `)),
 	})
 
-	logged := logs.String()
-	assert.Contains(t, logged, "publiccode validation failed: Diagnostics: 27 (errors 26, warnings 1, info 0, hints 0); message: Invalid symbol")
-	assert.NotContains(t, logged, "Errors (26)")
-	assert.NotContains(t, logged, "source: https://yml.publiccode.tools/schema/0.5")
+	event := findUtilLog(t, decodeUtilLogs(t, logs.Bytes()), "validate")
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "publiccode", event["component"])
+	assert.Equal(t, "Diagnostics: 27 (errors 26, warnings 1, info 0, hints 0); message: Invalid symbol", event["error"])
+	assert.NotContains(t, logs.String(), "Errors (26)")
+	assert.NotContains(t, logs.String(), "source: https://yml.publiccode.tools/schema/0.5")
+}
+
+func TestApplyRepositoryInputLogsFailedPublicCodeFetchWithoutQueryString(t *testing.T) {
+	logs := captureUtilLogs(t)
+	disablePublicCodeValidation(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	publicCodeURL := server.URL + "/publiccode.yml?token=must-not-be-logged"
+	repositoryURL := "https://github.com/example/fallback-name"
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repositoryURL,
+		PublicCodeUrl: &publicCodeURL,
+	})
+
+	assert.Equal(t, "fallback-name", repo.Name)
+	events := decodeUtilLogs(t, logs.Bytes())
+	require.Len(t, events, 1)
+	event := findUtilLog(t, events, "fetch")
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "publiccode", event["component"])
+	assert.Equal(t, float64(http.StatusServiceUnavailable), event["status_code"])
+	assert.Equal(t, server.URL+"/publiccode.yml", event["publiccode_url"])
+	assert.NotContains(t, logs.String(), "must-not-be-logged")
+}
+
+func TestApplyRepositoryInputLogsPublicCodeTransportFailure(t *testing.T) {
+	logs := captureUtilLogs(t)
+	disablePublicCodeValidation(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	publicCodeURL := server.URL + "/publiccode.yml?token=must-not-be-logged"
+	server.Close()
+	repositoryURL := "https://github.com/example/transport-fallback"
+
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repositoryURL,
+		PublicCodeUrl: &publicCodeURL,
+	})
+
+	assert.Equal(t, "transport-fallback", repo.Name)
+	events := decodeUtilLogs(t, logs.Bytes())
+	require.Len(t, events, 1)
+	event := findUtilLog(t, events, "fetch")
+	assert.Equal(t, "WARN", event["level"])
+	assert.NotEmpty(t, event["error"])
+	assert.NotContains(t, logs.String(), "must-not-be-logged")
+}
+
+func TestApplyRepositoryInputLogsPublicCodeReadFailure(t *testing.T) {
+	logs := captureUtilLogs(t)
+	disablePublicCodeValidation(t)
+	previousClient := http.DefaultClient
+	http.DefaultClient = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       readErrorBody{},
+			Header:     make(http.Header),
+		}, nil
+	})}
+	t.Cleanup(func() {
+		http.DefaultClient = previousClient
+	})
+
+	publicCodeURL := "https://example.test/publiccode.yml?token=must-not-be-logged"
+	repositoryURL := "https://github.com/example/read-fallback"
+	repo := util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repositoryURL,
+		PublicCodeUrl: &publicCodeURL,
+	})
+
+	assert.Equal(t, "read-fallback", repo.Name)
+	event := findUtilLog(t, decodeUtilLogs(t, logs.Bytes()), "read_response")
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "read failed", event["error"])
+	assert.NotContains(t, logs.String(), "must-not-be-logged")
+}
+
+func TestApplyRepositoryInputLogsPublicCodeCloseFailure(t *testing.T) {
+	logs := captureUtilLogs(t)
+	disablePublicCodeValidation(t)
+	publicCode := validPublicCodeYAML(`
+  nl:
+    shortDescription: Korte beschrijving van de Digitale Balie.
+    longDescription: De Digitale Balie maakt dienstverlening persoonlijk met videobellen en ondersteunt gesprekken, verificatie en veilige documentuitwisseling voor burgers en ondernemers binnen gemeentelijke processen.
+    features:
+      - Videoafspraak
+`)
+	previousClient := http.DefaultClient
+	http.DefaultClient = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       &closeErrorBody{Reader: bytes.NewBufferString(publicCode)},
+			Header:     make(http.Header),
+		}, nil
+	})}
+	t.Cleanup(func() {
+		http.DefaultClient = previousClient
+	})
+
+	publicCodeURL := "https://example.test/publiccode.yml?token=must-not-be-logged"
+	repositoryURL := "https://github.com/example/close-fallback"
+	util.ApplyRepositoryInput(nil, &models.RepositoryInput{
+		Url:           &repositoryURL,
+		PublicCodeUrl: &publicCodeURL,
+	})
+
+	event := findUtilLog(t, decodeUtilLogs(t, logs.Bytes()), "close_response")
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "close failed", event["error"])
+	assert.NotContains(t, logs.String(), "must-not-be-logged")
 }
 
 func TestApplyRepositoryInputFetchesPublicCodeYAMLFromURL(t *testing.T) {
@@ -608,6 +718,70 @@ func strPtr(val string) *string {
 func disablePublicCodeValidation(t *testing.T) {
 	t.Helper()
 	util.SetPublicCodeValidatorForTest(t, &fakePublicCodeValidator{})
+}
+
+func captureUtilLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeUtilLogs(t *testing.T, raw []byte) []map[string]any {
+	t.Helper()
+
+	lines := bytes.Split(bytes.TrimSpace(raw), []byte("\n"))
+	events := make([]map[string]any, 0, len(lines))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		var event map[string]any
+		require.NoError(t, json.Unmarshal(line, &event))
+		events = append(events, event)
+	}
+	return events
+}
+
+func findUtilLog(t *testing.T, events []map[string]any, operation string) map[string]any {
+	t.Helper()
+
+	for _, event := range events {
+		if event["operation"] == operation {
+			return event
+		}
+	}
+	t.Fatalf("no log event found for operation %q in %#v", operation, events)
+	return nil
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+type readErrorBody struct{}
+
+func (readErrorBody) Read([]byte) (int, error) {
+	return 0, errors.New("read failed")
+}
+
+func (readErrorBody) Close() error {
+	return nil
+}
+
+type closeErrorBody struct {
+	io.Reader
+}
+
+func (*closeErrorBody) Close() error {
+	return errors.New("close failed")
 }
 
 type fakePublicCodeValidator struct {

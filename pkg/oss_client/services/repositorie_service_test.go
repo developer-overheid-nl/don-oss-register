@@ -1,8 +1,10 @@
 package services_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -518,6 +520,7 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 }
 
 func TestCreateOrganisation_FallsBackToRequestLabelWhenTOOIUnavailable(t *testing.T) {
+	output := captureServiceLogs(t)
 	var saved *models.Organisation
 	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -547,6 +550,13 @@ func TestCreateOrganisation_FallsBackToRequestLabelWhenTOOIUnavailable(t *testin
 	assert.Equal(t, saved, created)
 	require.NotNil(t, saved)
 	assert.Equal(t, "Fallback label", saved.Label)
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "organisation", event["component"])
+	assert.Equal(t, "resolve_label", event["operation"])
+	assert.Equal(t, org.Uri, event["organisation_uri"])
+	assert.NotEmpty(t, event["error"])
 }
 
 func rewriteHostTransport(targetBase string) http.RoundTripper {
@@ -938,6 +948,7 @@ localisation:
 }
 
 func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
+	output := captureServiceLogs(t)
 	t.Setenv("ENABLE_TYPESENSE", "false")
 
 	repo := &stubRepo{
@@ -950,6 +961,44 @@ func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
 	service := services.NewRepositoryService(repo)
 	err := service.PublishAllRepositoriesToTypesense(context.Background())
 	assert.NoError(t, err)
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "typesense", event["component"])
+	assert.Equal(t, "bulk_index", event["operation"])
+}
+
+func TestPublishAllRepositoriesToTypesense_LogsRepositoryFailureAsError(t *testing.T) {
+	output := captureServiceLogs(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	t.Setenv("TYPESENSE_ENDPOINT", server.URL)
+	t.Setenv("TYPESENSE_API_KEY", "secret")
+	t.Setenv("TYPESENSE_COLLECTION", "oss-register")
+	t.Setenv("ENABLE_TYPESENSE", "true")
+
+	previousClient := httpclient.HTTPClient
+	httpclient.HTTPClient = server.Client()
+	t.Cleanup(func() { httpclient.HTTPClient = previousClient })
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(context.Context) ([]models.Repository, error) {
+			return []models.Repository{{Id: "repo-failed", Name: "Failed repo", Active: true}}, nil
+		},
+	}
+	service := services.NewRepositoryService(repo)
+
+	require.NoError(t, service.PublishAllRepositoriesToTypesense(context.Background()))
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "ERROR", event["level"])
+	assert.Equal(t, "typesense", event["component"])
+	assert.Equal(t, "bulk_index", event["operation"])
+	assert.Equal(t, "repo-failed", event["repository_id"])
+	assert.NotEmpty(t, event["error"])
 }
 
 func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
@@ -999,4 +1048,24 @@ func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t
 		"repo-1": 1,
 		"repo-3": 1,
 	}, sentIDs)
+}
+
+func captureServiceLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeServiceLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }

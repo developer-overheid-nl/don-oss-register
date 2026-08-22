@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,6 +19,7 @@ import (
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/repositories"
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/services"
+	commonlogging "github.com/developer-overheid-nl/don-register-common/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +27,32 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
+
+func TestRouterEmitsStructuredHTTPAccessLogWithoutQueryString(t *testing.T) {
+	var output bytes.Buffer
+	structuredLogger, err := commonlogging.NewJSONLogger(&output, "oss-register", "info")
+	require.NoError(t, err)
+	previousLogger := slog.Default()
+	slog.SetDefault(structuredLogger)
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+
+	env := newIntegrationEnv(t)
+	resp := env.doRequest(t, http.MethodGet, "/missing?token=must-not-be-logged")
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(output.Bytes(), &event))
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "oss-register", event["app"])
+	assert.Equal(t, "http_server", event["component"])
+	assert.Equal(t, "request", event["operation"])
+	assert.Equal(t, "/missing", event["path"])
+	assert.Equal(t, float64(http.StatusNotFound), event["status_code"])
+	assert.NotContains(t, output.String(), "must-not-be-logged")
+}
 
 type integrationEnv struct {
 	server  *httptest.Server
