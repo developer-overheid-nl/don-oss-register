@@ -96,8 +96,8 @@ func (donCheckerPublicCodeValidator) ValidatePublicCode(input string) error {
 func publicCodeValidationArgs(input string) []string {
 	return []string{
 		"validate",
-		"--ruleset",
-		"publiccode-05",
+		"--standard",
+		"publiccode",
 		"--input",
 		input,
 	}
