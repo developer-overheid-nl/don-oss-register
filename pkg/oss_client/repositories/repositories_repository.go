@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -16,7 +16,7 @@ import (
 )
 
 type RepositoriesRepository interface {
-	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
+	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
 	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
@@ -64,7 +64,14 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 			return err
 		}
 		if err == nil {
-			log.Printf("SaveRepository: found existing repository for url %q with id %s", repository.Url, existing.Id)
+			slog.DebugContext(
+				ctx,
+				"existing repository matched by URL",
+				"component", "repository_store",
+				"operation", "match_existing",
+				"repository_id", existing.Id,
+				"repository_url", repository.Url,
+			)
 			found = true
 		}
 	}
@@ -88,7 +95,7 @@ func (r *repositoriesRepository) SaveRepository(ctx context.Context, repository 
 	return r.db.WithContext(ctx).Create(repository).Error
 }
 
-func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -103,7 +110,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	query := applyArchivedRepositoryFilter(r.db.WithContext(ctx).Where("(active IS NULL OR active = ?)", true), p)
 
 	var repositories []models.Repository
-	if err := applyRepositoryOrdering(query).Preload("Organisation").Find(&repositories).Error; err != nil {
+	if err := query.Preload("Organisation").Find(&repositories).Error; err != nil {
 		return nil, models.Pagination{}, err
 	}
 
@@ -113,6 +120,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 			filtered = append(filtered, repo)
 		}
 	}
+	sortRepositories(filtered, sorting)
 
 	totalRecords := len(filtered)
 	pagination := commonpagination.New(page, perPage, totalRecords)

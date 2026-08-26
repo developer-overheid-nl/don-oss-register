@@ -1,7 +1,10 @@
 package oss_client
 
 import (
+	"log/slog"
+
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	commonlogging "github.com/developer-overheid-nl/don-register-common/logging"
 	commonrouter "github.com/developer-overheid-nl/don-register-common/router"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
@@ -18,11 +21,13 @@ var (
 )
 
 func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz {
+	installProblemErrorHook()
 	//gin.SetMode(gin.ReleaseMode)
 	g := commonrouter.NewEngine(apiVersion, commonrouter.CORSOptions{
 		AllowHeaders:  []string{"Origin", "Content-Length", "Content-Type", "Authorization", "API-Version", "X-Api-Key"},
 		ExposeHeaders: []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"},
 	})
+	g.Use(commonlogging.NewGinMiddleware(slog.Default()))
 	commonrouter.InstallProblemHandlers(g, apiVersion)
 	f := fizz.NewFromEngine(g)
 
@@ -32,7 +37,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		[]fizz.OperationOption{
 			fizz.ID("listRepositories"),
 			fizz.Summary("List repositories"),
-			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Ondersteunt dezelfde filterquery's als het filterendpoint en combineert deze met de optionele zoekterm q."),
+			fizz.Description("Geeft een lijst terug met OSS repositories die in het register zijn opgenomen. Combineert filters met de optionele zoekterm q en sorteert het gefilterde resultaat vóór paginering."),
 			fizz.Security(&openapi.SecurityRequirement{
 				"clientCredentials": {},
 			}),

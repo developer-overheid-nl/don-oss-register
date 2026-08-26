@@ -1,8 +1,10 @@
 package services_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,7 +23,7 @@ import (
 )
 
 type stubRepo struct {
-	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error)
+	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
 	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
@@ -41,9 +43,9 @@ func (fakePublicCodeValidator) ValidatePublicCode(string) error {
 	return nil
 }
 
-func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	if s.listFunc != nil {
-		return s.listFunc(ctx, page, perPage, p)
+		return s.listFunc(ctx, page, perPage, p, sorting)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -129,7 +131,7 @@ func TestListRepositories_ReturnsSummaries(t *testing.T) {
 	org := &models.Organisation{Uri: "org-1", Label: "Org 1"}
 	lastActivity := time.Date(2024, 5, 10, 12, 0, 0, 0, time.UTC)
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			return []models.Repository{
 				{
 					Id:               "repo-1",
@@ -159,7 +161,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	archived := true
 	query := "forms"
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, &orgURI, p.Organisation)
 			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
@@ -192,9 +194,48 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestListRepositorys_ForwardsParsedSort(t *testing.T) {
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
+			require.Equal(t, models.RepositorySortLastActivity, sorting.Field)
+			require.Equal(t, models.RepositorySortDescending, sorting.Order)
+			return []models.Repository{}, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+	sortBy, sortOrder := "lastActivity", "desc"
+
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
+		SortBy:    &sortBy,
+		SortOrder: &sortOrder,
+	})
+
+	require.NoError(t, err)
+}
+
+func TestListRepositorys_RejectsInvalidSortBeforeCallingRepository(t *testing.T) {
+	repo := &stubRepo{
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error) {
+			t.Fatal("expected invalid sorting to stop before repository access")
+			return nil, models.Pagination{}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+	sortBy := "lastCrawled"
+
+	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{SortBy: &sortBy})
+
+	var apiErr problem.ProblemJSON
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+	require.Len(t, apiErr.Errors, 1)
+	assert.Equal(t, "query", apiErr.Errors[0].In)
+	assert.Equal(t, "sortBy", apiErr.Errors[0].Location)
+}
+
 func TestListRepositories_DefaultsNilParams(t *testing.T) {
 	repo := &stubRepo{
-		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, 0, page)
 			require.Equal(t, 0, perPage)
 			require.NotNil(t, p)
@@ -476,6 +517,46 @@ func TestCreateOrganisation_Saves(t *testing.T) {
 	assert.Equal(t, saved, created)
 	require.NotNil(t, saved)
 	assert.Equal(t, tooiLabel, saved.Label)
+}
+
+func TestCreateOrganisation_FallsBackToRequestLabelWhenTOOIUnavailable(t *testing.T) {
+	output := captureServiceLogs(t)
+	var saved *models.Organisation
+	tooiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer tooiServer.Close()
+
+	orig := httpclient.HTTPClient
+	defer func() { httpclient.HTTPClient = orig }()
+	httpclient.HTTPClient = &http.Client{
+		Transport: rewriteHostTransport(tooiServer.URL),
+	}
+
+	repo := &stubRepo{
+		saveOrgFunc: func(org *models.Organisation) error {
+			saved = org
+			return nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	org := &models.Organisation{
+		Uri:   "https://identifier.overheid.nl/tooi/id/oorg/oorg99999",
+		Label: "Fallback label",
+	}
+	created, err := svc.CreateOrganisation(context.Background(), org)
+	require.NoError(t, err)
+	assert.Equal(t, saved, created)
+	require.NotNil(t, saved)
+	assert.Equal(t, "Fallback label", saved.Label)
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "WARN", event["level"])
+	assert.Equal(t, "organisation", event["component"])
+	assert.Equal(t, "resolve_label", event["operation"])
+	assert.Equal(t, org.Uri, event["organisation_uri"])
+	assert.NotEmpty(t, event["error"])
 }
 
 func rewriteHostTransport(targetBase string) http.RoundTripper {
@@ -867,6 +948,7 @@ localisation:
 }
 
 func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
+	output := captureServiceLogs(t)
 	t.Setenv("ENABLE_TYPESENSE", "false")
 
 	repo := &stubRepo{
@@ -879,6 +961,44 @@ func TestPublishAllRepositoriesToTypesense_Disabled(t *testing.T) {
 	service := services.NewRepositoryService(repo)
 	err := service.PublishAllRepositoriesToTypesense(context.Background())
 	assert.NoError(t, err)
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "typesense", event["component"])
+	assert.Equal(t, "bulk_index", event["operation"])
+}
+
+func TestPublishAllRepositoriesToTypesense_LogsRepositoryFailureAsError(t *testing.T) {
+	output := captureServiceLogs(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	t.Setenv("TYPESENSE_ENDPOINT", server.URL)
+	t.Setenv("TYPESENSE_API_KEY", "secret")
+	t.Setenv("TYPESENSE_COLLECTION", "oss-register")
+	t.Setenv("ENABLE_TYPESENSE", "true")
+
+	previousClient := httpclient.HTTPClient
+	httpclient.HTTPClient = server.Client()
+	t.Cleanup(func() { httpclient.HTTPClient = previousClient })
+
+	repo := &stubRepo{
+		allRepositoriesFunc: func(context.Context) ([]models.Repository, error) {
+			return []models.Repository{{Id: "repo-failed", Name: "Failed repo", Active: true}}, nil
+		},
+	}
+	service := services.NewRepositoryService(repo)
+
+	require.NoError(t, service.PublishAllRepositoriesToTypesense(context.Background()))
+
+	event := decodeServiceLog(t, output.Bytes())
+	assert.Equal(t, "ERROR", event["level"])
+	assert.Equal(t, "typesense", event["component"])
+	assert.Equal(t, "bulk_index", event["operation"])
+	assert.Equal(t, "repo-failed", event["repository_id"])
+	assert.NotEmpty(t, event["error"])
 }
 
 func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t *testing.T) {
@@ -928,4 +1048,24 @@ func TestPublishAllRepositoriesToTypesense_SendsDocumentsForActiveRepositories(t
 		"repo-1": 1,
 		"repo-3": 1,
 	}, sentIDs)
+}
+
+func captureServiceLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeServiceLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }

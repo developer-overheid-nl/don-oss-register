@@ -1,8 +1,11 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -30,7 +33,7 @@ func (s *activeJobRepoStub) SaveRepository(_ context.Context, r *models.Reposito
 	return nil
 }
 
-func (s *activeJobRepoStub) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams) ([]models.Repository, models.Pagination, error) {
+func (s *activeJobRepoStub) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 func (s *activeJobRepoStub) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {
@@ -116,4 +119,65 @@ func TestRefreshRepositoryActiveFlagsPropagatesErrors(t *testing.T) {
 
 	err = job.refreshRepositoryActiveFlags(context.Background(), time.Now().Add(-time.Hour))
 	assert.ErrorIs(t, err, expected)
+}
+
+func TestRunOnceRefreshesRepositoryActiveFlags(t *testing.T) {
+	output := captureInternalJobLogs(t)
+	repo := &activeJobRepoStub{
+		all: []models.Repository{
+			{Id: "stale", LastCrawledAt: time.Now().UTC().Add(-2 * time.Hour), Active: true},
+		},
+	}
+	job := &RepositoryActiveJob{
+		repo:       repo,
+		staleAfter: time.Hour,
+	}
+
+	job.runOnce(context.Background())
+
+	require.Len(t, repo.saved, 1)
+	assert.Equal(t, "stale", repo.saved[0].Id)
+	assert.False(t, repo.saved[0].Active)
+
+	event := decodeInternalJobLog(t, output.Bytes())
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "repository_active", event["component"])
+	assert.Equal(t, "refresh", event["operation"])
+	assert.Equal(t, float64(1), event["updated_count"])
+}
+
+func TestRunOnceLogsRefreshErrors(t *testing.T) {
+	output := captureInternalJobLogs(t)
+	job := &RepositoryActiveJob{
+		repo:       &activeJobRepoStub{allErr: errors.New("database unavailable")},
+		staleAfter: time.Hour,
+	}
+
+	job.runOnce(context.Background())
+
+	event := decodeInternalJobLog(t, output.Bytes())
+	assert.Equal(t, "ERROR", event["level"])
+	assert.Equal(t, "repository_active", event["component"])
+	assert.Equal(t, "refresh", event["operation"])
+	assert.Equal(t, "database unavailable", event["error"])
+}
+
+func captureInternalJobLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var output bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+	return &output
+}
+
+func decodeInternalJobLog(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(raw, &event))
+	return event
 }

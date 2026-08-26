@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,9 +12,49 @@ import (
 	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/loopfz/gadgeto/tonic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewApplicationLoggerAddsOSSRegisterIdentity(t *testing.T) {
+	var output bytes.Buffer
+	logger, err := newApplicationLogger(&output, "info")
+	require.NoError(t, err)
+
+	logger.Info("application event", "component", "test", "operation", "emit")
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(output.Bytes(), &event))
+	assert.Equal(t, "oss-register", event["app"])
+	assert.Equal(t, "INFO", event["level"])
+	assert.Equal(t, "application event", event["msg"])
+	assert.True(t, logger.Enabled(t.Context(), slog.LevelInfo))
+}
+
+func TestErrorHookLogsUnexpectedServerFailure(t *testing.T) {
+	var output bytes.Buffer
+	logger, err := newApplicationLogger(&output, "info")
+	require.NoError(t, err)
+	previousLogger := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() {
+		slog.SetDefault(previousLogger)
+	})
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/repositories", nil)
+	status, _ := tonic.GetErrorHook()(ctx, errors.New("database unavailable"))
+	require.Equal(t, http.StatusInternalServerError, status)
+
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(output.Bytes(), &event))
+	assert.Equal(t, "ERROR", event["level"])
+	assert.Equal(t, "oss-register", event["app"])
+	assert.Equal(t, "http_server", event["component"])
+	assert.Equal(t, "handle_error", event["operation"])
+	assert.Equal(t, "database unavailable", event["error"])
+}
 
 func TestInvalidParamsFromBindingReturnsGenericDetailForNonValidationErrors(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())

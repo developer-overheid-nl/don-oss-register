@@ -171,11 +171,13 @@
       "get": {
         "tags": ["Public endpoints", "Repositories"],
         "summary": "List repositories",
-        "description": "Returns a list of OSS repositories included in the register. Supports the same filter query parameters as the repository filter endpoint.",
+        "description": "Returns a list of OSS repositories included in the register. Combines filters with the optional q search term and sorts the filtered result before pagination.",
         "operationId": "listRepositories",
         "parameters": [
           { "$ref": "#/components/parameters/Page" },
           { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/SortBy" },
+          { "$ref": "#/components/parameters/SortOrder" },
           { "$ref": "#/components/parameters/SearchFilter" },
           { "$ref": "#/components/parameters/OrganisationFilter" },
           { "$ref": "#/components/parameters/PublicCodeFilter" },
@@ -479,6 +481,30 @@
           "minimum": 1,
           "maximum": 100,
           "default": 20
+        }
+      },
+      "SortBy": {
+        "name": "sortBy",
+        "in": "query",
+        "required": false,
+        "description": "Property used to sort the filtered repository collection. title maps to the repository name; lastActivity maps to lastActivityAt. Repositories without a last activity timestamp are placed last.",
+        "schema": {
+          "type": "string",
+          "enum": ["title", "lastActivity"],
+          "default": "title",
+          "example": "lastActivity"
+        }
+      },
+      "SortOrder": {
+        "name": "sortOrder",
+        "in": "query",
+        "required": false,
+        "description": "Direction used to sort the filtered repository collection.",
+        "schema": {
+          "type": "string",
+          "enum": ["asc", "desc"],
+          "default": "asc",
+          "example": "desc"
         }
       },
       "OrganisationFilter": {
@@ -827,11 +853,16 @@
       },
       "OrganisationInput": {
         "title": "Organisation input",
-        "description": "An organisation to add to the catalog. The label is resolved from TOOI.",
+        "description": "An organisation to add to the catalog. The label is resolved from TOOI, with an optional fallback label when TOOI does not provide one.",
         "type": "object",
         "properties": {
           "uri": {
             "$ref": "#/components/schemas/OrganisationUri"
+          },
+          "label": {
+            "description": "Fallback label when TOOI does not provide one",
+            "type": "string",
+            "examples": ["KOOP"]
           }
         },
         "required": ["uri"]

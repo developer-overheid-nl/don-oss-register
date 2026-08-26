@@ -1,9 +1,9 @@
-FROM node:24-bookworm-slim AS don-checker
+FROM node:26-bookworm-slim AS don-checker
 
 RUN npm install -g @developer-overheid-nl/don-checker@latest && \
     npm cache clean --force
 
-FROM golang:1.26.5
+FROM golang:1.26.6
 
 COPY --from=don-checker /usr/local/ /usr/local/
 

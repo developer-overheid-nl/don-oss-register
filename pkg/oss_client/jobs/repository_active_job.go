@@ -2,7 +2,7 @@ package jobs
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -28,7 +28,14 @@ func staleAfterFromEnv() time.Duration {
 		if err == nil && hours > 0 {
 			return time.Duration(hours) * time.Hour
 		}
-		log.Printf("invalid %s value %q, using default %d hours", EnvCrawlStaleAfterHours, v, DefaultRepositoryActiveStaleAfterHours)
+		slog.Warn(
+			"invalid repository active stale-after configuration; using default",
+			"component", "repository_active",
+			"operation", "configure_stale_after",
+			"environment_variable", EnvCrawlStaleAfterHours,
+			"configured_value", v,
+			"default_hours", DefaultRepositoryActiveStaleAfterHours,
+		)
 	}
 	return DefaultRepositoryActiveStaleAfter
 }
@@ -64,7 +71,13 @@ func (j *RepositoryActiveJob) Start(ctx context.Context) {
 func (j *RepositoryActiveJob) runOnce(ctx context.Context) {
 	cutoff := time.Now().UTC().Add(-j.staleAfter)
 	if err := j.refreshRepositoryActiveFlags(ctx, cutoff); err != nil {
-		log.Printf("repository active job failed: %v", err)
+		slog.ErrorContext(
+			ctx,
+			"repository active refresh failed",
+			"component", "repository_active",
+			"operation", "refresh",
+			"error", err,
+		)
 	}
 }
 
@@ -95,6 +108,12 @@ func (j *RepositoryActiveJob) refreshRepositoryActiveFlags(ctx context.Context, 
 		updated++
 	}
 
-	log.Printf("repository active job updated %d repositories", updated)
+	slog.InfoContext(
+		ctx,
+		"repository active refresh completed",
+		"component", "repository_active",
+		"operation", "refresh",
+		"updated_count", updated,
+	)
 	return nil
 }
