@@ -19,8 +19,8 @@ func TestDonCheckerPublicCodeValidatorAllowsEmptyInput(t *testing.T) {
 func TestPublicCodeValidationArgs(t *testing.T) {
 	assert.Equal(t, []string{
 		"validate",
-		"--ruleset",
-		"publiccode-05",
+		"--standard",
+		"publiccode",
 		"--input",
 		"publiccode.yml",
 	}, publicCodeValidationArgs("publiccode.yml"))
