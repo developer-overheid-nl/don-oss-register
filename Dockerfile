@@ -3,7 +3,7 @@ FROM node:26-bookworm-slim AS don-checker
 RUN npm install -g @developer-overheid-nl/don-checker@latest && \
     npm cache clean --force
 
-FROM golang:1.26.6
+FROM golang:1.27.1
 
 COPY --from=don-checker /usr/local/ /usr/local/
 
