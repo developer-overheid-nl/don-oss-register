@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/handler"
+	problem "github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/helpers/problem"
 	commonlogging "github.com/developer-overheid-nl/don-register-common/logging"
 	commonrouter "github.com/developer-overheid-nl/don-register-common/router"
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,7 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		ExposeHeaders: []string{"API-Version", "Link", "Total-Count", "Total-Pages", "Per-Page", "Current-Page"},
 	})
 	g.Use(commonlogging.NewGinMiddleware(slog.Default()))
-	commonrouter.InstallProblemHandlers(g, apiVersion)
+	installProblemHandlers(g, apiVersion)
 	f := fizz.NewFromEngine(g)
 
 	root := f.Group("/v1", "OSS v1", "OSS Register V1 routes")
@@ -169,6 +170,23 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 	g.StaticFile("/v1/openapi.json", "./api/openapi.json")
 
 	return f
+}
+
+// installProblemHandlers answers unknown routes and unsupported methods with an
+// application/problem+json response that includes status, title and detail.
+func installProblemHandlers(g *gin.Engine, apiVersion string) {
+	write := func(c *gin.Context, apiErr problem.ProblemJSON) {
+		c.Abort()
+		c.Header("API-Version", apiVersion)
+		c.Header("Content-Type", "application/problem+json")
+		c.JSON(apiErr.Status, apiErr)
+	}
+	g.NoMethod(func(c *gin.Context) {
+		write(c, problem.NewMethodNotAllowed("Method not allowed"))
+	})
+	g.NoRoute(func(c *gin.Context) {
+		write(c, problem.NewNotFound("Resource does not exist"))
+	})
 }
 
 func APIVersionMiddleware(version string) gin.HandlerFunc {
