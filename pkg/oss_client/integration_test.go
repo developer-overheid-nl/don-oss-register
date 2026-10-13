@@ -294,7 +294,7 @@ func TestListRepositories_RejectsInvalidSorting(t *testing.T) {
 			require.Len(t, apiErr.Errors, 1)
 			assert.Equal(t, http.StatusBadRequest, apiErr.Status)
 			assert.NotEmpty(t, apiErr.Title)
-			assert.Contains(t, apiErr.Detail, tt.location)
+			assert.Equal(t, apiErr.Errors[0].Detail, apiErr.Detail)
 			assert.Equal(t, "query", apiErr.Errors[0].In)
 			assert.Equal(t, tt.location, apiErr.Errors[0].Location)
 		})

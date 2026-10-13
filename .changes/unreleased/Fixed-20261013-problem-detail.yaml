@@ -1,3 +1,3 @@
 kind: Fixed
-body: Add the required `detail` member to all application/problem+json error responses and the OpenAPI ProblemJson schema, so the specification complies with NL GOV API Design Rules 2.2.0; the ADR validation workflow now uses don-checker 1.3.1 with ADR 2.2.0.
+body: Add the required `detail` member to all application/problem+json error responses (via don-register-common v0.4.0) and the OpenAPI ProblemJson schema, so the specification complies with NL GOV API Design Rules 2.2.0; the ADR validation workflow now uses don-checker 1.3.1 with ADR 2.2.0.
 time: 2026-10-13T14:30:00+02:00

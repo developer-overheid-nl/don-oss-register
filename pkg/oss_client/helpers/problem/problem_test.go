@@ -31,7 +31,7 @@ func TestProblemConstructors(t *testing.T) {
 			got:     problem.New(http.StatusTeapot, "short and stout", detail),
 			status:  http.StatusTeapot,
 			title:   "short and stout",
-			detail:  "name: is required",
+			detail:  "is required",
 			details: []problem.ErrorDetail{detail},
 		},
 		{
@@ -39,7 +39,7 @@ func TestProblemConstructors(t *testing.T) {
 			got:     problem.NewBadRequest("invalid input", detail),
 			status:  http.StatusBadRequest,
 			title:   "invalid input",
-			detail:  "name: is required",
+			detail:  "is required",
 			details: []problem.ErrorDetail{detail},
 		},
 		{
@@ -47,21 +47,28 @@ func TestProblemConstructors(t *testing.T) {
 			got:    problem.NewNotFound("missing"),
 			status: http.StatusNotFound,
 			title:  "missing",
-			detail: "The requested resource does not exist.",
+			detail: "missing",
+		},
+		{
+			name:   "method not allowed",
+			got:    problem.NewMethodNotAllowed("not allowed"),
+			status: http.StatusMethodNotAllowed,
+			title:  "not allowed",
+			detail: "not allowed",
 		},
 		{
 			name:   "internal server error",
 			got:    problem.NewInternalServerError("failed"),
 			status: http.StatusInternalServerError,
 			title:  "failed",
-			detail: "An unexpected error occurred while processing the request.",
+			detail: "failed",
 		},
 		{
 			name:   "forbidden",
 			got:    problem.NewForbidden("denied"),
 			status: http.StatusForbidden,
 			title:  "denied",
-			detail: "Access to the requested resource is forbidden.",
+			detail: "denied",
 		},
 	}
 
@@ -82,7 +89,7 @@ func TestProblemDetailCombinesMultipleErrors(t *testing.T) {
 		problem.ErrorDetail{In: "body", Location: "#/", Code: "invalid", Detail: "unexpected EOF"},
 	)
 
-	assert.Equal(t, "url: must be a valid URL; sortBy: unsupported value; unexpected EOF", got.Detail)
+	assert.Equal(t, "must be a valid URL; unsupported value; unexpected EOF", got.Detail)
 }
 
 func TestProblemJSONSerialisesRequiredMembers(t *testing.T) {
@@ -93,6 +100,6 @@ func TestProblemJSONSerialisesRequiredMembers(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &body))
 	assert.Equal(t, float64(http.StatusNotFound), body["status"])
 	assert.Equal(t, "Resource does not exist", body["title"])
-	assert.Equal(t, "The requested resource does not exist.", body["detail"])
+	assert.Equal(t, "Resource does not exist", body["detail"])
 	assert.NotContains(t, body, "errors")
 }
