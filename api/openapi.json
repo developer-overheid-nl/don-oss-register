@@ -751,6 +751,11 @@
             "description": "A short, human-readable summary of the problem type",
             "example": "Request validation failed"
           },
+          "detail": {
+            "type": "string",
+            "description": "A human-readable explanation specific to this occurrence of the problem",
+            "example": "url: must be a valid URL"
+          },
           "errors": {
             "type": "array",
             "items": {
@@ -760,7 +765,7 @@
                 "in": {
                   "type": "string",
                   "description": "Location of the error (e.g., body, query, header)",
-                  "enum": ["body", "query"]
+                  "enum": ["body", "query", "path"]
                 },
                 "location": {
                   "type": "string",
@@ -782,7 +787,7 @@
             }
           }
         },
-        "required": ["status", "title"]
+        "required": ["status", "title", "detail"]
       },
       "ResourceUuid": {
         "type": "string",

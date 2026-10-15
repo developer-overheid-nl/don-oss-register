@@ -292,6 +292,9 @@ func TestListRepositories_RejectsInvalidSorting(t *testing.T) {
 			require.Contains(t, resp.Header.Get("Content-Type"), "application/problem+json")
 			apiErr := decodeBody[problem.ProblemJSON](t, resp)
 			require.Len(t, apiErr.Errors, 1)
+			assert.Equal(t, http.StatusBadRequest, apiErr.Status)
+			assert.NotEmpty(t, apiErr.Title)
+			assert.Equal(t, apiErr.Errors[0].Detail, apiErr.Detail)
 			assert.Equal(t, "query", apiErr.Errors[0].In)
 			assert.Equal(t, tt.location, apiErr.Errors[0].Location)
 		})
@@ -577,10 +580,12 @@ func TestRepositoriesEndpoints(t *testing.T) {
 		type problemResponse struct {
 			Status int    `json:"status"`
 			Title  string `json:"title"`
+			Detail string `json:"detail"`
 		}
 		body := decodeBody[problemResponse](t, resp)
 		require.Equal(t, http.StatusMethodNotAllowed, body.Status)
 		require.Equal(t, "Method not allowed", body.Title)
+		require.NotEmpty(t, body.Detail)
 	})
 }
 

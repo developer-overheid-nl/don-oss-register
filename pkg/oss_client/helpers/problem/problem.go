@@ -20,13 +20,17 @@ func NewBadRequest(title string, details ...ErrorDetail) ProblemJSON {
 }
 
 func NewNotFound(title string) ProblemJSON {
-	return New(http.StatusNotFound, title)
+	return commonproblem.NewNotFound(title)
+}
+
+func NewMethodNotAllowed(title string) ProblemJSON {
+	return commonproblem.NewMethodNotAllowed(title)
 }
 
 func NewInternalServerError(title string) ProblemJSON {
-	return New(http.StatusInternalServerError, title)
+	return commonproblem.NewInternalServerError(title)
 }
 
 func NewForbidden(title string) ProblemJSON {
-	return New(http.StatusForbidden, title)
+	return commonproblem.NewForbidden(title)
 }

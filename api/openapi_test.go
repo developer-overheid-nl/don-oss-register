@@ -66,3 +66,20 @@ func TestListRepositoriesDocumentsSorting(t *testing.T) {
 	assert.Equal(t, []any{"asc", "desc"}, sortOrderSchema["enum"])
 	assert.Equal(t, "asc", sortOrderSchema["default"])
 }
+
+func TestProblemJSONRequiresStatusTitleAndDetail(t *testing.T) {
+	data, err := os.ReadFile("openapi.json")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(data, &spec))
+
+	components := spec["components"].(map[string]any)
+	schemas := components["schemas"].(map[string]any)
+	problemSchema := schemas["ProblemJson"].(map[string]any)
+	properties := problemSchema["properties"].(map[string]any)
+	for _, member := range []string{"status", "title", "detail"} {
+		assert.Contains(t, properties, member)
+	}
+	assert.ElementsMatch(t, []any{"status", "title", "detail"}, problemSchema["required"])
+}
