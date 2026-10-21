@@ -7,10 +7,12 @@
     "scanSummary": {
       "status": "completed",
       "scannedAt": "2026-10-20T12:46:30Z",
+      // Percentage van het aantal geslaagde repo rules (Warnings/ Errors)
+      "repoScorePercentage": 22,
       "packageCount": 72,
       "vulnerabilityCount": 7,
       "vulnerablePackageCount": 3,
-      "findingCounts": {"error": 4, "warning": 5, "hint": 0},
+      "findingCounts": {"error": 4, "warning": 3, "hint": 0},
       "directDependencyCount": 13,
       "transitiveDependencyCount": 59
     }
@@ -258,20 +260,20 @@
         }
       ],
       "summary": {
+        "repoScorePercentage": 22,
         "vulnerabilityCount": 7,
         "vulnerablePackageCount": 3,
-        "findingCounts": {"error": 4, "warning": 5, "hint": 0}
+        "findingCounts": {"error": 4, "warning": 3, "hint": 0}
       },
       "findings": [
-        {"rule": "MISSING_LICENSE_FILE", "severity": "ERROR", "message": "The project's code repository does not contain the file 'LICENSE'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/open-source-software-licenties"},
-        {"rule": "MISSING_PUBLICCODE_FILE", "severity": "ERROR", "message": "The project's code repository does not contain a 'publiccode.yml' or 'publiccode.yaml' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/publiccode-yml-toevoegen"},
-        {"rule": "MISSING_CONTRIBUTING_FILE", "severity": "ERROR", "message": "The project's code repository does not contain the file 'CONTRIBUTING.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/contributing-md"},
-        {"rule": "MISSING_SECURITY_FILE", "severity": "ERROR", "message": "The project's code repository does not contain the file 'SECURITY.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/security"},
-        {"rule": "MISSING_CODE_OF_CONDUCT_FILE", "severity": "WARNING", "message": "The project's code repository does not contain the file 'CODE_OF_CONDUCT.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/code-of-conduct-md"},
-        {"rule": "MISSING_CHANGELOG_FILE", "severity": "WARNING", "message": "The project's code repository does not contain a 'CHANGELOG' or 'CHANGELOG.md' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/changelog-bijhouden"},
-        {"rule": "VULNERABILITY_IN_DEPENDENCY", "severity": "WARNING", "message": "The package 'Go::golang.org/x/text:0.40.0' has a vulnerability.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/leidraad/security/richtlijn-applicatie-security-tools"},
-        {"rule": "VULNERABILITY_IN_DEPENDENCY", "severity": "WARNING", "message": "The package 'Go::golang.org/x/net:0.57.0' has a vulnerability.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/leidraad/security/richtlijn-applicatie-security-tools"},
-        {"rule": "VULNERABILITY_IN_DEPENDENCY", "severity": "WARNING", "message": "The package 'Go::golang.org/x/crypto:0.57.0' has a vulnerability.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/leidraad/security/richtlijn-applicatie-security-tools"}
+        {"rule": "VULNERABILITY_IN_DEPENDENCY", "severity": "WARNING", "passed": false, "message": "3 dependencies have a known vulnerability.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/leidraad/security/richtlijn-applicatie-security-tools"},
+        {"rule": "MISSING_README_FILE", "severity": "ERROR", "passed": true, "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/readme-md"},
+        {"rule": "MISSING_LICENSE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'LICENSE'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/open-source-software-licenties"},
+        {"rule": "MISSING_PUBLICCODE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain a 'publiccode.yml' or 'publiccode.yaml' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/publiccode-yml-toevoegen"},
+        {"rule": "MISSING_CONTRIBUTING_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'CONTRIBUTING.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/contributing-md"},
+        {"rule": "MISSING_SECURITY_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'SECURITY.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/security"},
+        {"rule": "MISSING_CODE_OF_CONDUCT_FILE", "severity": "WARNING", "passed": false, "message": "The project's code repository does not contain the file 'CODE_OF_CONDUCT.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/code-of-conduct-md"},
+        {"rule": "MISSING_CHANGELOG_FILE", "severity": "WARNING", "passed": false, "message": "The project's code repository does not contain a 'CHANGELOG' or 'CHANGELOG.md' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/changelog-bijhouden"}
       ],
       "tooling": {"ortVersion": "92.4.0", "runnerVersion": "3e8ab3b", "configDigest": "sha256:e7ec4f5141ca6340e00ba23cb8cab8bc60b9bb043863b1f88b21397292f8fc16"}
     }
