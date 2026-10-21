@@ -1,0 +1,283 @@
+{
+  "GET /repositories (item in de lijst)": {
+    "id": "0b5c…",
+    "url": "https://gitlab.com/blauwe-knop/vorderingenoverzicht/bk-config-service",
+    "name": "bk-config-service",
+    "archived": false,
+    "scanSummary": {
+      "status": "completed",
+      "scannedAt": "2026-10-20T12:46:30Z",
+      // Percentage van het aantal geslaagde repo rules (Warnings/ Errors)
+      "repoScorePercentage": 22,
+      "packageCount": 72,
+      "vulnerabilityCount": 7,
+      "vulnerablePackageCount": 3,
+      "findingCounts": {"error": 4, "warning": 3, "hint": 0},
+      "directDependencyCount": 13,
+      "transitiveDependencyCount": 59
+    }
+  },
+  "GET /repositories/{id}": {
+    "id": "0b5c…",
+    "url": "https://gitlab.com/blauwe-knop/vorderingenoverzicht/bk-config-service",
+    "name": "bk-config-service",
+    "scan": {
+      "status": "completed",
+      "startedAt": "2026-10-20T12:42:52Z",
+      "scannedAt": "2026-10-20T12:46:30Z",
+      "revision": "cd9f408ae99dcc00eeac08743c2de55f1d32c6a0",
+      "packageCount": 72,
+      "packageManagers": [
+        {
+          "name": "GoMod",
+          "definitionFile": "go.mod",
+          "module": "gitlab.com/blauwe-knop/vorderingenoverzicht/bk-config-service",
+          "directCount": 11,
+          "transitiveCount": 15,
+          "dependencies": [
+            {"packageId": "Go::github.com/go-chi/chi/v5:5.3.2", "name": "github.com/go-chi/chi/v5", "version": "5.3.2", "purl": "pkg:golang/github.com/go-chi/chi/v5@5.3.2", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-chi/cors:1.2.2", "name": "github.com/go-chi/cors", "version": "1.2.2", "purl": "pkg:golang/github.com/go-chi/cors@1.2.2", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/huandu/xstrings:1.6.0", "name": "github.com/huandu/xstrings", "version": "1.6.0", "purl": "pkg:golang/github.com/huandu/xstrings@1.6.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jackc/pgx/v5:5.11.0", "name": "github.com/jackc/pgx/v5", "version": "5.11.0", "purl": "pkg:golang/github.com/jackc/pgx/v5@5.11.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jessevdk/go-flags:1.6.1", "name": "github.com/jessevdk/go-flags", "version": "1.6.1", "purl": "pkg:golang/github.com/jessevdk/go-flags@1.6.1", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jmoiron/sqlx:1.4.0", "name": "github.com/jmoiron/sqlx", "version": "1.4.0", "purl": "pkg:golang/github.com/jmoiron/sqlx@1.4.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/pkg/errors:0.9.1", "name": "github.com/pkg/errors", "version": "0.9.1", "purl": "pkg:golang/github.com/pkg/errors@0.9.1", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/prometheus/client_golang:1.24.1", "name": "github.com/prometheus/client_golang", "version": "1.24.1", "purl": "pkg:golang/github.com/prometheus/client_golang@1.24.1", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::gitlab.com/blauwe-knop/common/health-checker:0.0.14", "name": "gitlab.com/blauwe-knop/common/health-checker", "version": "0.0.14", "purl": "pkg:golang/gitlab.com/blauwe-knop/common/health-checker@0.0.14", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.uber.org/zap:1.28.0", "name": "go.uber.org/zap", "version": "1.28.0", "purl": "pkg:golang/go.uber.org/zap@1.28.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::software.sslmate.com/src/go-pkcs12:0.7.3", "name": "software.sslmate.com/src/go-pkcs12", "version": "0.7.3", "purl": "pkg:golang/software.sslmate.com/src/go-pkcs12@0.7.3", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/beorn7/perks:1.0.1", "name": "github.com/beorn7/perks", "version": "1.0.1", "purl": "pkg:golang/github.com/beorn7/perks@1.0.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/cespare/xxhash/v2:2.3.0", "name": "github.com/cespare/xxhash/v2", "version": "2.3.0", "purl": "pkg:golang/github.com/cespare/xxhash/v2@2.3.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jackc/pgpassfile:1.0.0", "name": "github.com/jackc/pgpassfile", "version": "1.0.0", "purl": "pkg:golang/github.com/jackc/pgpassfile@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jackc/pgservicefile:0.0.0-20240606120523-5a60cdf6a761", "name": "github.com/jackc/pgservicefile", "version": "0.0.0-20240606120523-5a60cdf6a761", "purl": "pkg:golang/github.com/jackc/pgservicefile@0.0.0-20240606120523-5a60cdf6a761", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/jackc/puddle/v2:2.2.2", "name": "github.com/jackc/puddle/v2", "version": "2.2.2", "purl": "pkg:golang/github.com/jackc/puddle/v2@2.2.2", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/munnerz/goautoneg:0.0.0-20191010083416-a7dc8b61c822", "name": "github.com/munnerz/goautoneg", "version": "0.0.0-20191010083416-a7dc8b61c822", "purl": "pkg:golang/github.com/munnerz/goautoneg@0.0.0-20191010083416-a7dc8b61c822", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/prometheus/client_model:0.6.2", "name": "github.com/prometheus/client_model", "version": "0.6.2", "purl": "pkg:golang/github.com/prometheus/client_model@0.6.2", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/prometheus/common:0.70.1", "name": "github.com/prometheus/common", "version": "0.70.1", "purl": "pkg:golang/github.com/prometheus/common@0.70.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/prometheus/procfs:0.21.1", "name": "github.com/prometheus/procfs", "version": "0.21.1", "purl": "pkg:golang/github.com/prometheus/procfs@0.21.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.uber.org/multierr:1.11.0", "name": "go.uber.org/multierr", "version": "1.11.0", "purl": "pkg:golang/go.uber.org/multierr@1.11.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {
+              "packageId": "Go::golang.org/x/crypto:0.57.0",
+              "name": "golang.org/x/crypto",
+              "version": "0.57.0",
+              "purl": "pkg:golang/golang.org/x/crypto@0.57.0",
+              "licenses": [],
+              "direct": false,
+              "scopes": [
+                "main",
+                "vendor"
+              ],
+              "fixedIn": null,
+              "vulnerabilities": [
+                {"id": "GO-2026-5932", "summary": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues", "url": "https://osv.dev/vulnerability/GO-2026-5932"}
+              ]
+            },
+            {"packageId": "Go::golang.org/x/sync:0.23.0", "name": "golang.org/x/sync", "version": "0.23.0", "purl": "pkg:golang/golang.org/x/sync@0.23.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/sys:0.48.0", "name": "golang.org/x/sys", "version": "0.48.0", "purl": "pkg:golang/golang.org/x/sys@0.48.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/text:0.42.0", "name": "golang.org/x/text", "version": "0.42.0", "purl": "pkg:golang/golang.org/x/text@0.42.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::google.golang.org/protobuf:1.36.11", "name": "google.golang.org/protobuf", "version": "1.36.11", "purl": "pkg:golang/google.golang.org/protobuf@1.36.11", "licenses": [], "direct": false, "scopes": ["main", "vendor"]}
+          ]
+        },
+        {
+          "name": "GoMod",
+          "definitionFile": "test/mtls/go.mod",
+          "module": "gitlab.com/blauwe-knop/vorderingenoverzicht/bk-config-service/test/mtls",
+          "directCount": 2,
+          "transitiveCount": 45,
+          "dependencies": [
+            {"packageId": "Go::k8s.io/apimachinery:0.37.0", "name": "k8s.io/apimachinery", "version": "0.37.0", "purl": "pkg:golang/k8s.io/apimachinery@0.37.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/client-go:0.37.0", "name": "k8s.io/client-go", "version": "0.37.0", "purl": "pkg:golang/k8s.io/client-go@0.37.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/davecgh/go-spew:1.1.2-0.20180830191138-d8f796af33cc", "name": "github.com/davecgh/go-spew", "version": "1.1.2-0.20180830191138-d8f796af33cc", "purl": "pkg:golang/github.com/davecgh/go-spew@1.1.2-0.20180830191138-d8f796af33cc", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/emicklei/go-restful/v3:3.13.0", "name": "github.com/emicklei/go-restful/v3", "version": "3.13.0", "purl": "pkg:golang/github.com/emicklei/go-restful/v3@3.13.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/fxamacker/cbor/v2:2.9.1", "name": "github.com/fxamacker/cbor/v2", "version": "2.9.1", "purl": "pkg:golang/github.com/fxamacker/cbor/v2@2.9.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-logr/logr:1.4.3", "name": "github.com/go-logr/logr", "version": "1.4.3", "purl": "pkg:golang/github.com/go-logr/logr@1.4.3", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/jsonpointer:1.0.0", "name": "github.com/go-openapi/jsonpointer", "version": "1.0.0", "purl": "pkg:golang/github.com/go-openapi/jsonpointer@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/jsonreference:1.0.0", "name": "github.com/go-openapi/jsonreference", "version": "1.0.0", "purl": "pkg:golang/github.com/go-openapi/jsonreference@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/cmdutils:0.27.1", "name": "github.com/go-openapi/swag/cmdutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/cmdutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/conv:0.27.1", "name": "github.com/go-openapi/swag/conv", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/conv@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/fileutils:0.27.1", "name": "github.com/go-openapi/swag/fileutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/fileutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/jsonutils:0.27.1", "name": "github.com/go-openapi/swag/jsonutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/jsonutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/loading:0.27.1", "name": "github.com/go-openapi/swag/loading", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/loading@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/mangling:0.27.1", "name": "github.com/go-openapi/swag/mangling", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/mangling@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/netutils:0.27.1", "name": "github.com/go-openapi/swag/netutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/netutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/pools:0.27.1", "name": "github.com/go-openapi/swag/pools", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/pools@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/stringutils:0.27.1", "name": "github.com/go-openapi/swag/stringutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/stringutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/typeutils:0.27.1", "name": "github.com/go-openapi/swag/typeutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/typeutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/yamlutils:0.27.1", "name": "github.com/go-openapi/swag/yamlutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/yamlutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag:0.27.1", "name": "github.com/go-openapi/swag", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/google/gnostic-models:0.7.1", "name": "github.com/google/gnostic-models", "version": "0.7.1", "purl": "pkg:golang/github.com/google/gnostic-models@0.7.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/google/uuid:1.6.0", "name": "github.com/google/uuid", "version": "1.6.0", "purl": "pkg:golang/github.com/google/uuid@1.6.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/json-iterator/go:1.1.12", "name": "github.com/json-iterator/go", "version": "1.1.12", "purl": "pkg:golang/github.com/json-iterator/go@1.1.12", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/modern-go/concurrent:0.0.0-20180306012644-bacd9c7ef1dd", "name": "github.com/modern-go/concurrent", "version": "0.0.0-20180306012644-bacd9c7ef1dd", "purl": "pkg:golang/github.com/modern-go/concurrent@0.0.0-20180306012644-bacd9c7ef1dd", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/modern-go/reflect2:1.0.3-0.20250322232337-35a7c28c31ee", "name": "github.com/modern-go/reflect2", "version": "1.0.3-0.20250322232337-35a7c28c31ee", "purl": "pkg:golang/github.com/modern-go/reflect2@1.0.3-0.20250322232337-35a7c28c31ee", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/munnerz/goautoneg:0.0.0-20191010083416-a7dc8b61c822", "name": "github.com/munnerz/goautoneg", "version": "0.0.0-20191010083416-a7dc8b61c822", "purl": "pkg:golang/github.com/munnerz/goautoneg@0.0.0-20191010083416-a7dc8b61c822", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/spf13/pflag:1.0.10", "name": "github.com/spf13/pflag", "version": "1.0.10", "purl": "pkg:golang/github.com/spf13/pflag@1.0.10", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/x448/float16:0.8.4", "name": "github.com/x448/float16", "version": "0.8.4", "purl": "pkg:golang/github.com/x448/float16@0.8.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.yaml.in/yaml/v2:2.4.4", "name": "go.yaml.in/yaml/v2", "version": "2.4.4", "purl": "pkg:golang/go.yaml.in/yaml/v2@2.4.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.yaml.in/yaml/v3:3.0.4", "name": "go.yaml.in/yaml/v3", "version": "3.0.4", "purl": "pkg:golang/go.yaml.in/yaml/v3@3.0.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {
+              "packageId": "Go::golang.org/x/net:0.57.0",
+              "name": "golang.org/x/net",
+              "version": "0.57.0",
+              "purl": "pkg:golang/golang.org/x/net@0.57.0",
+              "licenses": [],
+              "direct": false,
+              "scopes": [
+                "main",
+                "vendor"
+              ],
+              "fixedIn": "0.60.0",
+              "vulnerabilities": [
+                {"id": "GO-2026-6603", "summary": "HTTP/2 server memory exhaustion due to Trailer headers in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6603", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6610", "summary": "HTTP/2 transport accepts malformed framing-related headers in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6610", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6611", "summary": "Excessive CPU consumption from repeated initial window changes in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6611", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6612", "summary": "Double flow control refund on HTTP/2 server streams in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6612", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6617", "summary": "HTTP/2 server crash due to HPACK encoder race in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6617", "firstFixedVersions": ["0.60.0"]}
+              ]
+            },
+            {"packageId": "Go::golang.org/x/oauth2:0.36.0", "name": "golang.org/x/oauth2", "version": "0.36.0", "purl": "pkg:golang/golang.org/x/oauth2@0.36.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/sys:0.47.0", "name": "golang.org/x/sys", "version": "0.47.0", "purl": "pkg:golang/golang.org/x/sys@0.47.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/term:0.45.0", "name": "golang.org/x/term", "version": "0.45.0", "purl": "pkg:golang/golang.org/x/term@0.45.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {
+              "packageId": "Go::golang.org/x/text:0.40.0",
+              "name": "golang.org/x/text",
+              "version": "0.40.0",
+              "purl": "pkg:golang/golang.org/x/text@0.40.0",
+              "licenses": [],
+              "direct": false,
+              "scopes": [
+                "main",
+                "vendor"
+              ],
+              "fixedIn": "0.41.0",
+              "vulnerabilities": [
+                {"id": "GO-2026-6629", "summary": "Panic parsing crafted input in x/text/secure/precis in golang.org/x/text", "url": "https://osv.dev/vulnerability/GO-2026-6629", "firstFixedVersions": ["0.41.0"]}
+              ]
+            },
+            {"packageId": "Go::golang.org/x/time:0.15.0", "name": "golang.org/x/time", "version": "0.15.0", "purl": "pkg:golang/golang.org/x/time@0.15.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::google.golang.org/protobuf:1.36.12-0.20260120151049-f2248ac996af", "name": "google.golang.org/protobuf", "version": "1.36.12-0.20260120151049-f2248ac996af", "purl": "pkg:golang/google.golang.org/protobuf@1.36.12-0.20260120151049-f2248ac996af", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::gopkg.in/evanphx/json-patch.v4:4.13.0", "name": "gopkg.in/evanphx/json-patch.v4", "version": "4.13.0", "purl": "pkg:golang/gopkg.in/evanphx/json-patch.v4@4.13.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::gopkg.in/inf.v0:0.9.1", "name": "gopkg.in/inf.v0", "version": "0.9.1", "purl": "pkg:golang/gopkg.in/inf.v0@0.9.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/api:0.37.0", "name": "k8s.io/api", "version": "0.37.0", "purl": "pkg:golang/k8s.io/api@0.37.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/klog/v2:2.140.0", "name": "k8s.io/klog/v2", "version": "2.140.0", "purl": "pkg:golang/k8s.io/klog/v2@2.140.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/kube-openapi:0.0.0-20260721132016-d427ff9ee9ad", "name": "k8s.io/kube-openapi", "version": "0.0.0-20260721132016-d427ff9ee9ad", "purl": "pkg:golang/k8s.io/kube-openapi@0.0.0-20260721132016-d427ff9ee9ad", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/utils:0.0.0-20260626114624-be93311217bd", "name": "k8s.io/utils", "version": "0.0.0-20260626114624-be93311217bd", "purl": "pkg:golang/k8s.io/utils@0.0.0-20260626114624-be93311217bd", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/json:0.0.0-20250730193827-2d320260d730", "name": "sigs.k8s.io/json", "version": "0.0.0-20250730193827-2d320260d730", "purl": "pkg:golang/sigs.k8s.io/json@0.0.0-20250730193827-2d320260d730", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/randfill:1.0.0", "name": "sigs.k8s.io/randfill", "version": "1.0.0", "purl": "pkg:golang/sigs.k8s.io/randfill@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/structured-merge-diff/v6:6.4.2", "name": "sigs.k8s.io/structured-merge-diff/v6", "version": "6.4.2", "purl": "pkg:golang/sigs.k8s.io/structured-merge-diff/v6@6.4.2", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/yaml:1.6.0", "name": "sigs.k8s.io/yaml", "version": "1.6.0", "purl": "pkg:golang/sigs.k8s.io/yaml@1.6.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]}
+          ]
+        },
+        {
+          "name": "GoMod",
+          "definitionFile": "test/pkcs12/go.mod",
+          "module": "gitlab.com/blauwe-knop/vorderingenoverzicht/bk-config-service/test/pkcs12",
+          "directCount": 2,
+          "transitiveCount": 45,
+          "dependencies": [
+            {"packageId": "Go::k8s.io/apimachinery:0.37.0", "name": "k8s.io/apimachinery", "version": "0.37.0", "purl": "pkg:golang/k8s.io/apimachinery@0.37.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/client-go:0.37.0", "name": "k8s.io/client-go", "version": "0.37.0", "purl": "pkg:golang/k8s.io/client-go@0.37.0", "licenses": [], "direct": true, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/davecgh/go-spew:1.1.2-0.20180830191138-d8f796af33cc", "name": "github.com/davecgh/go-spew", "version": "1.1.2-0.20180830191138-d8f796af33cc", "purl": "pkg:golang/github.com/davecgh/go-spew@1.1.2-0.20180830191138-d8f796af33cc", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/emicklei/go-restful/v3:3.13.0", "name": "github.com/emicklei/go-restful/v3", "version": "3.13.0", "purl": "pkg:golang/github.com/emicklei/go-restful/v3@3.13.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/fxamacker/cbor/v2:2.9.1", "name": "github.com/fxamacker/cbor/v2", "version": "2.9.1", "purl": "pkg:golang/github.com/fxamacker/cbor/v2@2.9.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-logr/logr:1.4.3", "name": "github.com/go-logr/logr", "version": "1.4.3", "purl": "pkg:golang/github.com/go-logr/logr@1.4.3", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/jsonpointer:1.0.0", "name": "github.com/go-openapi/jsonpointer", "version": "1.0.0", "purl": "pkg:golang/github.com/go-openapi/jsonpointer@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/jsonreference:1.0.0", "name": "github.com/go-openapi/jsonreference", "version": "1.0.0", "purl": "pkg:golang/github.com/go-openapi/jsonreference@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/cmdutils:0.27.1", "name": "github.com/go-openapi/swag/cmdutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/cmdutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/conv:0.27.1", "name": "github.com/go-openapi/swag/conv", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/conv@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/fileutils:0.27.1", "name": "github.com/go-openapi/swag/fileutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/fileutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/jsonutils:0.27.1", "name": "github.com/go-openapi/swag/jsonutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/jsonutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/loading:0.27.1", "name": "github.com/go-openapi/swag/loading", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/loading@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/mangling:0.27.1", "name": "github.com/go-openapi/swag/mangling", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/mangling@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/netutils:0.27.1", "name": "github.com/go-openapi/swag/netutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/netutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/pools:0.27.1", "name": "github.com/go-openapi/swag/pools", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/pools@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/stringutils:0.27.1", "name": "github.com/go-openapi/swag/stringutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/stringutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/typeutils:0.27.1", "name": "github.com/go-openapi/swag/typeutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/typeutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag/yamlutils:0.27.1", "name": "github.com/go-openapi/swag/yamlutils", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag/yamlutils@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/go-openapi/swag:0.27.1", "name": "github.com/go-openapi/swag", "version": "0.27.1", "purl": "pkg:golang/github.com/go-openapi/swag@0.27.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/google/gnostic-models:0.7.1", "name": "github.com/google/gnostic-models", "version": "0.7.1", "purl": "pkg:golang/github.com/google/gnostic-models@0.7.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/google/uuid:1.6.0", "name": "github.com/google/uuid", "version": "1.6.0", "purl": "pkg:golang/github.com/google/uuid@1.6.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/json-iterator/go:1.1.12", "name": "github.com/json-iterator/go", "version": "1.1.12", "purl": "pkg:golang/github.com/json-iterator/go@1.1.12", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/modern-go/concurrent:0.0.0-20180306012644-bacd9c7ef1dd", "name": "github.com/modern-go/concurrent", "version": "0.0.0-20180306012644-bacd9c7ef1dd", "purl": "pkg:golang/github.com/modern-go/concurrent@0.0.0-20180306012644-bacd9c7ef1dd", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/modern-go/reflect2:1.0.3-0.20250322232337-35a7c28c31ee", "name": "github.com/modern-go/reflect2", "version": "1.0.3-0.20250322232337-35a7c28c31ee", "purl": "pkg:golang/github.com/modern-go/reflect2@1.0.3-0.20250322232337-35a7c28c31ee", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/munnerz/goautoneg:0.0.0-20191010083416-a7dc8b61c822", "name": "github.com/munnerz/goautoneg", "version": "0.0.0-20191010083416-a7dc8b61c822", "purl": "pkg:golang/github.com/munnerz/goautoneg@0.0.0-20191010083416-a7dc8b61c822", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/spf13/pflag:1.0.10", "name": "github.com/spf13/pflag", "version": "1.0.10", "purl": "pkg:golang/github.com/spf13/pflag@1.0.10", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::github.com/x448/float16:0.8.4", "name": "github.com/x448/float16", "version": "0.8.4", "purl": "pkg:golang/github.com/x448/float16@0.8.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.yaml.in/yaml/v2:2.4.4", "name": "go.yaml.in/yaml/v2", "version": "2.4.4", "purl": "pkg:golang/go.yaml.in/yaml/v2@2.4.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::go.yaml.in/yaml/v3:3.0.4", "name": "go.yaml.in/yaml/v3", "version": "3.0.4", "purl": "pkg:golang/go.yaml.in/yaml/v3@3.0.4", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {
+              "packageId": "Go::golang.org/x/net:0.57.0",
+              "name": "golang.org/x/net",
+              "version": "0.57.0",
+              "purl": "pkg:golang/golang.org/x/net@0.57.0",
+              "licenses": [],
+              "direct": false,
+              "scopes": [
+                "main",
+                "vendor"
+              ],
+              "fixedIn": "0.60.0",
+              "vulnerabilities": [
+                {"id": "GO-2026-6603", "summary": "HTTP/2 server memory exhaustion due to Trailer headers in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6603", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6610", "summary": "HTTP/2 transport accepts malformed framing-related headers in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6610", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6611", "summary": "Excessive CPU consumption from repeated initial window changes in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6611", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6612", "summary": "Double flow control refund on HTTP/2 server streams in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6612", "firstFixedVersions": ["0.60.0"]},
+                {"id": "GO-2026-6617", "summary": "HTTP/2 server crash due to HPACK encoder race in net/http", "url": "https://osv.dev/vulnerability/GO-2026-6617", "firstFixedVersions": ["0.60.0"]}
+              ]
+            },
+            {"packageId": "Go::golang.org/x/oauth2:0.36.0", "name": "golang.org/x/oauth2", "version": "0.36.0", "purl": "pkg:golang/golang.org/x/oauth2@0.36.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/sys:0.47.0", "name": "golang.org/x/sys", "version": "0.47.0", "purl": "pkg:golang/golang.org/x/sys@0.47.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::golang.org/x/term:0.45.0", "name": "golang.org/x/term", "version": "0.45.0", "purl": "pkg:golang/golang.org/x/term@0.45.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {
+              "packageId": "Go::golang.org/x/text:0.40.0",
+              "name": "golang.org/x/text",
+              "version": "0.40.0",
+              "purl": "pkg:golang/golang.org/x/text@0.40.0",
+              "licenses": [],
+              "direct": false,
+              "scopes": [
+                "main",
+                "vendor"
+              ],
+              "fixedIn": "0.41.0",
+              "vulnerabilities": [
+                {"id": "GO-2026-6629", "summary": "Panic parsing crafted input in x/text/secure/precis in golang.org/x/text", "url": "https://osv.dev/vulnerability/GO-2026-6629", "firstFixedVersions": ["0.41.0"]}
+              ]
+            },
+            {"packageId": "Go::golang.org/x/time:0.15.0", "name": "golang.org/x/time", "version": "0.15.0", "purl": "pkg:golang/golang.org/x/time@0.15.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::google.golang.org/protobuf:1.36.12-0.20260120151049-f2248ac996af", "name": "google.golang.org/protobuf", "version": "1.36.12-0.20260120151049-f2248ac996af", "purl": "pkg:golang/google.golang.org/protobuf@1.36.12-0.20260120151049-f2248ac996af", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::gopkg.in/evanphx/json-patch.v4:4.13.0", "name": "gopkg.in/evanphx/json-patch.v4", "version": "4.13.0", "purl": "pkg:golang/gopkg.in/evanphx/json-patch.v4@4.13.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::gopkg.in/inf.v0:0.9.1", "name": "gopkg.in/inf.v0", "version": "0.9.1", "purl": "pkg:golang/gopkg.in/inf.v0@0.9.1", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/api:0.37.0", "name": "k8s.io/api", "version": "0.37.0", "purl": "pkg:golang/k8s.io/api@0.37.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/klog/v2:2.140.0", "name": "k8s.io/klog/v2", "version": "2.140.0", "purl": "pkg:golang/k8s.io/klog/v2@2.140.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/kube-openapi:0.0.0-20260721132016-d427ff9ee9ad", "name": "k8s.io/kube-openapi", "version": "0.0.0-20260721132016-d427ff9ee9ad", "purl": "pkg:golang/k8s.io/kube-openapi@0.0.0-20260721132016-d427ff9ee9ad", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::k8s.io/utils:0.0.0-20260626114624-be93311217bd", "name": "k8s.io/utils", "version": "0.0.0-20260626114624-be93311217bd", "purl": "pkg:golang/k8s.io/utils@0.0.0-20260626114624-be93311217bd", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/json:0.0.0-20250730193827-2d320260d730", "name": "sigs.k8s.io/json", "version": "0.0.0-20250730193827-2d320260d730", "purl": "pkg:golang/sigs.k8s.io/json@0.0.0-20250730193827-2d320260d730", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/randfill:1.0.0", "name": "sigs.k8s.io/randfill", "version": "1.0.0", "purl": "pkg:golang/sigs.k8s.io/randfill@1.0.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/structured-merge-diff/v6:6.4.2", "name": "sigs.k8s.io/structured-merge-diff/v6", "version": "6.4.2", "purl": "pkg:golang/sigs.k8s.io/structured-merge-diff/v6@6.4.2", "licenses": [], "direct": false, "scopes": ["main", "vendor"]},
+            {"packageId": "Go::sigs.k8s.io/yaml:1.6.0", "name": "sigs.k8s.io/yaml", "version": "1.6.0", "purl": "pkg:golang/sigs.k8s.io/yaml@1.6.0", "licenses": [], "direct": false, "scopes": ["main", "vendor"]}
+          ]
+        }
+      ],
+      "summary": {
+        "repoScorePercentage": 22,
+        "vulnerabilityCount": 7,
+        "vulnerablePackageCount": 3,
+        "findingCounts": {"error": 4, "warning": 3, "hint": 0}
+      },
+      "findings": [
+        {"rule": "MISSING_README_FILE", "severity": "ERROR", "passed": true, "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/readme-md"},
+        {"rule": "MISSING_LICENSE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'LICENSE'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/open-source-software-licenties"},
+        {"rule": "MISSING_PUBLICCODE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain a 'publiccode.yml' or 'publiccode.yaml' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/publiccode-yml-toevoegen"},
+        {"rule": "MISSING_CONTRIBUTING_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'CONTRIBUTING.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/contributing-md"},
+        {"rule": "MISSING_SECURITY_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'SECURITY.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/security"},
+        {"rule": "MISSING_CODE_OF_CONDUCT_FILE", "severity": "WARNING", "passed": false, "message": "The project's code repository does not contain the file 'CODE_OF_CONDUCT.md'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/code-of-conduct-md"},
+        {"rule": "MISSING_CHANGELOG_FILE", "severity": "WARNING", "passed": false, "message": "The project's code repository does not contain a 'CHANGELOG' or 'CHANGELOG.md' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/changelog-bijhouden"}
+      ],
+      "tooling": {"ortVersion": "92.4.0", "runnerVersion": "3e8ab3b", "configDigest": "sha256:e7ec4f5141ca6340e00ba23cb8cab8bc60b9bb043863b1f88b21397292f8fc16"}
+    }
+  },
+  "GET /repositories/{id} (mislukte scan)": {
+    "scan": {"status": "failed", "startedAt": "2026-10-20T12:42:52Z", "scannedAt": "2026-10-20T13:12:52Z", "revision": "cd9f408ae99dcc00eeac08743c2de55f1d32c6a0", "error": "analyze: time budget of 30m exceeded", "failedStage": "analyze"}
+  }
+}
