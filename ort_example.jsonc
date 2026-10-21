@@ -266,7 +266,6 @@
         "findingCounts": {"error": 4, "warning": 3, "hint": 0}
       },
       "findings": [
-        {"rule": "VULNERABILITY_IN_DEPENDENCY", "severity": "WARNING", "passed": false, "message": "3 dependencies have a known vulnerability.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/leidraad/security/richtlijn-applicatie-security-tools"},
         {"rule": "MISSING_README_FILE", "severity": "ERROR", "passed": true, "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/standaarden/readme-md"},
         {"rule": "MISSING_LICENSE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain the file 'LICENSE'.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/open-source-software-licenties"},
         {"rule": "MISSING_PUBLICCODE_FILE", "severity": "ERROR", "passed": false, "message": "The project's code repository does not contain a 'publiccode.yml' or 'publiccode.yaml' file.", "howToFixUrl": "https://developer.overheid.nl/kennisbank/open-source/tutorials/publiccode-yml-toevoegen"},
