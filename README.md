@@ -62,8 +62,8 @@ is het percentage geslaagde repository-regels; dat is er alleen als de scan zijn
 regels meestuurt (ort-config met `rules.yml`). Kwetsbaarheden worden wel in het
 ruwe rapport opgeslagen, maar niet via de API gepubliceerd.
 
-De runner roept het endpoint binnen het cluster aan via de service; er is geen
-gateway-route voor.
+De runner roept het endpoint aan via de API-gateway met een client-credentials-token.
+OPA vereist daarvoor de scope `repositories:write`; API-keys worden niet geaccepteerd.
 
 ## Typesense integratie
 
