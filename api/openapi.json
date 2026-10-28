@@ -377,6 +377,69 @@
         }
       }
     },
+    "/scans": {
+      "post": {
+        "security": [
+          {
+            "clientCredentials": [
+              "repositories:write"
+            ]
+          }
+        ],
+        "tags": [
+          "Private endpoints",
+          "Repositories"
+        ],
+        "summary": "Submit ORT scan",
+        "description": "Stores the result of an ORT scan by the ort-runner for a repository. Every scan is kept as history. A retried delivery with the same Idempotency-Key does not store a second scan and returns the stored scan. Vulnerabilities in the report are stored but not published.",
+        "operationId": "submitScan",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Key of this delivery. A retry with the same key returns the scan stored the first time.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanSubmission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "headers": {
+              "API-Version": {
+                "$ref": "#/components/headers/APIVersion"
+              }
+            },
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepositoryScan"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/organisations": {
       "get": {
         "security": [
@@ -942,6 +1005,9 @@
             "type": "boolean",
             "description": "Whether the repository is archived and hidden from default repository listings.",
             "readOnly": true
+          },
+          "scanSummary": {
+            "$ref": "#/components/schemas/RepositoryScanSummary"
           }
         }
       },
@@ -1012,6 +1078,9 @@
               "longDescription": {
                 "type": "string",
                 "description": "Long description of the repository, typically from publiccode.yml."
+              },
+              "scan": {
+                "$ref": "#/components/schemas/RepositoryScan"
               }
             }
           }
@@ -1084,6 +1153,245 @@
             "items": {
               "$ref": "#/components/schemas/FilterOption"
             }
+          }
+        }
+      },
+      "ScanSubmission": {
+        "title": "Scan submission",
+        "description": "A scan result as delivered by the ort-runner.",
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "repositoryId",
+          "scan"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              1
+            ],
+            "description": "Version of this message."
+          },
+          "repositoryId": {
+            "type": "string",
+            "description": "Id of the repository in the register."
+          },
+          "scan": {
+            "type": "object",
+            "description": "The complete run.json of the ort-runner. `status` must be `completed`, `incomplete` or `failed`.",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "incomplete",
+                  "failed"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "RepositoryScanSummary": {
+        "title": "Repository scan summary",
+        "description": "The latest ORT scan of a repository. Vulnerabilities are not published.",
+        "type": "object",
+        "readOnly": true,
+        "required": [
+          "status",
+          "scannedAt",
+          "findingCounts"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "incomplete",
+              "failed"
+            ],
+            "description": "Whether the scan ran completely. Says nothing about the quality of the repository."
+          },
+          "scannedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the scan finished."
+          },
+          "repoScorePercentage": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage of passed ORT repository rules. Absent when the scan did not report its rules."
+          },
+          "packageCount": {
+            "type": "integer",
+            "description": "Number of unique dependencies found."
+          },
+          "directDependencyCount": {
+            "type": "integer",
+            "description": "Number of unique direct dependencies."
+          },
+          "transitiveDependencyCount": {
+            "type": "integer",
+            "description": "Number of unique transitive dependencies."
+          },
+          "packageManagers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Package managers found, as named by ORT (for example GoMod or NPM)."
+          },
+          "findingCounts": {
+            "$ref": "#/components/schemas/ScanFindingCounts"
+          }
+        }
+      },
+      "ScanFindingCounts": {
+        "title": "Scan finding counts",
+        "description": "Number of failed ORT repository rules per severity.",
+        "type": "object",
+        "required": [
+          "error",
+          "warning",
+          "hint"
+        ],
+        "properties": {
+          "error": {
+            "type": "integer"
+          },
+          "warning": {
+            "type": "integer"
+          },
+          "hint": {
+            "type": "integer"
+          }
+        }
+      },
+      "RepositoryScan": {
+        "title": "Repository scan",
+        "description": "An ORT scan of a repository with its findings. Vulnerabilities are not published.",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RepositoryScanSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "startedAt",
+              "findings",
+              "tooling"
+            ],
+            "properties": {
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "revision": {
+                "type": "string",
+                "description": "Scanned Git commit."
+              },
+              "error": {
+                "type": "string",
+                "description": "Why the scan failed or is incomplete."
+              },
+              "failedStage": {
+                "type": "string",
+                "description": "The first stage of the scan that failed."
+              },
+              "projects": {
+                "type": "array",
+                "description": "Dependency counts per project file.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "packageManager",
+                    "definitionFile",
+                    "directDependencyCount",
+                    "transitiveDependencyCount"
+                  ],
+                  "properties": {
+                    "packageManager": {
+                      "type": "string"
+                    },
+                    "definitionFile": {
+                      "type": "string",
+                      "description": "Path of the project file, for example go.mod."
+                    },
+                    "directDependencyCount": {
+                      "type": "integer"
+                    },
+                    "transitiveDependencyCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "findings": {
+                "type": "array",
+                "description": "ORT repository rules, passed or failed.",
+                "items": {
+                  "$ref": "#/components/schemas/ScanFinding"
+                }
+              },
+              "tooling": {
+                "type": "object",
+                "description": "What the scan was made with.",
+                "properties": {
+                  "ortImage": {
+                    "type": "string"
+                  },
+                  "runnerVersion": {
+                    "type": "string"
+                  },
+                  "configDigest": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ScanFinding": {
+        "title": "Scan finding",
+        "description": "One ORT repository rule.",
+        "type": "object",
+        "required": [
+          "rule",
+          "severity",
+          "passed"
+        ],
+        "properties": {
+          "rule": {
+            "type": "string",
+            "description": "ORT rule id, for example MISSING_LICENSE_FILE."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "ERROR",
+              "WARNING",
+              "HINT"
+            ]
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "description": "ORT message for a failed rule."
+          },
+          "howToFixUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Guidance on developer.overheid.nl."
           }
         }
       },

@@ -22,7 +22,8 @@ import (
 
 // RepositoryService implementeert RepositoriesServicer met de benodigde repository
 type RepositoryService struct {
-	repo repositories.RepositoriesRepository
+	repo  repositories.RepositoriesRepository
+	scans repositories.ScansRepository
 }
 
 // NewRepositoryService Constructor-functie
@@ -59,6 +60,9 @@ func (s *RepositoryService) ListRepositorys(ctx context.Context, p *models.ListR
 	dtos := make([]models.RepositorySummary, len(repositories))
 	for i, repository := range repositories {
 		dtos[i] = util.ToRepositorySummary(&repository)
+	}
+	if err := s.attachScanSummaries(ctx, dtos); err != nil {
+		return nil, models.Pagination{}, err
 	}
 
 	return dtos, pagination, nil
@@ -130,6 +134,9 @@ func (s *RepositoryService) RetrieveRepository(ctx context.Context, id string) (
 		return nil, err
 	}
 	detail := util.ToRepositoryDetail(api)
+	if err := s.attachScanDetail(ctx, detail); err != nil {
+		return nil, err
+	}
 	return detail, nil
 }
 

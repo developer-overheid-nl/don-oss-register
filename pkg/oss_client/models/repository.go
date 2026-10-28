@@ -3,24 +3,26 @@ package models
 import "time"
 
 type RepositorySummary struct {
-	Id               string               `json:"id" gorm:"column:id;primaryKey"`
-	Url              string               `json:"url" gorm:"column:repository_url"`
-	ForkType         RepositoryForkType   `json:"forkType,omitempty" gorm:"-"`
-	Organisation     *OrganisationSummary `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
-	OrganisationID   *string              `json:"-" gorm:"column:organisation_id"`
-	PublicCodeUrl    string               `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
-	ShortDescription string               `json:"shortDescription,omitempty" gorm:"column:short_description"`
-	Name             string               `json:"name,omitempty" gorm:"column:name"`
-	CreatedAt        time.Time            `json:"createdAt" gorm:"column:created_at"`
-	LastCrawledAt    time.Time            `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
-	LastActivityAt   time.Time            `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
-	Archived         bool                 `json:"archived"`
+	Id               string                 `json:"id" gorm:"column:id;primaryKey"`
+	Url              string                 `json:"url" gorm:"column:repository_url"`
+	ForkType         RepositoryForkType     `json:"forkType,omitempty" gorm:"-"`
+	Organisation     *OrganisationSummary   `json:"organisation,omitempty" gorm:"foreignKey:OrganisationID;references:Uri"`
+	OrganisationID   *string                `json:"-" gorm:"column:organisation_id"`
+	PublicCodeUrl    string                 `json:"publicCodeUrl,omitempty" gorm:"column:public_code_url"`
+	ShortDescription string                 `json:"shortDescription,omitempty" gorm:"column:short_description"`
+	Name             string                 `json:"name,omitempty" gorm:"column:name"`
+	CreatedAt        time.Time              `json:"createdAt" gorm:"column:created_at"`
+	LastCrawledAt    time.Time              `json:"lastCrawledAt" gorm:"column:last_crawled_at"`
+	LastActivityAt   time.Time              `json:"lastActivityAt,omitempty" gorm:"column:last_activity_at"`
+	Archived         bool                   `json:"archived"`
+	ScanSummary      *RepositoryScanSummary `json:"scanSummary,omitempty" gorm:"-"`
 }
 
 type RepositoryDetail struct {
 	RepositorySummary
-	PublicCode      *PublicCode `json:"publicCode,omitempty"`
-	LongDescription string      `json:"longDescription,omitempty"`
+	PublicCode      *PublicCode           `json:"publicCode,omitempty"`
+	LongDescription string                `json:"longDescription,omitempty"`
+	Scan            *RepositoryScanDetail `json:"scan,omitempty"`
 }
 
 type Repository struct {

@@ -47,6 +47,24 @@ Voorbeelden voor Loki/Grafana:
 veld geschreven. Als de ingestie `app` niet als label instelt, parseer dan
 eerst met `| json` en filter daarna op `app="oss-register"`.
 
+## ORT-scans
+
+De [ort-runner](https://github.com/developer-overheid-nl/ort-runner) stuurt per
+gescande repository zijn `run.json` naar `POST /v1/scans`, met `schemaVersion`,
+`repositoryId` en `scan` in de body. Het register bewaart elke scan in de tabel
+`repository_scans`, zodat de geschiedenis beschikbaar blijft. Een herhaalde levering
+met dezelfde `Idempotency-Key` slaat geen tweede scan op.
+
+De laatste scan staat als `scanSummary` in `GET /v1/repositories` en als `scan` in
+`GET /v1/repositories/{id}`: status, aantallen directe en transitieve dependencies,
+package managers en de ORT-bevindingen per repository-regel. `repoScorePercentage`
+is het percentage geslaagde repository-regels; dat is er alleen als de scan zijn
+regels meestuurt (ort-config met `rules.yml`). Kwetsbaarheden worden wel in het
+ruwe rapport opgeslagen, maar niet via de API gepubliceerd.
+
+De runner roept het endpoint binnen het cluster aan via de service; er is geen
+gateway-route voor.
+
 ## Typesense integratie
 
 Nieuwe repositories worden na een succesvolle POST of PUT ook naar Typesense gestuurd, zodat ze vindbaar zijn in de zoekfunctie. Bij het opstarten van de server worden bestaande actieve repositories bovendien opnieuw naar Typesense gepubliceerd. Stel hiervoor de volgende omgevingsvariabelen in:

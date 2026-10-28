@@ -37,6 +37,10 @@ func Connect(connStr string) (*gorm.DB, error) {
 	if err := migrateRepositorySchemaColumns(db); err != nil {
 		return nil, err
 	}
+	// The scan table is new, so AutoMigrate only creates it and its indexes.
+	if err := db.AutoMigrate(&models.RepositoryScan{}); err != nil {
+		return nil, fmt.Errorf("failed to migrate repository_scans: %w", err)
+	}
 
 	// if err := db.AutoMigrate(
 	// 	&models.Repository{},
