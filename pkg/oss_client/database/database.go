@@ -11,7 +11,9 @@ import (
 
 // Connect connects to the database, optionally resets the schema, and performs migrations.
 func Connect(connStr string) (*gorm.DB, error) {
-	db, err := commondatabase.ConnectPostgres(connStr)
+	// AutoMigrate only covers tables that are new since the production schema
+	// was created; older tables are migrated by the functions below.
+	db, err := commondatabase.ConnectPostgres(connStr, &models.RepositoryScan{})
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +38,6 @@ func Connect(connStr string) (*gorm.DB, error) {
 	}
 	if err := migrateRepositorySchemaColumns(db); err != nil {
 		return nil, err
-	}
-	// The scan table is new, so AutoMigrate only creates it and its indexes.
-	if err := db.AutoMigrate(&models.RepositoryScan{}); err != nil {
-		return nil, fmt.Errorf("failed to migrate repository_scans: %w", err)
 	}
 
 	// if err := db.AutoMigrate(

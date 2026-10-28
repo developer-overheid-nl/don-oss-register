@@ -393,18 +393,7 @@
         "summary": "Submit ORT scan",
         "description": "Stores the result of an ORT scan by the ort-runner for a repository. Every scan is kept as history. A retried delivery with the same Idempotency-Key does not store a second scan and returns the stored scan. Vulnerabilities in the report are stored but not published.",
         "operationId": "submitScan",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "description": "Key of this delivery. A retry with the same key returns the scan stored the first time.",
-            "schema": {
-              "type": "string",
-              "maxLength": 255
-            }
-          }
-        ],
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
         "requestBody": {
           "required": true,
           "content": {
@@ -693,6 +682,16 @@
         },
         "style": "form",
         "explode": true
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "description": "Key of this delivery. A retry with the same key returns the scan stored the first time.",
+        "schema": {
+          "type": "string",
+          "maxLength": 255
+        }
       },
       "ResourceId": {
         "name": "id",
@@ -1175,6 +1174,7 @@
           },
           "repositoryId": {
             "type": "string",
+            "format": "uuid",
             "description": "Id of the repository in the register."
           },
           "scan": {
