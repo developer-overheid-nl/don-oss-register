@@ -131,6 +131,11 @@ func (c *OSSController) UpdateRepository(ctx *gin.Context, req *models.UpdateRep
 	return updated, nil
 }
 
+// SubmitScan handles POST /scans
+func (c *OSSController) SubmitScan(ctx *gin.Context, body *models.ScanSubmission) (*models.RepositoryScanDetail, error) {
+	return c.Service.SubmitScan(ctx.Request.Context(), *body)
+}
+
 // ListRepositoryFilters handles GET /repositories/filters
 func (c *OSSController) ListRepositoryFilters(ctx *gin.Context, p *models.RepositoryFiltersParams) ([]models.FilterGroup, error) {
 	return c.Service.GetRepositoryFilters(ctx.Request.Context(), p)
