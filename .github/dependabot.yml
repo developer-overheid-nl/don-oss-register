@@ -9,6 +9,11 @@ updates:
       - "github-actions"
     assignees:
       - "pasibun"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "gomod"
     directory: "/"
@@ -33,3 +38,8 @@ updates:
       - "docker"
     assignees:
       - "pasibun"
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
