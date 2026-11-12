@@ -1069,3 +1069,37 @@ func decodeServiceLog(t *testing.T, raw []byte) map[string]any {
 	require.NoError(t, json.Unmarshal(raw, &event))
 	return event
 }
+
+func TestGetRepositoryFilters_OrganisationIsSearchSelectWithLargestFirst(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{
+				Organisation: []models.OrgFilterCount{
+					{Value: "https://example.org/a", Label: "Alpha", Count: 2},
+					{Value: "https://example.org/z", Label: "Zulu", Count: 40},
+					{Value: "https://example.org/m", Label: "Mike", Count: 7},
+				},
+			}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{})
+	require.NoError(t, err)
+
+	var organisation *models.FilterGroup
+	for i := range groups {
+		if groups[i].Key == "organisation" {
+			organisation = &groups[i]
+		}
+	}
+	require.NotNil(t, organisation)
+	assert.Equal(t, "search-select", organisation.Type)
+	require.NotNil(t, organisation.ShowTop)
+	assert.Equal(t, 10, *organisation.ShowTop)
+	require.NoError(t, organisation.Validate())
+	// The frontend shows the first showTop options, so the largest come first.
+	assert.Equal(t, []string{"Zulu", "Mike", "Alpha"}, []string{
+		organisation.Options[0].Label, organisation.Options[1].Label, organisation.Options[2].Label,
+	})
+}

@@ -142,6 +142,10 @@ func buildLicenseGroup(p *models.RepositoryFiltersParams, counts *models.Reposit
 	}
 }
 
+// organisationShowTop is how many organisations the filter shows before the
+// user searches or expands the list.
+const organisationShowTop = 10
+
 func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
 	activeOrg := ""
 	if p.Organisation != nil {
@@ -165,13 +169,16 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 			}
 		})
 	}
-	sortFilterOptions(options)
+	// A search-select shows only the first options, so the largest go first.
+	commonfilters.SortOptionsByCount(options)
+	showTop := organisationShowTop
 	return models.FilterGroup{
 		Key:         "organisation",
 		Label:       "Organisatie",
 		Description: "De overheidsorganisatie die de repository beheert.",
-		Type:        "single-select",
+		Type:        "search-select",
 		Options:     options,
+		ShowTop:     &showTop,
 	}
 }
 

@@ -101,3 +101,18 @@ func TestSubmitScanIsDocumented(t *testing.T) {
 	assert.Equal(t, "#/components/schemas/RepositoryScanSummary", summary["scanSummary"].(map[string]any)["$ref"])
 	assert.NotContains(t, schemas["RepositoryScanSummary"].(map[string]any)["properties"], "vulnerabilityCount")
 }
+
+func TestFilterGroupDocumentsSearchSelect(t *testing.T) {
+	data, err := os.ReadFile("openapi.json")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(data, &spec))
+
+	schemas := spec["components"].(map[string]any)["schemas"].(map[string]any)
+	properties := schemas["FilterGroup"].(map[string]any)["properties"].(map[string]any)
+	assert.Contains(t, properties["type"].(map[string]any)["enum"], "search-select")
+	showTop := properties["showTop"].(map[string]any)
+	assert.Equal(t, "integer", showTop["type"])
+	assert.Equal(t, float64(1), showTop["minimum"])
+}
