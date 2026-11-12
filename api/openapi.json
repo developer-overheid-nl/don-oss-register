@@ -1132,8 +1132,8 @@
           },
           "type": {
             "type": "string",
-            "enum": ["toggle", "date", "multi-select", "single-select"],
-            "description": "Filter type. toggle: on/off switch. date: date input (ISO 8601). multi-select: multiple values selectable. single-select: one value selectable from a list."
+            "enum": ["toggle", "date", "multi-select", "single-select", "search-select"],
+            "description": "Filter type. toggle: on/off switch. date: date input (ISO 8601). multi-select: multiple values selectable. single-select: one value selectable from a list. search-select: one value selectable from a long list, which the client shortens to the first showTop options and makes searchable."
           },
           "value": {
             "oneOf": [
@@ -1148,10 +1148,16 @@
           },
           "options": {
             "type": "array",
-            "description": "Available options with counts. Only present for multi-select type.",
+            "description": "Available options with counts. Present for multi-select, single-select and search-select. For search-select the options with the most matches come first.",
             "items": {
               "$ref": "#/components/schemas/FilterOption"
             }
+          },
+          "showTop": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Only for search-select: how many options to show before the user searches or expands the list.",
+            "example": 10
           }
         }
       },
