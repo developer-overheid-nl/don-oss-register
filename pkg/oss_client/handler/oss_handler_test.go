@@ -396,3 +396,15 @@ func TestListRepositoryFilters_DelegatesToService(t *testing.T) {
 	require.NotNil(t, groups[0].Count)
 	assert.Equal(t, 3, *groups[0].Count)
 }
+
+func TestSubmitScan_RejectsUnsupportedSchemaVersion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := handler.NewOSSController(services.NewRepositoryService(&serviceStubRepo{}).WithScans(nil))
+
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/scans", nil)
+
+	_, err := ctrl.SubmitScan(ctx, &models.ScanSubmission{SchemaVersion: 2, RepositoryID: "repo-1", Scan: json.RawMessage(`{}`)})
+	require.Error(t, err)
+}

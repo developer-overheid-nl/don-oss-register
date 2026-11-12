@@ -208,7 +208,7 @@ func main() {
 	}
 	commondatabase.ConfigureLogging(db, logger)
 	repo := repositories.NewRepositoriesRepository(db)
-	repositoriesService := services.NewRepositoryService(repo)
+	repositoriesService := services.NewRepositoryService(repo).WithScans(repositories.NewScansRepository(db))
 	controller := handler.NewOSSController(repositoriesService)
 	if _, err := repositoriesService.CreateOrganisation(context.Background(), &models.Organisation{Uri: "https://www.gpp-woo.nl", Label: "GPP-Woo"}); err != nil {
 		slog.Warn(

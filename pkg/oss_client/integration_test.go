@@ -71,10 +71,10 @@ func newIntegrationEnv(t *testing.T) *integrationEnv {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}, &models.GitOrganisatie{}))
+	require.NoError(t, db.AutoMigrate(&models.Organisation{}, &models.Repository{}, &models.GitOrganisatie{}, &models.RepositoryScan{}))
 
 	repo := repositories.NewRepositoriesRepository(db)
-	svc := services.NewRepositoryService(repo)
+	svc := services.NewRepositoryService(repo).WithScans(repositories.NewScansRepository(db))
 	controller := handler.NewOSSController(svc)
 	router := oss_client.NewRouter("test-version", controller)
 

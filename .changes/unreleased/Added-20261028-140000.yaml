@@ -1,0 +1,3 @@
+kind: Added
+body: Store ORT scans from the ort-runner via `POST /v1/scans`, keeping every scan as history, and show the latest scan as `scanSummary` in the repository list and as `scan` on the repository detail, with dependency counts, package managers, ORT findings per repository rule and a score; vulnerabilities are stored but not published.
+time: 2026-10-28T14:00:00+01:00

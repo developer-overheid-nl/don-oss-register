@@ -83,3 +83,21 @@ func TestProblemJSONRequiresStatusTitleAndDetail(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []any{"status", "title", "detail"}, problemSchema["required"])
 }
+
+func TestSubmitScanIsDocumented(t *testing.T) {
+	data, err := os.ReadFile("openapi.json")
+	require.NoError(t, err)
+
+	var spec map[string]any
+	require.NoError(t, json.Unmarshal(data, &spec))
+
+	paths := spec["paths"].(map[string]any)
+	post := paths["/scans"].(map[string]any)["post"].(map[string]any)
+	assert.Equal(t, "submitScan", post["operationId"])
+	assert.Contains(t, post["responses"].(map[string]any), "201")
+
+	schemas := spec["components"].(map[string]any)["schemas"].(map[string]any)
+	summary := schemas["RepositorySummary"].(map[string]any)["properties"].(map[string]any)
+	assert.Equal(t, "#/components/schemas/RepositoryScanSummary", summary["scanSummary"].(map[string]any)["$ref"])
+	assert.NotContains(t, schemas["RepositoryScanSummary"].(map[string]any)["properties"], "vulnerabilityCount")
+}

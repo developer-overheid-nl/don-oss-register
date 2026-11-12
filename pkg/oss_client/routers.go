@@ -113,6 +113,19 @@ func NewRouter(apiVersion string, controller *handler.OSSController) *fizz.Fizz 
 		tonic.Handler(controller.CreateRepository, 201),
 	)
 
+	root.POST("/scans",
+		[]fizz.OperationOption{
+			fizz.ID("submitScan"),
+			fizz.Summary("Submit ORT scan"),
+			fizz.Description("Slaat het resultaat van een ORT-scan door de ort-runner op bij een repository. Elke scan wordt bewaard; een herhaalde levering met dezelfde Idempotency-Key slaat geen tweede scan op."),
+			fizz.Security(&openapi.SecurityRequirement{
+				"clientCredentials": {"repositories:write"},
+			}),
+			apiVersionHeader,
+		},
+		tonic.Handler(controller.SubmitScan, 201),
+	)
+
 	root.GET("/git-organisations",
 		[]fizz.OperationOption{
 			fizz.ID("listGitOrganisations"),
