@@ -1094,7 +1094,7 @@ func TestGetRepositoryFilters_OrganisationIsSearchSelectWithLargestFirst(t *test
 		}
 	}
 	require.NotNil(t, organisation)
-	assert.Equal(t, "search-select", organisation.Type)
+	assert.Equal(t, "search-single-select", organisation.Type)
 	require.NotNil(t, organisation.ShowTop)
 	assert.Equal(t, 10, *organisation.ShowTop)
 	require.NoError(t, organisation.Validate())

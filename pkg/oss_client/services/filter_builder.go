@@ -169,14 +169,14 @@ func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.Re
 			}
 		})
 	}
-	// A search-select shows only the first options, so the largest go first.
+	// A search-single-select shows only the first options, so the largest go first.
 	commonfilters.SortOptionsByCount(options)
 	showTop := organisationShowTop
 	return models.FilterGroup{
 		Key:         "organisation",
 		Label:       "Organisatie",
 		Description: "De overheidsorganisatie die de repository beheert.",
-		Type:        "search-select",
+		Type:        commonfilters.TypeSearchSingleSelect,
 		Options:     options,
 		ShowTop:     &showTop,
 	}

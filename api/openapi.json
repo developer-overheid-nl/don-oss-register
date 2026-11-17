@@ -1132,8 +1132,8 @@
           },
           "type": {
             "type": "string",
-            "enum": ["toggle", "date", "multi-select", "single-select", "search-select"],
-            "description": "Filter type. toggle: on/off switch. date: date input (ISO 8601). multi-select: multiple values selectable. single-select: one value selectable from a list. search-select: one value selectable from a long list, which the client shortens to the first showTop options and makes searchable."
+            "enum": ["toggle", "date", "multi-select", "single-select", "search-single-select", "search-multi-select"],
+            "description": "Filter type. toggle: on/off switch. date: date input (ISO 8601). multi-select: multiple values selectable. single-select: one value selectable from a list. search-single-select: one value selectable from a long list, which the client shortens to the first showTop options and makes searchable. search-multi-select: as search-single-select, with multiple values selectable."
           },
           "value": {
             "oneOf": [
@@ -1148,7 +1148,7 @@
           },
           "options": {
             "type": "array",
-            "description": "Available options with counts. Present for multi-select, single-select and search-select. For search-select the options with the most matches come first.",
+            "description": "Available options with counts. Present for multi-select, single-select, search-single-select and search-multi-select. For search-single-select and search-multi-select the options with the most matches come first.",
             "items": {
               "$ref": "#/components/schemas/FilterOption"
             }
@@ -1156,7 +1156,7 @@
           "showTop": {
             "type": "integer",
             "minimum": 1,
-            "description": "Only for search-select: how many options to show before the user searches or expands the list.",
+            "description": "Only for search-single-select and search-multi-select: how many options to show before the user searches or expands the list.",
             "example": 10
           }
         }

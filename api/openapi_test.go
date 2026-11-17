@@ -111,7 +111,10 @@ func TestFilterGroupDocumentsSearchSelect(t *testing.T) {
 
 	schemas := spec["components"].(map[string]any)["schemas"].(map[string]any)
 	properties := schemas["FilterGroup"].(map[string]any)["properties"].(map[string]any)
-	assert.Contains(t, properties["type"].(map[string]any)["enum"], "search-select")
+	enum := properties["type"].(map[string]any)["enum"]
+	assert.Contains(t, enum, "search-single-select")
+	assert.Contains(t, enum, "search-multi-select")
+	assert.NotContains(t, enum, "search-select")
 	showTop := properties["showTop"].(map[string]any)
 	assert.Equal(t, "integer", showTop["type"])
 	assert.Equal(t, float64(1), showTop["minimum"])
