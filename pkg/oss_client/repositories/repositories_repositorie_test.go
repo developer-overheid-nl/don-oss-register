@@ -161,7 +161,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 
 	publicCodeOnly := true
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 		PublicCode:   &publicCodeOnly,
 	}, titleAscendingSort())
 	require.NoError(t, err)
@@ -173,9 +173,22 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	}
 	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
 
+	// Several organisations match any of them.
+	withoutPublicCode := false
+	several, _, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
+		Organisation: []string{org1.Uri, org2.Uri},
+		PublicCode:   &withoutPublicCode,
+	}, titleAscendingSort())
+	require.NoError(t, err)
+	severalIDs := make([]string, len(several))
+	for i, repo := range several {
+		severalIDs[i] = repo.Id
+	}
+	assert.ElementsMatch(t, []string{"repo-3", "repo-5"}, severalIDs)
+
 	publicCodeDisabled := false
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 		PublicCode:   &publicCodeDisabled,
 	}, titleAscendingSort())
 	require.NoError(t, err)
@@ -185,7 +198,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 
 	archivedOnly := true
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 		PublicCode:   &publicCodeDisabled,
 		Archived:     &archivedOnly,
 	}, titleAscendingSort())
@@ -195,7 +208,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.Equal(t, "repo-4", results[0].Id)
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 	}, titleAscendingSort())
 	require.NoError(t, err)
 	require.Len(t, results, 2)
@@ -207,7 +220,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.ElementsMatch(t, []string{"repo-1", "repo-2"}, ids)
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 		SoftwareType: []string{"library"},
 	}, titleAscendingSort())
 	require.NoError(t, err)
@@ -216,7 +229,7 @@ func TestRepositoriesRepository_GetRepositoriesOrganisationFilter(t *testing.T) 
 	assert.Equal(t, "repo-1", results[0].Id)
 
 	results, pagination, err = repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation: &org1.Uri,
+		Organisation: []string{org1.Uri},
 		License:      []string{"EUPL-1.2"},
 	}, titleAscendingSort())
 	require.NoError(t, err)
@@ -397,7 +410,7 @@ func TestRepositoriesRepository_GetRepositoriesLastActivityAfterFilter(t *testin
 
 	date := "2024-01-01"
 	results, pagination, err := repo.GetRepositorys(ctx, 1, 10, &models.RepositoryFiltersParams{
-		Organisation:      &org.Uri,
+		Organisation:      []string{org.Uri},
 		LastActivityAfter: &date,
 	}, titleAscendingSort())
 	require.NoError(t, err)
@@ -473,7 +486,7 @@ func TestRepositoriesRepository_SearchRepositoriesOrganisationFilterAndPaginatio
 	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{Id: "repo-2", Name: "Account Beta", OrganisationID: &org1.Uri, Active: true}))
 	require.NoError(t, repo.SaveRepository(ctx, &models.Repository{Id: "repo-3", Name: "Account Other", OrganisationID: &org2.Uri, Active: true}))
 
-	results, pagination, err := repo.SearchRepositorys(ctx, 1, 1, &org1.Uri, "account")
+	results, pagination, err := repo.SearchRepositorys(ctx, 1, 1, []string{org1.Uri}, "account")
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, 2, pagination.TotalRecords)
@@ -482,11 +495,17 @@ func TestRepositoriesRepository_SearchRepositoriesOrganisationFilterAndPaginatio
 	assert.Equal(t, 2, *pagination.Next)
 	assert.Nil(t, pagination.Previous)
 
-	results, pagination, err = repo.SearchRepositorys(ctx, 2, 1, &org1.Uri, "account")
+	results, pagination, err = repo.SearchRepositorys(ctx, 2, 1, []string{org1.Uri}, "account")
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	require.NotNil(t, pagination.Previous)
 	assert.Equal(t, 1, *pagination.Previous)
+
+	// Several organisations match any of them.
+	results, pagination, err = repo.SearchRepositorys(ctx, 1, 10, []string{org1.Uri, org2.Uri}, "account")
+	require.NoError(t, err)
+	assert.Len(t, results, 3)
+	assert.Equal(t, 3, pagination.TotalRecords)
 }
 
 func TestRepositoriesRepository_SaveRepositoryPersistsForkFlag(t *testing.T) {
@@ -614,11 +633,16 @@ func TestRepositoriesRepository_GitOrganisationsCRUD(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, missing)
 
-	results, pagination, err := repo.GetGitOrganisations(ctx, 1, 10, &org2.Uri)
+	results, pagination, err := repo.GetGitOrganisations(ctx, 1, 10, []string{org2.Uri})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "git-2", results[0].Id)
 	assert.Equal(t, 1, pagination.TotalRecords)
+
+	results, pagination, err = repo.GetGitOrganisations(ctx, 1, 10, []string{org1.Uri, org2.Uri})
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+	assert.Equal(t, 2, pagination.TotalRecords)
 }
 
 func TestRepositoriesRepository_GetRepositoryFilterCountsAppliesCrossFilters(t *testing.T) {
@@ -684,7 +708,7 @@ func TestRepositoriesRepository_GetRepositoryFilterCountsAppliesCrossFilters(t *
 
 	date := "2024-01-01"
 	counts, err := repo.GetRepositoryFilterCounts(ctx, &models.RepositoryFiltersParams{
-		Organisation:      &org1.Uri,
+		Organisation:      []string{org1.Uri},
 		LastActivityAfter: &date,
 	})
 	require.NoError(t, err)

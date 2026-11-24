@@ -20,10 +20,10 @@ import (
 type serviceStubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
-	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
+	searchFunc          func(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
-	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
+	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	findOrgFunc         func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
@@ -45,9 +45,9 @@ func (s *serviceStubRepo) GetRepositoryByID(ctx context.Context, id string) (*mo
 	return nil, nil
 }
 
-func (s *serviceStubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+func (s *serviceStubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error) {
 	if s.searchFunc != nil {
-		return s.searchFunc(ctx, page, perPage, organisation, query)
+		return s.searchFunc(ctx, page, perPage, organisations, query)
 	}
 	return []models.Repository{}, models.Pagination{}, nil
 }
@@ -77,9 +77,9 @@ func (s *serviceStubRepo) GetOrganisations(ctx context.Context, page, perPage in
 	return nil, models.Pagination{}, nil
 }
 
-func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *serviceStubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error) {
 	if s.gitOrgListFunc != nil {
-		return s.gitOrgListFunc(ctx, page, perPage, organisation)
+		return s.gitOrgListFunc(ctx, page, perPage, organisations)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -154,10 +154,10 @@ func TestRetrieveRepository_NotFound(t *testing.T) {
 func TestSearchRepositorys_UsesService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+		searchFunc: func(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error) {
 			assert.Equal(t, 1, page)
 			assert.Equal(t, 20, perPage)
-			assert.Nil(t, organisation)
+			assert.Empty(t, organisations)
 			assert.Equal(t, "repo", query)
 			return []models.Repository{{Id: "repo-2", Organisation: &models.Organisation{Uri: "org-1"}}}, models.Pagination{TotalRecords: 1}, nil
 		},
@@ -297,7 +297,7 @@ func TestCreateRepository_DelegatesToService(t *testing.T) {
 func TestListGitOrganisations_SetsHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := &serviceStubRepo{
-		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error) {
 			return []models.GitOrganisatie{{Id: "git-1", Url: "https://github.com/example"}}, models.Pagination{
 				TotalRecords:   1,
 				TotalPages:     1,

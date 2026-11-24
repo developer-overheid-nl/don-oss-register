@@ -90,13 +90,19 @@ func TestRepoMatchesFilters_PublicCode_Excluded(t *testing.T) {
 
 func TestRepoMatchesFilters_Organisation_Match(t *testing.T) {
 	repo := makeRepo(withOrg("https://example.org"))
-	p := &models.RepositoryFiltersParams{Organisation: ptr("https://example.org")}
+	p := &models.RepositoryFiltersParams{Organisation: []string{"https://example.org"}}
+	assert.True(t, repoMatchesFilters(repo, p, ""))
+}
+
+func TestRepoMatchesFilters_Organisation_MatchesAnyOfSeveral(t *testing.T) {
+	repo := makeRepo(withOrg("https://other.org"))
+	p := &models.RepositoryFiltersParams{Organisation: []string{"https://example.org", "https://other.org"}}
 	assert.True(t, repoMatchesFilters(repo, p, ""))
 }
 
 func TestRepoMatchesFilters_Organisation_NoMatch(t *testing.T) {
 	repo := makeRepo(withOrg("https://other.org"))
-	p := &models.RepositoryFiltersParams{Organisation: ptr("https://example.org")}
+	p := &models.RepositoryFiltersParams{Organisation: []string{"https://example.org"}}
 	assert.False(t, repoMatchesFilters(repo, p, ""))
 }
 
@@ -246,7 +252,7 @@ func TestCountByField_RespectsOtherFilters(t *testing.T) {
 		{OrganisationID: &org1, Active: true, PublicCodeUrl: "https://org1.nl/publiccode.yml", PublicCode: &models.PublicCode{SoftwareType: "library"}},
 		{OrganisationID: &org2, Active: true, PublicCodeUrl: "https://org2.nl/publiccode.yml", PublicCode: &models.PublicCode{SoftwareType: "addon"}},
 	}
-	p := &models.RepositoryFiltersParams{Organisation: &org1}
+	p := &models.RepositoryFiltersParams{Organisation: []string{org1}}
 	result := countByField(repos, p, "softwareType", func(r models.Repository) string {
 		if r.PublicCode == nil {
 			return ""

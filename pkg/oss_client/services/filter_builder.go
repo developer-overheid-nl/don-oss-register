@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strings"
-
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
 	commonfilters "github.com/developer-overheid-nl/don-register-common/filters"
 )
@@ -147,36 +145,31 @@ func buildLicenseGroup(p *models.RepositoryFiltersParams, counts *models.Reposit
 const organisationShowTop = 10
 
 func buildOrganisationGroup(p *models.RepositoryFiltersParams, counts *models.RepositoryFilterCounts) models.FilterGroup {
-	activeOrg := ""
-	if p.Organisation != nil {
-		activeOrg = strings.TrimSpace(*p.Organisation)
-	}
+	selected := selectedSet(p.Organisation)
 	options := make([]models.FilterOption, 0, len(counts.Organisation))
 	for _, fc := range counts.Organisation {
 		options = append(options, models.FilterOption{
 			Value:    fc.Value,
 			Label:    fc.Label,
 			Count:    fc.Count,
-			Selected: activeOrg == fc.Value,
+			Selected: selected[fc.Value],
 		})
 	}
-	if activeOrg != "" {
-		options = appendMissingSelectedOptions(options, map[string]bool{activeOrg: true}, func(value string) models.FilterOption {
-			return models.FilterOption{
-				Value:    value,
-				Label:    value,
-				Selected: true,
-			}
-		})
-	}
-	// A search-single-select shows only the first options, so the largest go first.
+	options = appendMissingSelectedOptions(options, selected, func(value string) models.FilterOption {
+		return models.FilterOption{
+			Value:    value,
+			Label:    value,
+			Selected: true,
+		}
+	})
+	// A search-multi-select shows only the first options, so the largest go first.
 	commonfilters.SortOptionsByCount(options)
 	showTop := organisationShowTop
 	return models.FilterGroup{
 		Key:         "organisation",
 		Label:       "Organisatie",
 		Description: "De overheidsorganisatie die de repository beheert.",
-		Type:        commonfilters.TypeSearchSingleSelect,
+		Type:        commonfilters.TypeSearchMultiSelect,
 		Options:     options,
 		ShowTop:     &showTop,
 	}

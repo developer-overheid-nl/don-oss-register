@@ -19,8 +19,8 @@ type GitOrganisatieSummary struct {
 }
 
 type ListGitOrganisationsParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
+	Page         int      `query:"page" validate:"omitempty,min=1"`
+	PerPage      int      `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation []string `query:"organisation"`
 	BaseURL      string
 }
