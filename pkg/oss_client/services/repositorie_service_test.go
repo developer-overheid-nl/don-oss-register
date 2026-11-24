@@ -25,12 +25,12 @@ import (
 type stubRepo struct {
 	listFunc            func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	retrieveFunc        func(ctx context.Context, id string) (*models.Repository, error)
-	searchFunc          func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
+	searchFunc          func(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error)
 	saveRepositoryFunc  func(ctx context.Context, repository *models.Repository) error
 	allRepositoriesFunc func(ctx context.Context) ([]models.Repository, error)
 	saveOrgFunc         func(org *models.Organisation) error
 	getOrgFunc          func(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
-	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
+	gitOrgListFunc      func(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error)
 	findOrgByURIF       func(ctx context.Context, uri string) (*models.Organisation, error)
 	findGitOrgByURLFunc func(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	saveGitOrgFunc      func(ctx context.Context, gitOrg *models.GitOrganisatie) error
@@ -64,9 +64,9 @@ func (s *stubRepo) SaveRepository(ctx context.Context, repository *models.Reposi
 	return nil
 }
 
-func (s *stubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+func (s *stubRepo) SearchRepositorys(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error) {
 	if s.searchFunc != nil {
-		return s.searchFunc(ctx, page, perPage, organisation, query)
+		return s.searchFunc(ctx, page, perPage, organisations, query)
 	}
 	return []models.Repository{}, models.Pagination{}, nil
 }
@@ -92,9 +92,9 @@ func (s *stubRepo) GetOrganisations(ctx context.Context, page, perPage int) ([]m
 	return nil, models.Pagination{}, nil
 }
 
-func (s *stubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *stubRepo) GetGitOrganisations(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error) {
 	if s.gitOrgListFunc != nil {
-		return s.gitOrgListFunc(ctx, page, perPage, organisation)
+		return s.gitOrgListFunc(ctx, page, perPage, organisations)
 	}
 	return nil, models.Pagination{}, nil
 }
@@ -162,7 +162,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	query := "forms"
 	repo := &stubRepo{
 		listFunc: func(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
-			require.Equal(t, &orgURI, p.Organisation)
+			require.Equal(t, []string{orgURI}, p.Organisation)
 			require.Equal(t, query, p.Query)
 			require.Equal(t, &publicCode, p.PublicCode)
 			require.Equal(t, &archived, p.Archived)
@@ -179,7 +179,7 @@ func TestListRepositories_ForwardsAllFilters(t *testing.T) {
 	svc := services.NewRepositoryService(repo)
 
 	_, _, err := svc.ListRepositorys(context.Background(), &models.ListRepositorysParams{
-		Organisation:       &orgURI,
+		Organisation:       []string{orgURI},
 		Query:              query,
 		PublicCode:         &publicCode,
 		Archived:           &archived,
@@ -262,10 +262,10 @@ func TestSearchRepositories_ReturnsEmptyOnBlankQuery(t *testing.T) {
 func TestSearchRepositories_ReturnsSummaries(t *testing.T) {
 	orgURI := "https://example.org/org"
 	repo := &stubRepo{
-		searchFunc: func(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+		searchFunc: func(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error) {
 			require.Equal(t, 3, page)
 			require.Equal(t, 7, perPage)
-			require.Equal(t, &orgURI, organisation)
+			require.Equal(t, []string{orgURI}, organisations)
 			require.Equal(t, "account", query)
 			return []models.Repository{{
 				Id:           "repo-1",
@@ -279,7 +279,7 @@ func TestSearchRepositories_ReturnsSummaries(t *testing.T) {
 	results, pagination, err := svc.SearchRepositorys(context.Background(), &models.ListRepositorysSearchParams{
 		Page:         3,
 		PerPage:      7,
-		Organisation: &orgURI,
+		Organisation: []string{orgURI},
 		Query:        " account ",
 	})
 	require.NoError(t, err)
@@ -347,10 +347,10 @@ func TestRetrieveRepository_NotFoundPassesThrough(t *testing.T) {
 func TestListGitOrganisations_ReturnsSummaries(t *testing.T) {
 	orgURI := "https://example.org/org"
 	repo := &stubRepo{
-		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+		gitOrgListFunc: func(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error) {
 			require.Equal(t, 2, page)
 			require.Equal(t, 5, perPage)
-			require.Equal(t, &orgURI, organisation)
+			require.Equal(t, []string{orgURI}, organisations)
 			return []models.GitOrganisatie{
 				{Id: "git-1", Url: "https://github.com/example", Organisation: &models.Organisation{Uri: orgURI, Label: "Example"}},
 			}, models.Pagination{CurrentPage: 2, RecordsPerPage: 5, TotalRecords: 1}, nil
@@ -361,7 +361,7 @@ func TestListGitOrganisations_ReturnsSummaries(t *testing.T) {
 	results, pagination, err := svc.ListGitOrganisations(context.Background(), &models.ListGitOrganisationsParams{
 		Page:         2,
 		PerPage:      5,
-		Organisation: &orgURI,
+		Organisation: []string{orgURI},
 	})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
@@ -821,7 +821,7 @@ func TestGetRepositoryFilters_OrganisationKeepsSelectedOptionWithoutCount(t *tes
 
 	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{
 		Query:        "bla",
-		Organisation: &org,
+		Organisation: []string{org},
 	})
 	require.NoError(t, err)
 
@@ -1068,4 +1068,44 @@ func decodeServiceLog(t *testing.T, raw []byte) map[string]any {
 	var event map[string]any
 	require.NoError(t, json.Unmarshal(raw, &event))
 	return event
+}
+
+func TestGetRepositoryFilters_OrganisationIsSearchMultiSelectWithLargestFirst(t *testing.T) {
+	repo := &stubRepo{
+		filterCountsFunc: func(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error) {
+			return &models.RepositoryFilterCounts{
+				Organisation: []models.OrgFilterCount{
+					{Value: "https://example.org/a", Label: "Alpha", Count: 2},
+					{Value: "https://example.org/z", Label: "Zulu", Count: 40},
+					{Value: "https://example.org/m", Label: "Mike", Count: 7},
+				},
+			}, nil
+		},
+	}
+	svc := services.NewRepositoryService(repo)
+
+	groups, err := svc.GetRepositoryFilters(context.Background(), &models.RepositoryFiltersParams{
+		Organisation: []string{"https://example.org/a", "https://example.org/m"},
+	})
+	require.NoError(t, err)
+
+	var organisation *models.FilterGroup
+	for i := range groups {
+		if groups[i].Key == "organisation" {
+			organisation = &groups[i]
+		}
+	}
+	require.NotNil(t, organisation)
+	assert.Equal(t, "search-multi-select", organisation.Type)
+	require.NotNil(t, organisation.ShowTop)
+	assert.Equal(t, 10, *organisation.ShowTop)
+	require.NoError(t, organisation.Validate())
+	// The frontend shows the first showTop options, so the largest come first.
+	assert.Equal(t, []string{"Zulu", "Mike", "Alpha"}, []string{
+		organisation.Options[0].Label, organisation.Options[1].Label, organisation.Options[2].Label,
+	})
+	// Every chosen organisation is selected.
+	assert.Equal(t, []bool{false, true, true}, []bool{
+		organisation.Options[0].Selected, organisation.Options[1].Selected, organisation.Options[2].Selected,
+	})
 }

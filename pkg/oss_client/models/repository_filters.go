@@ -6,17 +6,17 @@ import (
 )
 
 type ListRepositorysSearchParams struct {
-	Page         int     `query:"page" validate:"omitempty,min=1"`
-	PerPage      int     `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation *string `query:"organisation"`
-	Query        string  `query:"q" binding:"required"`
+	Page         int      `query:"page" validate:"omitempty,min=1"`
+	PerPage      int      `query:"perPage" validate:"omitempty,min=1,max=100"`
+	Organisation []string `query:"organisation"`
+	Query        string   `query:"q" binding:"required"`
 	BaseURL      string
 }
 
 type ListRepositorysParams struct {
 	Page               int      `query:"page" validate:"omitempty,min=1"`
 	PerPage            int      `query:"perPage" validate:"omitempty,min=1,max=100"`
-	Organisation       *string  `query:"organisation"`
+	Organisation       []string `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
 	Archived           *bool    `query:"archived"`
@@ -37,7 +37,7 @@ func (p *ListRepositorysParams) RepositoryFilters() *RepositoryFiltersParams {
 		return &RepositoryFiltersParams{}
 	}
 	return &RepositoryFiltersParams{
-		Organisation:       p.Organisation,
+		Organisation:       append([]string(nil), p.Organisation...),
 		Query:              p.Query,
 		PublicCode:         p.PublicCode,
 		Archived:           p.Archived,
@@ -75,7 +75,7 @@ type RepositoryFilterCounts struct {
 }
 
 type RepositoryFiltersParams struct {
-	Organisation       *string  `query:"organisation"`
+	Organisation       []string `query:"organisation"`
 	Query              string   `query:"q"`
 	PublicCode         *bool    `query:"publiccode"`
 	Archived           *bool    `query:"archived"`

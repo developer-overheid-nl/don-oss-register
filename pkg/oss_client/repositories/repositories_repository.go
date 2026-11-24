@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/developer-overheid-nl/don-oss-register/pkg/oss_client/models"
+	commonfilters "github.com/developer-overheid-nl/don-register-common/filters"
 	commonpagination "github.com/developer-overheid-nl/don-register-common/pagination"
 	commonquery "github.com/developer-overheid-nl/don-register-common/query"
 	"gorm.io/gorm"
@@ -19,12 +20,12 @@ type RepositoriesRepository interface {
 	GetRepositorys(ctx context.Context, page, perPage int, p *models.RepositoryFiltersParams, sorting models.RepositorySort) ([]models.Repository, models.Pagination, error)
 	GetRepositoryByID(ctx context.Context, oasUrl string) (*models.Repository, error)
 	SaveRepository(ctx context.Context, repository *models.Repository) error
-	SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error)
+	SearchRepositorys(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error)
 	SaveOrganisatie(organisation *models.Organisation) error
 	AllRepositorys(ctx context.Context) ([]models.Repository, error)
 	GetOrganisations(ctx context.Context, page, perPage int) ([]models.Organisation, models.Pagination, error)
 	FindOrganisationByURI(ctx context.Context, uri string) (*models.Organisation, error)
-	GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error)
+	GetGitOrganisations(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error)
 	FindGitOrganisationByURL(ctx context.Context, url string) (*models.GitOrganisatie, error)
 	SaveGitOrganisatie(ctx context.Context, gitOrg *models.GitOrganisatie) error
 	GetRepositoryFilterCounts(ctx context.Context, p *models.RepositoryFiltersParams) (*models.RepositoryFilterCounts, error)
@@ -36,7 +37,7 @@ type repositoriesRepository struct {
 
 type repositoryFilterMatcher struct {
 	params            *models.RepositoryFiltersParams
-	organisation      string
+	organisations     map[string]bool
 	query             string
 	lastActivityAfter *time.Time
 }
@@ -138,7 +139,7 @@ func (r *repositoriesRepository) GetRepositorys(ctx context.Context, page, perPa
 	return filtered[offset:end], pagination, nil
 }
 
-func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, organisation *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, perPage int, organisations []string) ([]models.GitOrganisatie, models.Pagination, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -147,10 +148,7 @@ func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, 
 	}
 	offset := (page - 1) * perPage
 
-	db := r.db.WithContext(ctx)
-	if organisation != nil && strings.TrimSpace(*organisation) != "" {
-		db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-	}
+	db := whereOrganisationIn(r.db.WithContext(ctx), organisations)
 
 	var totalRecords int64
 	if err := db.Model(&models.GitOrganisatie{}).Count(&totalRecords).Error; err != nil {
@@ -167,6 +165,21 @@ func (r *repositoriesRepository) GetGitOrganisations(ctx context.Context, page, 
 	return gitOrganisations, pagination, nil
 }
 
+// whereOrganisationIn limits a query to the given organisations; without any
+// organisation it leaves the query unchanged.
+func whereOrganisationIn(db *gorm.DB, organisations []string) *gorm.DB {
+	selected := commonfilters.SelectedSet(organisations)
+	if len(selected) == 0 {
+		return db
+	}
+	values := make([]string, 0, len(selected))
+	for value := range selected {
+		values = append(values, value)
+	}
+	sort.Strings(values)
+	return db.Where("organisation_id IN ?", values)
+}
+
 func (r *repositoriesRepository) GetRepositoryByID(ctx context.Context, id string) (*models.Repository, error) {
 	var api models.Repository
 	if err := r.db.WithContext(ctx).Preload("Organisation").First(&api, "id = ?", id).Error; err != nil {
@@ -178,7 +191,7 @@ func (r *repositoriesRepository) GetRepositoryByID(ctx context.Context, id strin
 	return &api, nil
 }
 
-func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, perPage int, organisation *string, query string) ([]models.Repository, models.Pagination, error) {
+func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, perPage int, organisations []string, query string) ([]models.Repository, models.Pagination, error) {
 	trimmed := strings.TrimSpace(query)
 	if page < 1 {
 		page = 1
@@ -195,10 +208,7 @@ func (r *repositoriesRepository) SearchRepositorys(ctx context.Context, page, pe
 
 	pattern := fmt.Sprintf("%%%s%%", commonquery.EscapeSQLLike(strings.ToLower(trimmed)))
 	applySearchFilters := func(db *gorm.DB) *gorm.DB {
-		db = db.Where("(active IS NULL OR active = ?)", true)
-		if organisation != nil && strings.TrimSpace(*organisation) != "" {
-			db = db.Where("organisation_id = ?", strings.TrimSpace(*organisation))
-		}
+		db = whereOrganisationIn(db.Where("(active IS NULL OR active = ?)", true), organisations)
 		return db.Where("(LOWER(name) LIKE ? ESCAPE '\\' OR LOWER(short_description) LIKE ? ESCAPE '\\' OR LOWER(long_description) LIKE ? ESCAPE '\\')", pattern, pattern, pattern)
 	}
 
@@ -481,10 +491,7 @@ func compileRepositoryFilters(p *models.RepositoryFiltersParams, validate bool) 
 		p = &models.RepositoryFiltersParams{}
 	}
 
-	matcher := &repositoryFilterMatcher{params: p}
-	if p.Organisation != nil {
-		matcher.organisation = strings.TrimSpace(*p.Organisation)
-	}
+	matcher := &repositoryFilterMatcher{params: p, organisations: commonfilters.SelectedSet(p.Organisation)}
 	matcher.query = strings.ToLower(strings.TrimSpace(p.Query))
 	if p.LastActivityAfter != nil {
 		trimmed := strings.TrimSpace(*p.LastActivityAfter)
@@ -508,8 +515,8 @@ func repoMatchesCompiledFilters(repo models.Repository, matcher *repositoryFilte
 		return true
 	}
 	p := matcher.params
-	if exclude != "organisation" && matcher.organisation != "" {
-		if repo.OrganisationID == nil || *repo.OrganisationID != matcher.organisation {
+	if exclude != "organisation" && len(matcher.organisations) > 0 {
+		if repo.OrganisationID == nil || !matcher.organisations[*repo.OrganisationID] {
 			return false
 		}
 	}

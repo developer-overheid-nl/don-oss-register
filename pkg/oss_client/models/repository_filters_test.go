@@ -13,7 +13,7 @@ func TestListRepositorysParamsRepositoryFiltersCopiesAllFilterValues(t *testing.
 	publicCode := false
 	lastActivityAfter := "2024-01-01"
 	params := &models.ListRepositorysParams{
-		Organisation:       &org,
+		Organisation:       []string{org},
 		Query:              "zaak",
 		PublicCode:         &publicCode,
 		LastActivityAfter:  &lastActivityAfter,

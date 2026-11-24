@@ -36,7 +36,7 @@ func (s *activeJobRepoStub) SaveRepository(_ context.Context, r *models.Reposito
 func (s *activeJobRepoStub) GetRepositorys(_ context.Context, _, _ int, _ *models.RepositoryFiltersParams, _ models.RepositorySort) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
-func (s *activeJobRepoStub) SearchRepositorys(_ context.Context, _, _ int, _ *string, _ string) ([]models.Repository, models.Pagination, error) {
+func (s *activeJobRepoStub) SearchRepositorys(_ context.Context, _, _ int, _ []string, _ string) ([]models.Repository, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 
@@ -56,7 +56,7 @@ func (s *activeJobRepoStub) FindOrganisationByURI(_ context.Context, _ string) (
 	return nil, nil
 }
 
-func (s *activeJobRepoStub) GetGitOrganisations(_ context.Context, _, _ int, _ *string) ([]models.GitOrganisatie, models.Pagination, error) {
+func (s *activeJobRepoStub) GetGitOrganisations(_ context.Context, _, _ int, _ []string) ([]models.GitOrganisatie, models.Pagination, error) {
 	return nil, models.Pagination{}, nil
 }
 
